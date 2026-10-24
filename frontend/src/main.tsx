@@ -110,7 +110,11 @@ if (import.meta.env.VITE_PRO_BUILD) {
       .finally(markProOverlaySettled);
   }
 } else {
-  // No overlay is coming: what the registries have now is all there will be.
+  // No overlay is coming: install the open-source Web Serial flasher
+  // (ESP32 via esptool-js, Uno/Nano via STK500) so "Flash to real board"
+  // works in self-hosted builds. Lazy: esptool-js loads with it.
+  void import('./flash/ossWebFlash').then((m) => m.installOssWebFlash());
+  // What the registries have now is all there will be.
   markProOverlaySettled();
 }
 

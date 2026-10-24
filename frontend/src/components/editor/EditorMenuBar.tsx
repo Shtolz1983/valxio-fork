@@ -113,6 +113,7 @@ export const EditorMenuBar: React.FC = () => {
   const fileItems: Item[] = [
     { kind: 'command', id: 'project.new', label: t('editor.menu.newProject', 'New workspace') },
     { kind: 'command', id: 'file.new', label: t('editor.menu.newFile', 'New file') },
+    { kind: 'command', id: 'file.openSketch', label: t('openSketch.menu', 'Open sketch (.ino)…') },
     { kind: 'separator' },
     // Third item, and deliberately at the head of the project group rather
     // than tacked onto the "new …" pair above: it opens the user's saved
@@ -223,6 +224,7 @@ export const EditorMenuBar: React.FC = () => {
     { kind: 'command', id: 'view.toggleConsole', label: t('editor.menu.toggleConsole', 'Output Console') },
     { kind: 'separator' },
     { kind: 'command', id: 'view.reset', label: t('editor.menu.centerView', 'Center canvas view') },
+    { kind: 'command', id: 'view.fit', label: t('editor.menu.fitView', 'Fit circuit to view') },
     { kind: 'command', id: 'view.zoomIn', label: t('editor.canvas.zoomIn', 'Zoom in') },
     { kind: 'command', id: 'view.zoomOut', label: t('editor.canvas.zoomOut', 'Zoom out') },
   ];

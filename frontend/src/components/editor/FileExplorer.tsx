@@ -10,6 +10,7 @@ import { getChipActions, getChipActionsVersion, subscribeChipActions } from '../
 import type { BoardKind } from '../../types/board';
 import { boardDisplayName, isKnownBoardKind, isPiBoardKind } from '../../types/board';
 import { importProjectFile, PROJECT_FILE_ACCEPT } from '../../utils/importProject';
+import { importSketchFiles, SKETCH_FILE_ACCEPT } from '../../utils/importSketch';
 import { retargetBoardWires } from '../../utils/wokwiZip';
 import { showMessageDialog, showConfirmDialog } from '../../store/useMessageDialogStore';
 import { registerEditorCommand } from '../../lib/editorCommands';
@@ -128,6 +129,25 @@ const IcoSave = () => (
     <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
     <polyline points="17 21 17 13 7 13 7 21" />
     <polyline points="7 3 7 8 15 8" />
+  </svg>
+);
+
+const IcoOpenSketch = () => (
+  // A code file with an "upload" arrow: loads a sketch, not a whole project.
+  <svg
+    width="22"
+    height="22"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+    <polyline points="14 2 14 8 20 8" />
+    <polyline points="12 18 12 12" />
+    <polyline points="9 15 12 12 15 15" />
   </svg>
 );
 
@@ -428,6 +448,18 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({ onSaveClick, onNewCl
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const handleOpenProjectClick = useCallback(() => {
     fileInputRef.current?.click();
+  }, []);
+
+  // "Open sketch": an .ino from disk (multi-select its .h/.cpp tabs too)
+  // replaces the active board's code — see utils/importSketch.ts.
+  const sketchInputRef = useRef<HTMLInputElement | null>(null);
+  const handleOpenSketchClick = useCallback(() => {
+    sketchInputRef.current?.click();
+  }, []);
+  const handleSketchFilesPicked = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files ? [...e.target.files] : [];
+    e.target.value = '';
+    if (files.length) await importSketchFiles(files);
   }, []);
   const handleProjectFilePicked = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -796,6 +828,7 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({ onSaveClick, onNewCl
   // (which targets the ACTIVE board's file group, same as its + button).
   useEffect(() => {
     const offOpen = registerEditorCommand('project.open', handleOpenProjectClick);
+    const offOpenSketch = registerEditorCommand('file.openSketch', handleOpenSketchClick);
     const offNewFile = registerEditorCommand('file.new', () => {
       const st = useSimulatorStore.getState();
       const board = st.boards.find((b) => b.id === st.activeBoardId) ?? st.boards[0];
@@ -806,10 +839,11 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({ onSaveClick, onNewCl
     });
     return () => {
       offOpen();
+      offOpenSketch();
       offNewFile();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [handleOpenProjectClick]);
+  }, [handleOpenProjectClick, handleOpenSketchClick]);
 
   const startCreateFile = (boardId: string, groupId: string, parentPath = '') => {
     // Switch to this board first so createFile targets the right group
@@ -906,6 +940,22 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({ onSaveClick, onNewCl
             type="file"
             accept={PROJECT_FILE_ACCEPT}
             onChange={handleProjectFilePicked}
+            style={{ display: 'none' }}
+          />
+          <button
+            className="file-explorer-save-btn"
+            title={t('openSketch.button', 'Open sketch (.ino and its .h/.cpp files)')}
+            aria-label={t('openSketch.button', 'Open sketch (.ino and its .h/.cpp files)')}
+            onClick={handleOpenSketchClick}
+          >
+            <IcoOpenSketch />
+          </button>
+          <input
+            ref={sketchInputRef}
+            type="file"
+            accept={SKETCH_FILE_ACCEPT}
+            multiple
+            onChange={handleSketchFilesPicked}
             style={{ display: 'none' }}
           />
           <input

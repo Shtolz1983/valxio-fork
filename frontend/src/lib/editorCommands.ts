@@ -26,6 +26,7 @@ export type EditorCommandId =
   | 'project.exportBom'
   | 'project.exportScreenshot'
   | 'file.new'
+  | 'file.openSketch'
   // Monaco's own Format Document action, registered by CodeEditor while the
   // open file has a formatter (C/C++, Python, JSON) — see codeFormatters.ts.
   | 'edit.formatDocument'
@@ -55,6 +56,7 @@ export type EditorCommandId =
   | 'view.toggleExplorer'
   | 'view.toggleConsole'
   | 'view.reset'
+  | 'view.fit'
   | 'view.zoomIn'
   | 'view.zoomOut';
 

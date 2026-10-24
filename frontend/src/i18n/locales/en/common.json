@@ -439,5 +439,35 @@
     "readMore": "Read more",
     "gotIt": "Got it",
     "close": "Close"
+  },
+  "aiPanel": {
+    "title": "AI assistant",
+    "open": "Open AI assistant",
+    "close": "Close",
+    "newChat": "New chat",
+    "disconnected": "Bridge not connected",
+    "bridgeHint": "Start the AI bridge on this computer:",
+    "emptyHint": "Describe your device, e.g. \"ESP32 weather station: DHT22 sensor and an SSD1306 OLED showing temperature\".",
+    "working": "Working…",
+    "placeholder": "What should we build?",
+    "stop": "Stop",
+    "send": "Send"
+  },
+  "openSketch": {
+    "title": "Open sketch",
+    "button": "Open sketch (.ino and its .h/.cpp files)",
+    "menu": "Open sketch (.ino)…",
+    "noIno": "Pick at least one .ino file.",
+    "confirm": "Replace the code of {{board}} with {{file}} (+{{extra}} file(s))? The circuit stays as it is.",
+    "replace": "Replace",
+    "cancel": "Cancel",
+    "loaded": "Loaded {{file}} as sketch.ino (+{{extra}} file(s)) into {{board}}.",
+    "libraries": "Libraries: {{list}}.",
+    "unresolved": "No library found for: {{list}} — install them from the Library Manager.",
+    "skipped": "Skipped (not sketch files): {{list}}.",
+    "buildHint": "The AI assistant can place and wire the parts this sketch uses.",
+    "buildCircuit": "Build the circuit from the sketch",
+    "close": "Close",
+    "buildPrompt": "Build the circuit for the sketch on board {{board}}: place every part the code uses and wire it to the pins the code uses. Do not change the code. If a pin in the code cannot work for its part, tell me instead of rewiring it."
   }
 }

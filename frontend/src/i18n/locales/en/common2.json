@@ -440,6 +440,7 @@
       "redo": "Redo",
       "formatDocument": "Format document",
       "centerView": "Center canvas view",
+      "fitView": "Fit circuit to view",
       "toggleExplorer": "File Explorer",
       "toggleConsole": "Output Console",
       "toggleScope": "Oscilloscope / Logic Analyzer",

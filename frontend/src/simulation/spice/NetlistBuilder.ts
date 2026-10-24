@@ -35,7 +35,7 @@ function isRailNet(net: string): boolean {
  * the circuit verifier, and the overlay net maps (all of which run their own
  * bare union-find over wires).
  */
-function unionBreadboardGroups(
+export function unionBreadboardGroups(
   uf: UnionFind,
   components: ReadonlyArray<{ id: string; metadataId: string }>,
   wires: WireForSpice[],

@@ -2366,6 +2366,40 @@ export const SimulatorCanvas = ({ headerSlot }: SimulatorCanvasProps = {}) => {
     setPan({ x: 0, y: 0 });
   };
 
+  // Zoom and pan so every board and part is visible. Bounds come from the
+  // rendered elements (ids = board / component ids), so rotated parts and
+  // board art of any size are measured as drawn.
+  const handleFitView = () => {
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect || rect.width === 0 || rect.height === 0) return;
+    const { boards: bs, components: cs } = useSimulatorStore.getState();
+    const z = zoomRef.current;
+    const p = panRef.current;
+    let x1 = Infinity, y1 = Infinity, x2 = -Infinity, y2 = -Infinity;
+    for (const id of [...bs.map((b) => b.id), ...cs.map((c) => c.id)]) {
+      const r = document.getElementById(id)?.getBoundingClientRect();
+      if (!r || r.width === 0) continue;
+      x1 = Math.min(x1, (r.left - rect.left - p.x) / z);
+      y1 = Math.min(y1, (r.top - rect.top - p.y) / z);
+      x2 = Math.max(x2, (r.right - rect.left - p.x) / z);
+      y2 = Math.max(y2, (r.bottom - rect.top - p.y) / z);
+    }
+    if (!Number.isFinite(x1)) return handleResetView();
+    const margin = 40;
+    const nextZoom = Math.max(
+      0.2,
+      Math.min(1.5, (rect.width - 2 * margin) / (x2 - x1), (rect.height - 2 * margin) / (y2 - y1)),
+    );
+    const nextPan = {
+      x: (rect.width - (x2 - x1) * nextZoom) / 2 - x1 * nextZoom,
+      y: (rect.height - (y2 - y1) * nextZoom) / 2 - y1 * nextZoom,
+    };
+    zoomRef.current = nextZoom;
+    panRef.current = nextPan;
+    setZoom(nextZoom);
+    setPan(nextPan);
+  };
+
   // Edit-menu view commands. handleResetView only touches refs/setters, so
   // a one-time registration is safe; zoom goes through the same synthetic
   // wheel call the +/- buttons use, via a latest-ref (handleWheel closes
@@ -2381,6 +2415,7 @@ export const SimulatorCanvas = ({ headerSlot }: SimulatorCanvasProps = {}) => {
   useEffect(() => {
     const offs = [
       registerEditorCommand('view.reset', handleResetView),
+      registerEditorCommand('view.fit', handleFitView),
       registerEditorCommand('view.zoomIn', () => viewCommandsRef.current.zoom(-100)),
       registerEditorCommand('view.zoomOut', () => viewCommandsRef.current.zoom(100)),
     ];

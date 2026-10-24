@@ -16,7 +16,14 @@ import type { PinSourceState } from '../spice/types';
 import type { StoreSnapshot } from '../spice/storeAdapter';
 import type { Wire } from '../../types/wire';
 import { buildNetlist } from '../spice/NetlistBuilder';
-import { verifyCircuit, occupiedSourcePairs, sourcePairKey, type VerificationResult } from './circuitVerifier';
+import {
+  verifyCircuit,
+  occupiedSourcePairs,
+  sourcePairKey,
+  type CircuitWarning,
+  type VerificationResult,
+} from './circuitVerifier';
+import { validateCircuitFromStore } from '../../validation/validateFromStore';
 
 /** The slice of the simulator store the pre-flight reads. */
 export interface PreflightState {
@@ -128,7 +135,30 @@ export function buildPreflightSnapshot(state: PreflightState): PreflightSnapshot
   return { snap: { components: state.components, wires, boards }, synthesizedPins };
 }
 
+/**
+ * Electrical (SPICE) findings plus the logic-level rules of
+ * validation/circuitValidator.ts, merged into one result so the Run gate and
+ * the AI assistant see a single "Circuit check". Either half failing leaves
+ * the other's findings intact.
+ */
 export async function verifyCircuitFromStore(): Promise<VerificationResult | null> {
+  const electrical = await verifyElectricalFromStore();
+  let logic: CircuitWarning[] = [];
+  try {
+    logic = validateCircuitFromStore();
+  } catch (err) {
+    console.warn('[validateCircuit] failed', err);
+  }
+  if (logic.length === 0) return electrical;
+  const base = electrical ?? { errors: [], warnings: [], componentsChecked: useSimulatorStore.getState().components.length };
+  return {
+    ...base,
+    errors: [...base.errors, ...logic.filter((w) => w.severity === 'error')],
+    warnings: [...base.warnings, ...logic.filter((w) => w.severity === 'warning')],
+  };
+}
+
+async function verifyElectricalFromStore(): Promise<VerificationResult | null> {
   try {
     const sim = useSimulatorStore.getState();
     // Skip if the circuit has not got anything analysable on it yet.

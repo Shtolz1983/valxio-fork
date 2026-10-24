@@ -18,6 +18,7 @@ import { CompileProgressCard } from '../components/editor/CompileProgressCard';
 import { SimulatorCanvas } from '../components/simulator/SimulatorCanvas';
 import { SerialMonitor } from '../components/simulator/SerialMonitor';
 import { Oscilloscope } from '../components/simulator/Oscilloscope';
+import { AiPanel } from '../components/ai/AiPanel';
 import { AppHeader } from '../components/layout/AppHeader';
 import { triggerSaveAction } from '../lib/proSaveAction';
 import { GitHubStarBanner } from '../components/layout/GitHubStarBanner';
@@ -819,6 +820,9 @@ export const EditorPage: React.FC = () => {
             </>
           )}
         </div>
+
+        {/* ── AI assistant (right dock) ── */}
+        <AiPanel />
       </div>
 
       {showStarBanner && (

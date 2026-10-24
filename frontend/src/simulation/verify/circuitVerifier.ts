@@ -49,7 +49,21 @@ export type WarningCode =
   | 'unpowered-net'
   | 'no-return-path'
   | 'voltage-mismatch'
-  | 'bus-off-pins';
+  | 'bus-off-pins'
+  // Logic-level rules (validation/circuitValidator.ts)
+  | 'gpio-short'
+  | 'flash-pin'
+  | 'input-only-pin'
+  | 'strapping-pin'
+  | 'serial-pin'
+  | 'no-adc'
+  | 'adc2-wifi'
+  | 'pin-conflict'
+  | 'unwired-signal'
+  | 'supply-range'
+  | 'logic-level'
+  | 'i2c-pins'
+  | 'i2c-address-conflict';
 
 export interface CircuitWarning {
   severity: WarningSeverity;
