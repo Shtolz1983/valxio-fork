@@ -132,6 +132,7 @@ export function ElectricalOverlay({
 
   return (
     <svg
+      data-canvas-ui="true"
       style={{
         position: 'absolute',
         top: 0,

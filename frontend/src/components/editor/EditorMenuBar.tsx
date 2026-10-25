@@ -22,6 +22,8 @@ import React, { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useSimulatorStore } from '../../store/useSimulatorStore';
+import { useLibraryPrefsStore } from '../../store/useLibraryPrefsStore';
+import { reroutableWireCount, rerouteWires } from '../../utils/rerouteWires';
 import { useOscilloscopeStore } from '../../store/useOscilloscopeStore';
 import { useEditorStore, type EditorViewMode } from '../../store/useEditorStore';
 import { useThemeMode } from '../../hooks/useTheme';
@@ -78,6 +80,8 @@ export const EditorMenuBar: React.FC = () => {
   const navigate = useNavigate();
   const currentLocale = getLocaleFromPath(location.pathname);
   const serialOpen = useSimulatorStore((s) => s.serialMonitorOpen);
+  const autoInstallLibs = useLibraryPrefsStore((s) => s.autoInstallMissing);
+  const setAutoInstallLibs = useLibraryPrefsStore((s) => s.setAutoInstallMissing);
   const toggleSerialMonitor = useSimulatorStore((s) => s.toggleSerialMonitor);
   const scopeOpen = useOscilloscopeStore((s) => s.open);
   const toggleOscilloscope = useOscilloscopeStore((s) => s.toggleOscilloscope);
@@ -135,18 +139,19 @@ export const EditorMenuBar: React.FC = () => {
     { kind: 'command', id: 'project.import', label: t('editor.toolbar.importLabel', 'Import project') },
     { kind: 'command', id: 'project.exportVlx', label: t('editor.toolbar.exportVlxLabel', 'Export project (.vlx)') },
     { kind: 'command', id: 'project.export', label: t('editor.toolbar.exportLabel', 'Export project (.zip)') },
-    { kind: 'command', id: 'project.exportBom', label: t('editor.toolbar.exportBomLabel', 'Bill of Materials (CSV)'), pro: true },
+    { kind: 'command', id: 'project.exportBom', label: t('editor.toolbar.exportBomLabel', 'Bill of Materials (CSV)') },
     {
       kind: 'command',
       id: 'project.exportScreenshot',
       label: t('editor.toolbar.exportScreenshotLabel', 'Schematic image (PNG)'),
-      pro: true,
     },
     { kind: 'separator' },
     // The toolbar's "..." menu folded in here — same actions, same PRO
-    // pills, one button fewer in the strip.
-    { kind: 'command', id: 'project.share', label: t('editor.toolbar.shareLabel', 'Share / Embed') },
-    { kind: 'command', id: 'project.githubSync', label: t('editor.toolbar.githubSyncLabel', 'Sync to GitHub'), pro: true },
+    // pills, one button fewer in the strip. Share, GitHub sync and recording
+    // need velxio.dev accounts: only the pro overlay registers them, so this
+    // build hides the rows instead of offering actions that do nothing.
+    { kind: 'command', id: 'project.share', label: t('editor.toolbar.shareLabel', 'Share / Embed'), optional: true },
+    { kind: 'command', id: 'project.githubSync', label: t('editor.toolbar.githubSyncLabel', 'Sync to GitHub'), pro: true, optional: true },
     {
       kind: 'command',
       id: 'project.connectAgent',
@@ -157,7 +162,7 @@ export const EditorMenuBar: React.FC = () => {
       optional: true,
     },
     { kind: 'command', id: 'firmware.upload', label: t('editor.toolbar.uploadFirmwareLabel', 'Upload firmware') },
-    { kind: 'command', id: 'sim.record', label: t('editor.toolbar.recordLabel', 'Record simulation'), pro: true },
+    { kind: 'command', id: 'sim.record', label: t('editor.toolbar.recordLabel', 'Record simulation'), pro: true, optional: true },
   ];
 
   // Sign in / My projects for the Account menu. The bottom-left account
@@ -447,6 +452,34 @@ export const EditorMenuBar: React.FC = () => {
               >
                 <span>{t('editor.menu.redo', 'Redo')}</span>
                 <span className="emb-shortcut">Ctrl+Y</span>
+              </button>
+              <button
+                role="menuitem"
+                className="emb-item"
+                disabled={reroutableWireCount() === 0}
+                title={t(
+                  'editor.menu.routeWiresHint',
+                  'Lay out every wire without hand-made bends side by side and around parts',
+                )}
+                onClick={() => {
+                  setOpen(null);
+                  rerouteWires();
+                }}
+              >
+                <span>{t('editor.menu.routeWires', 'Route wires')}</span>
+              </button>
+              <div className="emb-separator" />
+              <button
+                role="menuitemcheckbox"
+                aria-checked={autoInstallLibs}
+                className="emb-item"
+                onClick={() => {
+                  setOpen(null);
+                  setAutoInstallLibs(!autoInstallLibs);
+                }}
+              >
+                <span>{t('missingLibraries.menu', 'Install missing libraries automatically')}</span>
+                <span className="emb-shortcut">{autoInstallLibs ? '✓' : ''}</span>
               </button>
             </>
           )}

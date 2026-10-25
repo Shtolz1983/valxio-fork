@@ -49,6 +49,7 @@
     "jszip": "^3.10.1",
     "littlefs": "^0.1.0",
     "lucide-react": "^0.460.0",
+    "modern-screenshot": "4.7.0",
     "monaco-editor": "0.55.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",

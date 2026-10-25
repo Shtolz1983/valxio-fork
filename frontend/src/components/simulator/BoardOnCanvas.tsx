@@ -239,6 +239,7 @@ export const BoardOnCanvas = ({
       {/* Active board highlight ring */}
       {isActive && (
         <div
+          data-canvas-ui="true"
           style={{
             position: 'absolute',
             left: x - 3,
@@ -278,6 +279,7 @@ export const BoardOnCanvas = ({
 
       {/* Status dot — top-right corner */}
       <div
+        data-canvas-ui="true"
         style={{
           position: 'absolute',
           left: box.left + box.w - 10,

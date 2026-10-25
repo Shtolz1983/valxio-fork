@@ -25,7 +25,10 @@ import { clearChipDrives } from '../../simulation/customChips/chipPinDrives';
 import { requestElectricalResolve } from '../../simulation/spice/electricalResolveHook';
 import { reportRunEvent } from '../../services/metricsService';
 import { useProjectStore } from '../../store/useProjectStore';
-import { triggerDownloadVlx } from '../../utils/vlxFile';
+import { useLocalProjectStore } from '../../store/useLocalProjectStore';
+import { safeProjectName, triggerDownloadVlx } from '../../utils/vlxFile';
+import { bomCsv } from '../../utils/bom';
+import { captureSchematic } from '../../utils/schematicImage';
 import {
   compileProgress,
   MULTI_BOARD_PROGRESS_ID,
@@ -49,7 +52,6 @@ import {
 } from '../../utils/analytics';
 import './EditorToolbar.css';
 import { ThemeToggle } from '../layout/ThemeToggle';
-import { getResolvedTheme } from '../../lib/theme';
 
 /**
  * Output-console group for circuit pre-flight + runtime faults. Routing these
@@ -1411,111 +1413,61 @@ export const EditorToolbar = ({
     }
   };
 
-  // Phase 3 D3.2 — Schematic screenshot. Pro-tier-gated by the backend.
-  // Same UX pattern as BOM export: everyone can click; 402 redirects to
-  // /pricing. The server-side headless chromium renders the canvas and
-  // returns a PNG, which we trigger a download for.
+  /** File name base for exports: the project's name, else the sketch's. */
+  const projectBaseName = () =>
+    useLocalProjectStore.getState().name ||
+    useProjectStore.getState().currentProject?.slug ||
+    files.find((f) => f.name.endsWith('.ino'))?.name.replace('.ino', '') ||
+    'velxio';
+
+  const downloadBlob = (blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  /** "Schematic image (PNG)": taken from the live canvas in the browser (utils/schematicImage.ts). */
   const handleExportScreenshot = async () => {
-    const projectId = currentProject?.id;
-    if (!projectId) {
-      setMessage({ type: 'error', text: 'Save the project before exporting an image.' });
-      return;
-    }
-    setMessage({ type: 'info', text: 'Rendering screenshot — may take 5-10 seconds…' });
+    const world = document.querySelector<HTMLElement>('.canvas-world');
+    const { boards: allBoards, components } = useSimulatorStore.getState();
+    const ids = [...allBoards.map((b) => b.id), ...components.map((c) => c.id)];
     try {
-      // The render happens in a headless browser on the server, which has
-      // no localStorage and therefore no idea which theme the user is
-      // looking at -- it used to hand back a dark image to someone working
-      // in light mode. Pass the RESOLVED theme so the export matches the
-      // canvas it was taken from.
-      const resp = await fetch(
-        `/api/pro/projects/${projectId}/screenshot.png?theme=${getResolvedTheme()}`,
-        { credentials: 'include' },
-      );
-      if (resp.status === 402) {
-        // Fire the in-place upgrade modal instead of bouncing to /pricing —
-        // keeps the user in the editor with full context. The pro overlay's
-        // UpgradeGate listens for this event and opens UpgradePromptModal.
-        window.dispatchEvent(new CustomEvent('velxio-pro-upgrade-prompt', {
-          detail: { componentName: 'Schematic screenshot export' },
-        }));
+      const blob = world ? await captureSchematic(world, ids) : null;
+      if (!blob) {
+        setMessage({ type: 'error', text: t('editor.toolbar.exportScreenshotEmpty', 'Add at least one component to export an image.') });
         return;
       }
-      if (resp.status === 401) {
-        window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname)}`;
-        return;
-      }
-      if (resp.status === 422) {
-        setMessage({ type: 'error', text: 'Add at least one component to export an image.' });
-        return;
-      }
-      if (!resp.ok) {
-        setMessage({ type: 'error', text: 'Screenshot export failed.' });
-        return;
-      }
-      const blob = await resp.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      const cd = resp.headers.get('Content-Disposition') || '';
-      const m = /filename="?([^"]+)"?/.exec(cd);
-      a.download = m ? m[1] : `velxio-${projectId}.png`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-      setMessage({ type: 'success', text: 'Screenshot downloaded.' });
-    } catch {
-      setMessage({ type: 'error', text: 'Screenshot export failed.' });
+      const filename = `${safeProjectName(projectBaseName())}.png`;
+      downloadBlob(blob, filename);
+      setMessage({ type: 'success', text: t('editor.toolbar.exportedFile', 'Exported {{file}}', { file: filename }) });
+    } catch (err) {
+      console.error('Schematic image failed', err);
+      setMessage({ type: 'error', text: t('editor.toolbar.exportScreenshotFailed', 'Screenshot export failed.') });
     }
   };
 
-  // Phase 3 D3.1 — BOM export. Pro-tier-gated by the backend (402 if not pro).
-  // We let everyone click; the 402 response feeds the upgrade prompt below
-  // so free/maker users hit the funnel naturally instead of an obviously-
-  // locked button (which they'd just dismiss).
-  const handleExportBom = async () => {
-    const projectId = currentProject?.id;
-    if (!projectId) {
-      setMessage({ type: 'error', text: 'Save the project before exporting a BOM.' });
-      return;
-    }
-    try {
-      const resp = await fetch(`/api/pro/projects/${projectId}/bom.csv`, {
-        credentials: 'include',
-      });
-      if (resp.status === 402) {
-        // Fire the in-place upgrade modal instead of bouncing to /pricing —
-        // keeps the user in the editor with full context. The pro overlay's
-        // UpgradeGate listens for this event and opens UpgradePromptModal.
-        window.dispatchEvent(new CustomEvent('velxio-pro-upgrade-prompt', {
-          detail: { componentName: 'BOM export' },
-        }));
-        return;
-      }
-      if (resp.status === 401) {
-        window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname)}`;
-        return;
-      }
-      if (!resp.ok) {
-        setMessage({ type: 'error', text: 'BOM export failed.' });
-        return;
-      }
-      const blob = await resp.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      // Filename comes from Content-Disposition; pick a fallback.
-      const cd = resp.headers.get('Content-Disposition') || '';
-      const m = /filename="?([^"]+)"?/.exec(cd);
-      a.download = m ? m[1] : `bom-${projectId}.csv`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-    } catch {
-      setMessage({ type: 'error', text: 'BOM export failed.' });
-    }
+  /** "Bill of Materials (CSV)": counted from the canvas in the browser (utils/bom.ts). */
+  const handleExportBom = () => {
+    const { boards: allBoards, components, wires } = useSimulatorStore.getState();
+    const csv = bomCsv(
+      { boards: allBoards, components, wires },
+      {
+        qty: t('editor.toolbar.bom.qty', 'Qty'),
+        part: t('editor.toolbar.bom.part', 'Part'),
+        value: t('editor.toolbar.bom.value', 'Value'),
+        libraries: t('editor.toolbar.bom.libraries', 'Arduino libraries'),
+        ids: t('editor.toolbar.bom.ids', 'On the canvas'),
+        wires: t('editor.toolbar.bom.wires', 'Jumper wires'),
+      },
+    );
+    const filename = `${safeProjectName(projectBaseName())}-bom.csv`;
+    downloadBlob(new Blob([csv], { type: 'text/csv;charset=utf-8' }), filename);
+    setMessage({ type: 'success', text: t('editor.toolbar.exportedFile', 'Exported {{file}}', { file: filename }) });
   };
 
   const handleFirmwareUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1666,24 +1618,9 @@ export const EditorToolbar = ({
     import: () => importInputRef.current?.click(),
     export: () => void handleExport(),
     exportVlx: () => handleExportVlx(),
-    bom: () => void handleExportBom(),
+    bom: () => handleExportBom(),
     screenshot: () => void handleExportScreenshot(),
     firmware: () => firmwareInputRef.current?.click(),
-    // Pro actions fire the same window events the old "..." menu items
-    // fired; without the overlay they are silent no-ops, which is fine —
-    // OSS builds cannot have linked repos or shared projects anyway.
-    share: () =>
-      window.dispatchEvent(new CustomEvent('velxio-pro-share-prompt', {
-        detail: { projectId: currentProject?.id ?? null },
-      })),
-    githubSync: () =>
-      window.dispatchEvent(new CustomEvent('velxio-pro-github-sync-prompt', {
-        detail: { projectId: currentProject?.id ?? null },
-      })),
-    record: () =>
-      window.dispatchEvent(new CustomEvent('velxio-pro-replay-record-toggle', {
-        detail: { projectId: currentProject?.id ?? null },
-      })),
     compile: () => void handleCompile(),
     run: () => void handleRun(),
     stop: () => handleStop(),
@@ -1700,9 +1637,6 @@ export const EditorToolbar = ({
       registerEditorCommand('project.exportBom', () => menuCommandsRef.current.bom()),
       registerEditorCommand('project.exportScreenshot', () => menuCommandsRef.current.screenshot()),
       registerEditorCommand('firmware.upload', () => menuCommandsRef.current.firmware()),
-      registerEditorCommand('project.share', () => menuCommandsRef.current.share()),
-      registerEditorCommand('project.githubSync', () => menuCommandsRef.current.githubSync()),
-      registerEditorCommand('sim.record', () => menuCommandsRef.current.record()),
       registerEditorCommand('sim.compile', () => menuCommandsRef.current.compile()),
       registerEditorCommand('sim.run', () => menuCommandsRef.current.run()),
       registerEditorCommand('sim.stop', () => menuCommandsRef.current.stop()),
