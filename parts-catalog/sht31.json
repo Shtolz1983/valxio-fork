@@ -1,0 +1,71 @@
+{
+  "id": "sht31",
+  "name": "SHT31",
+  "title": "Precision temperature and humidity sensor (I2C), ±0.3 °C, ±2 % RH",
+  "titleRu": "Точный датчик температуры и влажности (I2C), ±0,3 °C, ±2 % RH",
+  "group": "climate",
+  "interface": "i2c",
+  "pins": [
+    {
+      "name": "VIN",
+      "role": "power"
+    },
+    {
+      "name": "GND",
+      "role": "ground"
+    },
+    {
+      "name": "SCL",
+      "role": "i2c-scl"
+    },
+    {
+      "name": "SDA",
+      "role": "i2c-sda"
+    }
+  ],
+  "supply": {
+    "min": 2.4,
+    "max": 5.5
+  },
+  "i2c": {
+    "addresses": [
+      "0x44",
+      "0x45"
+    ]
+  },
+  "libraries": [
+    "Adafruit SHT31 Library",
+    "Adafruit BusIO"
+  ],
+  "example": "#include <Adafruit_SHT31.h>\n\nAdafruit_SHT31 sht31 = Adafruit_SHT31();\n\nvoid setup() {\n  Serial.begin(115200);\n  if (!sht31.begin(0x44)) {\n    Serial.println(\"SHT31 not found - check SDA/SCL (address 0x44, or 0x45 with ADR high)\");\n    while (true) delay(10);\n  }\n}\n\nvoid loop() {\n  float t = sht31.readTemperature();\n  float h = sht31.readHumidity();\n  Serial.print(\"Temperature: \");\n  Serial.print(t);\n  Serial.print(\" C, humidity: \");\n  Serial.print(h);\n  Serial.println(\" %\");\n  delay(1000);\n}\n",
+  "notes": [
+    "ADR pin low (default) = 0x44, high = 0x45."
+  ],
+  "source": {
+    "library": "https://github.com/adafruit/Adafruit_SHT31"
+  },
+  "sim": {
+    "model": "sht31",
+    "controls": [
+      {
+        "key": "temperature",
+        "label": "Temperature",
+        "min": -40,
+        "max": 125,
+        "step": 0.5,
+        "unit": "°C",
+        "default": 24
+      },
+      {
+        "key": "humidity",
+        "label": "Humidity",
+        "min": 0,
+        "max": 100,
+        "step": 1,
+        "unit": "%",
+        "default": 50
+      }
+    ]
+  },
+  "status": "verified"
+}

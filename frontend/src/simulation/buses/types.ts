@@ -175,8 +175,16 @@ export interface SpiDeviceDescriptor {
  * (`wasm_chip_runtime.py`, `ChipRuntime.ts`).
  */
 export interface RemoteSpiModel {
-  /** The compiled chip, base64. */
+  /** The compiled chip, base64. Empty for a `catalog` model. */
   wasmB64: string;
+  /**
+   * A parts-catalog chip the host has a native twin of
+   * (backend/app/services/catalog_spi_models.py), named instead of shipping an
+   * artifact. Its panel values are its attributes (`attrs` / `remoteAttrs()`).
+   */
+  catalog?: string;
+  /** The register map of a `catalog: 'regmap'` chip (partsCatalog/regmap.ts). */
+  regmap?: object;
   /** Chip pin name -> board GPIO. The fabric fills the bus pins it resolved;
    *  a model with extra legs (an interrupt output) adds them here. */
   pinMap?: Record<string, number>;

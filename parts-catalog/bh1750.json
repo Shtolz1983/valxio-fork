@@ -1,0 +1,64 @@
+{
+  "id": "bh1750",
+  "name": "BH1750",
+  "title": "Digital light sensor (I2C), 1…65535 lx, GY-302",
+  "titleRu": "Цифровой датчик освещённости (I2C), 1…65535 лк, GY-302",
+  "group": "light",
+  "interface": "i2c",
+  "pins": [
+    {
+      "name": "VCC",
+      "role": "power"
+    },
+    {
+      "name": "GND",
+      "role": "ground"
+    },
+    {
+      "name": "SCL",
+      "role": "i2c-scl"
+    },
+    {
+      "name": "SDA",
+      "role": "i2c-sda"
+    },
+    {
+      "name": "ADDR",
+      "role": "passive",
+      "desc": "Address select: low/open = 0x23, high = 0x5C"
+    }
+  ],
+  "supply": {
+    "min": 3.0,
+    "max": 5.0
+  },
+  "i2c": {
+    "addresses": [
+      "0x23",
+      "0x5C"
+    ]
+  },
+  "libraries": [
+    "BH1750"
+  ],
+  "example": "#include <Wire.h>\n#include <BH1750.h>\n\nBH1750 lightMeter;\n\nvoid setup() {\n  Serial.begin(115200);\n  Wire.begin();\n  if (!lightMeter.begin()) {\n    Serial.println(\"BH1750 not found - check SDA/SCL\");\n  }\n}\n\nvoid loop() {\n  float lux = lightMeter.readLightLevel();\n  Serial.print(\"Light: \");\n  Serial.print(lux);\n  Serial.println(\" lx\");\n  delay(1000);\n}\n",
+  "notes": [],
+  "source": {
+    "library": "https://github.com/claws/BH1750"
+  },
+  "sim": {
+    "model": "bh1750",
+    "controls": [
+      {
+        "key": "lux",
+        "label": "Light",
+        "min": 0,
+        "max": 20000,
+        "step": 10,
+        "unit": "lx",
+        "default": 300
+      }
+    ]
+  },
+  "status": "verified"
+}

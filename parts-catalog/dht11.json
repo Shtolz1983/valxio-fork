@@ -1,0 +1,63 @@
+{
+  "id": "dht11",
+  "name": "DHT11",
+  "title": "Temperature and humidity sensor, 0…50 °C ±2 °C, 20…90 % RH",
+  "titleRu": "Датчик температуры и влажности, 0…50 °C ±2 °C, 20…90 % RH",
+  "group": "climate",
+  "interface": "single-wire",
+  "pins": [
+    {
+      "name": "VCC",
+      "role": "power"
+    },
+    {
+      "name": "DATA",
+      "role": "bidir",
+      "desc": "Single-wire data (not I2C)"
+    },
+    {
+      "name": "GND",
+      "role": "ground"
+    }
+  ],
+  "supply": {
+    "min": 3.3,
+    "max": 5.5
+  },
+  "libraries": [
+    "DHT sensor library",
+    "Adafruit Unified Sensor"
+  ],
+  "example": "#include <DHT.h>\n\nDHT dht({{DATA}}, DHT11);\n\nvoid setup() {\n  Serial.begin(115200);\n  dht.begin();\n}\n\nvoid loop() {\n  delay(2000);  // the DHT11 measures at most once per second\n  float h = dht.readHumidity();\n  float t = dht.readTemperature();\n  if (isnan(h) || isnan(t)) {\n    Serial.println(\"DHT11 read failed\");\n    return;\n  }\n  Serial.print(\"Temperature: \");\n  Serial.print(t);\n  Serial.print(\" C, humidity: \");\n  Serial.print(h);\n  Serial.println(\" %\");\n}\n",
+  "notes": [
+    "3-pin modules carry the 10 kΩ pull-up on DATA; a bare 4-pin sensor needs one.",
+    "Read at most every 1-2 s; readTemperature() returns NaN on a failed read."
+  ],
+  "source": {
+    "library": "https://github.com/adafruit/DHT-sensor-library"
+  },
+  "sim": {
+    "model": "dht11",
+    "controls": [
+      {
+        "key": "temperature",
+        "label": "Temperature",
+        "min": 0,
+        "max": 50,
+        "step": 1,
+        "unit": "°C",
+        "default": 25
+      },
+      {
+        "key": "humidity",
+        "label": "Humidity",
+        "min": 20,
+        "max": 90,
+        "step": 1,
+        "unit": "%",
+        "default": 50
+      }
+    ]
+  },
+  "status": "verified"
+}

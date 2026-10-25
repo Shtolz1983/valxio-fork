@@ -1,0 +1,77 @@
+{
+  "id": "ccs811",
+  "name": "CCS811",
+  "title": "Air quality sensor eCO2 / TVOC (I2C)",
+  "titleRu": "Датчик качества воздуха eCO2 / TVOC (I2C)",
+  "group": "air",
+  "interface": "i2c",
+  "pins": [
+    {
+      "name": "VCC",
+      "role": "power"
+    },
+    {
+      "name": "GND",
+      "role": "ground"
+    },
+    {
+      "name": "SCL",
+      "role": "i2c-scl"
+    },
+    {
+      "name": "SDA",
+      "role": "i2c-sda"
+    },
+    {
+      "name": "WAK",
+      "role": "ground",
+      "desc": "Wake, must be LOW"
+    }
+  ],
+  "supply": {
+    "min": 3.3,
+    "max": 5.0
+  },
+  "i2c": {
+    "addresses": [
+      "0x5A",
+      "0x5B"
+    ]
+  },
+  "libraries": [
+    "Adafruit CCS811 Library",
+    "Adafruit BusIO"
+  ],
+  "example": "#include <Adafruit_CCS811.h>\n\nAdafruit_CCS811 ccs;\n\nvoid setup() {\n  Serial.begin(115200);\n  if (!ccs.begin()) {\n    Serial.println(\"CCS811 not found - check SDA/SCL and that WAK is on GND\");\n    while (true) delay(10);\n  }\n  while (!ccs.available()) delay(10);\n}\n\nvoid loop() {\n  if (ccs.available() && !ccs.readData()) {\n    Serial.print(\"eCO2: \");\n    Serial.print(ccs.geteCO2());\n    Serial.print(\" ppm, TVOC: \");\n    Serial.print(ccs.getTVOC());\n    Serial.println(\" ppb\");\n  }\n  delay(1000);\n}\n",
+  "notes": [
+    "WAK must be tied to GND or the sensor never answers.",
+    "Readings settle after about 20 minutes (48 h burn-in for a new sensor)."
+  ],
+  "source": {
+    "library": "https://github.com/adafruit/Adafruit_CCS811"
+  },
+  "sim": {
+    "model": "ccs811",
+    "controls": [
+      {
+        "key": "eco2",
+        "label": "eCO2",
+        "min": 400,
+        "max": 8192,
+        "step": 10,
+        "unit": "ppm",
+        "default": 400
+      },
+      {
+        "key": "tvoc",
+        "label": "TVOC",
+        "min": 0,
+        "max": 1187,
+        "step": 1,
+        "unit": "ppb",
+        "default": 0
+      }
+    ]
+  },
+  "status": "verified"
+}

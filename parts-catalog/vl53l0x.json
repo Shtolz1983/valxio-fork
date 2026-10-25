@@ -1,0 +1,66 @@
+{
+  "id": "vl53l0x",
+  "name": "VL53L0X",
+  "title": "Laser time-of-flight distance sensor (I2C), up to 2 m",
+  "titleRu": "Лазерный дальномер ToF (I2C), до 2 м",
+  "group": "distance",
+  "interface": "i2c",
+  "pins": [
+    {
+      "name": "VIN",
+      "role": "power"
+    },
+    {
+      "name": "GND",
+      "role": "ground"
+    },
+    {
+      "name": "SCL",
+      "role": "i2c-scl"
+    },
+    {
+      "name": "SDA",
+      "role": "i2c-sda"
+    },
+    {
+      "name": "XSHUT",
+      "role": "nc",
+      "desc": "Shutdown, active low (optional)"
+    }
+  ],
+  "supply": {
+    "min": 2.6,
+    "max": 5.5
+  },
+  "i2c": {
+    "addresses": [
+      "0x29"
+    ]
+  },
+  "libraries": [
+    "VL53L0X"
+  ],
+  "example": "#include <Wire.h>\n#include <VL53L0X.h>\n\nVL53L0X sensor;\n\nvoid setup() {\n  Serial.begin(115200);\n  Wire.begin();\n  sensor.setTimeout(500);\n  if (!sensor.init()) {\n    Serial.println(\"VL53L0X not found - check SDA/SCL\");\n    while (true) delay(10);\n  }\n  sensor.startContinuous();\n}\n\nvoid loop() {\n  uint16_t mm = sensor.readRangeContinuousMillimeters();\n  if (sensor.timeoutOccurred()) {\n    Serial.println(\"timeout\");\n  } else {\n    Serial.print(\"Distance: \");\n    Serial.print(mm);\n    Serial.println(\" mm\");\n  }\n  delay(100);\n}\n",
+  "notes": [
+    "Default address 0x29; to use several, hold the others in reset with XSHUT and change addresses one by one.",
+    "Out of range reads about 8190 mm."
+  ],
+  "source": {
+    "library": "https://github.com/pololu/vl53l0x-arduino"
+  },
+  "sim": {
+    "model": "vl53l0x",
+    "controls": [
+      {
+        "key": "distance",
+        "label": "Distance",
+        "min": 30,
+        "max": 2200,
+        "step": 10,
+        "unit": "mm",
+        "default": 500
+      }
+    ]
+  },
+  "status": "verified"
+}

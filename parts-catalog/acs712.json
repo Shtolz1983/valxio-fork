@@ -1,0 +1,74 @@
+{
+  "id": "acs712",
+  "name": "ACS712",
+  "title": "Hall-effect current sensor, ±5/20/30 A, analog",
+  "titleRu": "Датчик тока на эффекте Холла, ±5/20/30 А, аналоговый",
+  "group": "electrical",
+  "interface": "analog",
+  "pins": [
+    {
+      "name": "VCC",
+      "role": "power"
+    },
+    {
+      "name": "OUT",
+      "role": "analog-in",
+      "desc": "VCC/2 at 0 A, 185/100/66 mV per A"
+    },
+    {
+      "name": "GND",
+      "role": "ground"
+    },
+    {
+      "name": "IP+",
+      "role": "passive",
+      "desc": "Current path in"
+    },
+    {
+      "name": "IP-",
+      "role": "passive",
+      "desc": "Current path out"
+    }
+  ],
+  "supply": {
+    "min": 4.5,
+    "max": 5.5
+  },
+  "libraries": [],
+  "example": "// ACS712-05B: 185 mV per amp, 2.5 V at 0 A (5 V supply).\nconst int SENSOR_PIN = {{OUT}};\nconst float MV_PER_AMP = 185.0;  // 100 for the 20A version, 66 for 30A\n\n#if defined(ESP32)\nconst float ADC_MAX = 4095.0;  // 12-bit ADC\nconst float ADC_VREF = 3.3;\n#else\nconst float ADC_MAX = 1023.0;  // 10-bit ADC\nconst float ADC_VREF = 5.0;\n#endif\n\nvoid setup() {\n  Serial.begin(115200);\n}\n\nvoid loop() {\n  float millivolts = analogRead(SENSOR_PIN) * ADC_VREF / ADC_MAX * 1000.0;\n  float amps = (millivolts - 2500.0) / MV_PER_AMP;\n  Serial.print(\"Current: \");\n  Serial.print(amps, 3);\n  Serial.println(\" A\");\n  delay(500);\n}\n",
+  "notes": [
+    "Needs 5 V. OUT swings up to 5 V: on a 3.3 V board use a divider and rescale the zero point.",
+    "The load current flows through IP+ / IP- (screw terminal), isolated from the logic side."
+  ],
+  "sim": {
+    "controls": [
+      {
+        "key": "current",
+        "label": "Current",
+        "min": -5,
+        "max": 5,
+        "step": 0.05,
+        "unit": "A",
+        "default": 0
+      }
+    ],
+    "outputs": [
+      {
+        "pin": "OUT",
+        "kind": "analog",
+        "from": "current",
+        "volts": [
+          [
+            -5,
+            1.575
+          ],
+          [
+            5,
+            3.425
+          ]
+        ]
+      }
+    ]
+  },
+  "status": "verified"
+}

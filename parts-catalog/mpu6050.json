@@ -1,0 +1,62 @@
+{
+  "id": "mpu6050",
+  "name": "MPU6050",
+  "title": "6-axis accelerometer and gyroscope (I2C), GY-521",
+  "titleRu": "6-осевой акселерометр и гироскоп (I2C), GY-521",
+  "group": "motion",
+  "interface": "i2c",
+  "component": "mpu6050",
+  "pins": [
+    {
+      "name": "INT",
+      "role": "nc"
+    },
+    {
+      "name": "AD0",
+      "role": "passive",
+      "desc": "Address: low/open = 0x68, high = 0x69"
+    },
+    {
+      "name": "XCL",
+      "role": "nc"
+    },
+    {
+      "name": "XDA",
+      "role": "nc"
+    },
+    {
+      "name": "SDA",
+      "role": "i2c-sda"
+    },
+    {
+      "name": "SCL",
+      "role": "i2c-scl"
+    },
+    {
+      "name": "GND",
+      "role": "ground"
+    },
+    {
+      "name": "VCC",
+      "role": "power"
+    }
+  ],
+  "supply": {
+    "min": 3.0,
+    "max": 5.5
+  },
+  "i2c": {
+    "addresses": [
+      "0x68",
+      "0x69"
+    ]
+  },
+  "libraries": [
+    "Adafruit MPU6050",
+    "Adafruit Unified Sensor",
+    "Adafruit BusIO"
+  ],
+  "example": "#include <Adafruit_MPU6050.h>\n\nAdafruit_MPU6050 mpu;\n\nvoid setup() {\n  Serial.begin(115200);\n  if (!mpu.begin()) {\n    Serial.println(\"MPU6050 not found - check SDA/SCL\");\n    while (true) delay(10);\n  }\n}\n\nvoid loop() {\n  sensors_event_t a, g, temp;\n  mpu.getEvent(&a, &g, &temp);\n  Serial.print(\"Accel X: \");\n  Serial.print(a.acceleration.x);\n  Serial.print(\" Y: \");\n  Serial.print(a.acceleration.y);\n  Serial.print(\" Z: \");\n  Serial.print(a.acceleration.z);\n  Serial.print(\" m/s^2, gyro Z: \");\n  Serial.print(g.gyro.z);\n  Serial.println(\" rad/s\");\n  delay(200);\n}\n",
+  "notes": [],
+  "status": "verified"
+}

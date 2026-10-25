@@ -77,3 +77,19 @@ describe('AVR ADC pad mapping', () => {
     sim.stop();
   });
 });
+
+describe('AVR ADC across a rebuilt chip', () => {
+  // A part sets its voltage when it attaches and again only when its value
+  // moves. Stop -> Run rebuilds the MCU, ADC included, and a new ADC that
+  // started at zero read 0 V on every analog sensor until a slider moved.
+  it('keeps the circuit voltages through a reset and a new firmware', () => {
+    const sim = boot('uno');
+    setAdcVoltage(sim, 14, 2.5);
+    setAdcVoltage(sim, 17, 1.2);
+    sim.reset();
+    expect(channelOf(sim, 0)).toBeCloseTo(2.5, 6);
+    expect(channelOf(sim, 3)).toBeCloseTo(1.2, 6);
+    sim.loadHex(EMPTY_HEX);
+    expect(channelOf(sim, 0)).toBeCloseTo(2.5, 6);
+  });
+});

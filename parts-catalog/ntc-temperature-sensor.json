@@ -1,0 +1,31 @@
+{
+  "id": "ntc-temperature-sensor",
+  "name": "NTC",
+  "title": "NTC thermistor temperature module (10 kΩ, B=3950)",
+  "titleRu": "Модуль термистора NTC (10 кОм, B=3950)",
+  "group": "climate",
+  "interface": "analog",
+  "component": "ntc-temperature-sensor",
+  "pins": [
+    {
+      "name": "GND",
+      "role": "ground"
+    },
+    {
+      "name": "VCC",
+      "role": "power"
+    },
+    {
+      "name": "OUT",
+      "role": "analog-in"
+    }
+  ],
+  "supply": {
+    "min": 3.3,
+    "max": 5.5
+  },
+  "libraries": [],
+  "example": "const int SENSOR_PIN = {{OUT}};\nconst float BETA = 3950;  // thermistor beta coefficient\n\n#if defined(ESP32)\nconst float ADC_MAX = 4095.0;  // 12-bit ADC\nconst float ADC_VREF = 3.3;\n#else\nconst float ADC_MAX = 1023.0;  // 10-bit ADC\nconst float ADC_VREF = 5.0;\n#endif\n\nvoid setup() {\n  Serial.begin(115200);\n}\n\nvoid loop() {\n  int raw = analogRead(SENSOR_PIN);\n  float celsius = 1 / (log(1 / (ADC_MAX / raw - 1)) / BETA + 1.0 / 298.15) - 273.15;\n  Serial.print(\"Temperature: \");\n  Serial.print(celsius);\n  Serial.println(\" C\");\n  delay(1000);\n}\n",
+  "notes": [],
+  "status": "verified"
+}

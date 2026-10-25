@@ -1,0 +1,47 @@
+{
+  "id": "tm1637",
+  "name": "TM1637",
+  "title": "4-digit 7-segment display with TM1637 driver",
+  "titleRu": "4-разрядный 7-сегментный индикатор с драйвером TM1637",
+  "group": "display",
+  "interface": "digital",
+  "pins": [
+    {
+      "name": "CLK",
+      "role": "mcu-out",
+      "desc": "Clock"
+    },
+    {
+      "name": "DIO",
+      "role": "bidir",
+      "desc": "Data"
+    },
+    {
+      "name": "VCC",
+      "role": "power"
+    },
+    {
+      "name": "GND",
+      "role": "ground"
+    }
+  ],
+  "supply": {
+    "min": 3.3,
+    "max": 5.5
+  },
+  "libraries": [
+    "TM1637"
+  ],
+  "example": "#include <TM1637Display.h>\n\nTM1637Display display({{CLK}}, {{DIO}});\nint counter = 0;\n\nvoid setup() {\n  display.setBrightness(5);  // 0..7\n}\n\nvoid loop() {\n  display.showNumberDec(counter++);\n  delay(1000);\n}\n",
+  "notes": [
+    "Not I2C despite the two wires: any two GPIOs work."
+  ],
+  "source": {
+    "library": "https://github.com/avishorp/TM1637"
+  },
+  "sim": {
+    "model": "tm1637",
+    "controls": []
+  },
+  "status": "verified"
+}

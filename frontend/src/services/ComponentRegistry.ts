@@ -7,6 +7,7 @@
 
 import { prepareSearchFields, rankBySearch, type PreparedSearchFields } from '../utils/searchMatch';
 import { componentSearchKeywords } from '../data/componentSearchKeywords';
+import { loadPartCardComponents } from '../partsCatalog/catalog';
 import type {
   ComponentMetadata,
   ComponentCategory,
@@ -221,6 +222,11 @@ export class ComponentRegistry {
         pinCount: 0,
         tags: ['custom', 'chip', 'wasm', 'c', 'wokwi', 'eeprom', 'rtc', 'logic', 'cpu', '8080', 'z80'],
       });
+
+      // Generic modules from the parts catalogue (parts-catalog/*.json via
+      // the backend). Awaited here so a saved project's modules resolve on
+      // the first render; resolves to [] when the backend has no catalogue.
+      data.components.push(...(await loadPartCardComponents()));
 
       this.processMetadata(data.components);
       this.loaded = true;

@@ -1,0 +1,35 @@
+{
+  "id": "pir-motion-sensor",
+  "name": "HC-SR501",
+  "title": "PIR motion sensor",
+  "titleRu": "ИК-датчик движения (PIR)",
+  "group": "motion",
+  "interface": "digital",
+  "component": "pir-motion-sensor",
+  "pins": [
+    {
+      "name": "VCC",
+      "role": "power"
+    },
+    {
+      "name": "OUT",
+      "role": "mcu-in",
+      "desc": "HIGH while motion is detected"
+    },
+    {
+      "name": "GND",
+      "role": "ground"
+    }
+  ],
+  "supply": {
+    "min": 4.5,
+    "max": 20.0
+  },
+  "libraries": [],
+  "example": "const int PIR_PIN = {{OUT}};\n\nvoid setup() {\n  Serial.begin(115200);\n  pinMode(PIR_PIN, INPUT);\n}\n\nvoid loop() {\n  if (digitalRead(PIR_PIN) == HIGH) {\n    Serial.println(\"Motion detected\");\n  }\n  delay(200);\n}\n",
+  "notes": [
+    "OUT is 3.3 V logic, safe for 3.3 V boards.",
+    "Trimmers set the hold time and the sensitivity; allow 30-60 s warm-up."
+  ],
+  "status": "verified"
+}

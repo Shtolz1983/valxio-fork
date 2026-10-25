@@ -1,0 +1,53 @@
+{
+  "id": "ttp223",
+  "name": "TTP223",
+  "title": "Capacitive touch button",
+  "titleRu": "Ёмкостная сенсорная кнопка",
+  "group": "touch",
+  "interface": "digital",
+  "pins": [
+    {
+      "name": "VCC",
+      "role": "power"
+    },
+    {
+      "name": "IO",
+      "role": "mcu-in",
+      "desc": "HIGH while touched (default mode)"
+    },
+    {
+      "name": "GND",
+      "role": "ground"
+    }
+  ],
+  "supply": {
+    "min": 2.0,
+    "max": 5.5
+  },
+  "libraries": [],
+  "example": "const int TOUCH_PIN = {{IO}};\n\nvoid setup() {\n  Serial.begin(115200);\n  pinMode(TOUCH_PIN, INPUT);\n}\n\nvoid loop() {\n  if (digitalRead(TOUCH_PIN) == HIGH) {\n    Serial.println(\"Touched\");\n  }\n  delay(100);\n}\n",
+  "notes": [
+    "Solder pad A switches the output to active LOW, pad B to toggle mode."
+  ],
+  "sim": {
+    "controls": [
+      {
+        "key": "touch",
+        "label": "Touch",
+        "min": 0,
+        "max": 1,
+        "step": 1,
+        "unit": "",
+        "default": 0
+      }
+    ],
+    "outputs": [
+      {
+        "pin": "IO",
+        "kind": "digital",
+        "from": "touch"
+      }
+    ]
+  },
+  "status": "verified"
+}

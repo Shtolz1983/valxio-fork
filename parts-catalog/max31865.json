@@ -1,0 +1,79 @@
+{
+  "id": "max31865",
+  "name": "MAX31865",
+  "title": "RTD (PT100/PT1000) to digital converter, SPI, 15-bit, 2/3/4-wire",
+  "titleRu": "Преобразователь сигнала термосопротивления PT100/PT1000 в цифру, SPI, 15 бит, 2/3/4 провода",
+  "group": "climate",
+  "interface": "spi",
+  "pins": [
+    {
+      "name": "VIN",
+      "role": "power",
+      "desc": "3-5 V, feeds the onboard 3.3 V regulator"
+    },
+    {
+      "name": "3VO",
+      "role": "power",
+      "desc": "3.3 V regulator output, leave unconnected"
+    },
+    {
+      "name": "GND",
+      "role": "ground"
+    },
+    {
+      "name": "CLK",
+      "role": "spi-sck"
+    },
+    {
+      "name": "SDO",
+      "role": "spi-miso"
+    },
+    {
+      "name": "SDI",
+      "role": "spi-mosi"
+    },
+    {
+      "name": "CS",
+      "role": "spi-cs"
+    },
+    {
+      "name": "RDY",
+      "role": "nc",
+      "desc": "Data-ready output, optional"
+    }
+  ],
+  "supply": {
+    "min": 3,
+    "max": 5
+  },
+  "libraries": [
+    "Adafruit MAX31865 library",
+    "Adafruit BusIO"
+  ],
+  "example": "#include <Adafruit_MAX31865.h>\n\nconst int CS_PIN = {{CS}};\nAdafruit_MAX31865 thermo = Adafruit_MAX31865(CS_PIN);\n\n// 430.0 for PT100, 4300.0 for PT1000\n#define RREF 430.0\n// 100.0 for PT100, 1000.0 for PT1000\n#define RNOMINAL 100.0\n\nvoid setup() {\n  Serial.begin(115200);\n  thermo.begin(MAX31865_4WIRE);  // MAX31865_2WIRE or MAX31865_3WIRE to match the probe\n}\n\nvoid loop() {\n  float t = thermo.temperature(RNOMINAL, RREF);\n  uint8_t fault = thermo.readFault();\n  if (fault) {\n    Serial.print(\"Fault 0x\");\n    Serial.println(fault, HEX);\n    thermo.clearFault();\n  } else {\n    Serial.print(\"Temperature: \");\n    Serial.print(t);\n    Serial.println(\" C\");\n  }\n  delay(1000);\n}\n",
+  "notes": [
+    "Set RREF and RNOMINAL to match the board: 430 ohm / 100 for PT100, 4300 ohm / 1000 for PT1000.",
+    "Adafruit board is 4-wire by default; for 2- or 3-wire probes solder the jumpers on the back and pass MAX31865_2WIRE/3WIRE to begin().",
+    "VIN takes 3-5 V and SPI pins are level-shifted, so power it at your MCU logic level.",
+    "Fault code 0x… from readFault() usually means a disconnected probe or wrong wire-mode jumpers."
+  ],
+  "source": {
+    "datasheet": "https://learn.adafruit.com/adafruit-max31865-rtd-pt100-amplifier/pinouts",
+    "library": "https://github.com/adafruit/Adafruit_MAX31865"
+  },
+  "sim": {
+    "model": "max31865",
+    "controls": [
+      {
+        "key": "temperature",
+        "label": "RTD temperature",
+        "min": -200,
+        "max": 850,
+        "step": 0.1,
+        "unit": "°C",
+        "default": 25
+      }
+    ]
+  },
+  "status": "verified"
+}

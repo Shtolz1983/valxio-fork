@@ -221,6 +221,15 @@
   cursor: not-allowed;
 }
 
+.add-component-btn.add-component-btn-secondary {
+  background: var(--wb-5);
+  color: var(--wb-13);
+  border: 1px solid var(--wb-7);
+}
+.add-component-btn.add-component-btn-secondary:hover:not(:disabled) {
+  background: var(--color-wash-hover);
+}
+
 /* ── Canvas content (viewport) ───────────────────── */
 .canvas-content {
   flex: 1;

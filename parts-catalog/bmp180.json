@@ -1,0 +1,70 @@
+{
+  "id": "bmp180",
+  "name": "BMP180",
+  "title": "Barometric pressure and temperature sensor (I2C), GY-68",
+  "titleRu": "Датчик атмосферного давления и температуры (I2C), GY-68",
+  "group": "climate",
+  "interface": "i2c",
+  "pins": [
+    {
+      "name": "VIN",
+      "role": "power"
+    },
+    {
+      "name": "GND",
+      "role": "ground"
+    },
+    {
+      "name": "SCL",
+      "role": "i2c-scl"
+    },
+    {
+      "name": "SDA",
+      "role": "i2c-sda"
+    }
+  ],
+  "supply": {
+    "min": 3.3,
+    "max": 5.0
+  },
+  "i2c": {
+    "addresses": [
+      "0x77"
+    ]
+  },
+  "libraries": [
+    "Adafruit BMP085 Library",
+    "Adafruit BusIO"
+  ],
+  "example": "#include <Adafruit_BMP085.h>\n\nAdafruit_BMP085 bmp;\n\nvoid setup() {\n  Serial.begin(115200);\n  if (!bmp.begin()) {\n    Serial.println(\"BMP180 not found - check SDA/SCL\");\n    while (true) delay(10);\n  }\n}\n\nvoid loop() {\n  Serial.print(\"Temperature: \");\n  Serial.print(bmp.readTemperature());\n  Serial.print(\" C, pressure: \");\n  Serial.print(bmp.readPressure() / 100.0);\n  Serial.println(\" hPa\");\n  delay(1000);\n}\n",
+  "notes": [
+    "The BMP085 library drives the BMP180 too (same protocol)."
+  ],
+  "source": {
+    "library": "https://github.com/adafruit/Adafruit-BMP085-Library"
+  },
+  "sim": {
+    "model": "bmp180",
+    "controls": [
+      {
+        "key": "temperature",
+        "label": "Temperature",
+        "min": -40,
+        "max": 85,
+        "step": 0.5,
+        "unit": "°C",
+        "default": 24
+      },
+      {
+        "key": "pressure",
+        "label": "Pressure",
+        "min": 300,
+        "max": 1100,
+        "step": 0.5,
+        "unit": "hPa",
+        "default": 1013
+      }
+    ]
+  },
+  "status": "verified"
+}

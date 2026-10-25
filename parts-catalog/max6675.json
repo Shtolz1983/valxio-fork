@@ -1,0 +1,62 @@
+{
+  "id": "max6675",
+  "name": "MAX6675",
+  "title": "K-type thermocouple amplifier, 0…1024 °C (SPI, read-only)",
+  "titleRu": "Усилитель термопары K-типа, 0…1024 °C (SPI, только чтение)",
+  "group": "climate",
+  "interface": "spi",
+  "pins": [
+    {
+      "name": "GND",
+      "role": "ground"
+    },
+    {
+      "name": "VCC",
+      "role": "power"
+    },
+    {
+      "name": "SCK",
+      "role": "mcu-out",
+      "desc": "Clock"
+    },
+    {
+      "name": "CS",
+      "role": "spi-cs"
+    },
+    {
+      "name": "SO",
+      "role": "mcu-in",
+      "desc": "Data out"
+    }
+  ],
+  "supply": {
+    "min": 3.0,
+    "max": 5.5
+  },
+  "libraries": [
+    "MAX6675 library"
+  ],
+  "example": "#include <max6675.h>\n\nconst int THERMO_SCK = {{SCK}};\nconst int THERMO_CS = {{CS}};\nconst int THERMO_SO = {{SO}};\nMAX6675 thermocouple(THERMO_SCK, THERMO_CS, THERMO_SO);\n\nvoid setup() {\n  Serial.begin(115200);\n  delay(500);  // let the MAX6675 settle\n}\n\nvoid loop() {\n  Serial.print(\"Thermocouple: \");\n  Serial.print(thermocouple.readCelsius());\n  Serial.println(\" C\");\n  delay(1000);  // one conversion takes up to 220 ms\n}\n",
+  "notes": [
+    "The library bit-bangs the bus, so any three GPIOs work.",
+    "Reads NaN with no thermocouple attached."
+  ],
+  "source": {
+    "library": "https://github.com/adafruit/MAX6675-library"
+  },
+  "sim": {
+    "model": "max6675",
+    "controls": [
+      {
+        "key": "temperature",
+        "label": "Thermocouple temperature",
+        "min": 0,
+        "max": 1023.75,
+        "step": 0.25,
+        "unit": "°C",
+        "default": 25
+      }
+    ]
+  },
+  "status": "verified"
+}

@@ -1,0 +1,62 @@
+{
+  "id": "ds18b20",
+  "name": "DS18B20",
+  "title": "Digital temperature sensor, 1-Wire, -55…125 °C, ±0.5 °C",
+  "titleRu": "Цифровой датчик температуры, 1-Wire, -55…125 °C, ±0,5 °C",
+  "group": "climate",
+  "interface": "1-wire",
+  "pins": [
+    {
+      "name": "GND",
+      "role": "ground"
+    },
+    {
+      "name": "DQ",
+      "role": "bidir",
+      "desc": "1-Wire data, needs a 4.7 kΩ pull-up to VCC"
+    },
+    {
+      "name": "VCC",
+      "role": "power"
+    }
+  ],
+  "supply": {
+    "min": 3.0,
+    "max": 5.5
+  },
+  "pullups": [
+    {
+      "pin": "DQ",
+      "ohms": 4700
+    }
+  ],
+  "libraries": [
+    "OneWire",
+    "DallasTemperature"
+  ],
+  "example": "#include <OneWire.h>\n#include <DallasTemperature.h>\n\nconst int ONE_WIRE_PIN = {{DQ}};\nOneWire oneWire(ONE_WIRE_PIN);\nDallasTemperature sensors(&oneWire);\n\nvoid setup() {\n  Serial.begin(115200);\n  sensors.begin();\n}\n\nvoid loop() {\n  sensors.requestTemperatures();\n  float t = sensors.getTempCByIndex(0);\n  if (t == DEVICE_DISCONNECTED_C) {\n    Serial.println(\"DS18B20 not found - check the wiring and the 4.7k pull-up\");\n  } else {\n    Serial.print(\"Temperature: \");\n    Serial.print(t);\n    Serial.println(\" C\");\n  }\n  delay(1000);\n}\n",
+  "notes": [
+    "DQ needs a 4.7 kΩ pull-up to VCC (many 3-pin modules already have it).",
+    "Several DS18B20 can share one DQ line; address them with getTempCByIndex(i).",
+    "A conversion at 12-bit resolution takes up to 750 ms."
+  ],
+  "source": {
+    "datasheet": "https://www.analog.com/media/en/technical-documentation/data-sheets/DS18B20.pdf",
+    "library": "https://github.com/milesburton/Arduino-Temperature-Control-Library"
+  },
+  "sim": {
+    "model": "ds18b20",
+    "controls": [
+      {
+        "key": "temperature",
+        "label": "Temperature",
+        "min": -55,
+        "max": 125,
+        "step": 0.5,
+        "unit": "°C",
+        "default": 25
+      }
+    ]
+  },
+  "status": "verified"
+}

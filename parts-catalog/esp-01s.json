@@ -1,0 +1,46 @@
+{
+  "id": "esp-01s",
+  "name": "ESP-01S",
+  "title": "ESP8266 Wi-Fi module (AT firmware, UART) on an ESP-01 adapter v1.0 with 3.3 V regulator and level shifter",
+  "titleRu": "Wi-Fi модуль ESP8266 ESP-01S (AT-прошивка, UART) на адаптере ESP-01 v1.0 со стабилизатором 3,3 В и преобразователем уровней",
+  "group": "other",
+  "interface": "uart",
+  "pins": [
+    {
+      "name": "RX",
+      "role": "mcu-out",
+      "desc": "Serial data into the module, connect to the MCU TX (swap RX/TX if no reply)"
+    },
+    {
+      "name": "TX",
+      "role": "mcu-in",
+      "desc": "Serial data from the module, connect to the MCU RX"
+    },
+    {
+      "name": "GND",
+      "role": "ground"
+    },
+    {
+      "name": "VCC",
+      "role": "power",
+      "desc": "5 V typical input of the adapter regulator, not for the bare module"
+    }
+  ],
+  "supply": {
+    "min": 5,
+    "max": 12
+  },
+  "libraries": [],
+  "example": "// ESP-01S with stock AT firmware: send AT commands and print the replies.\n#if defined(ESP32)\n  #define ESP_SERIAL Serial2\n#else\n  #include <SoftwareSerial.h>\n  SoftwareSerial espSerial({{TX}}, {{RX}});  // board RX, board TX\n  #define ESP_SERIAL espSerial\n#endif\n\nvoid setup() {\n  Serial.begin(115200);\n#if defined(ESP32)\n  ESP_SERIAL.begin(115200, SERIAL_8N1, {{TX}}, {{RX}});  // board RX, board TX\n#else\n  ESP_SERIAL.begin(9600);  // set the module to 9600 first: AT+UART_DEF=9600,8,1,0,0\n#endif\n  delay(1000);\n  ESP_SERIAL.println(\"AT+GMR\");\n}\n\nvoid loop() {\n  while (ESP_SERIAL.available()) Serial.write(ESP_SERIAL.read());\n  while (Serial.available()) ESP_SERIAL.write(Serial.read());\n}\n",
+  "notes": [
+    "The bare ESP-01/ESP-01S is 3.3 V only (not 5 V tolerant) and can draw about 170 mA, more than an Uno 3.3 V pin supplies.",
+    "The v1.0 adapter has an onboard 3.3 V regulator (input 5 V typical, up to 12 V), MOSFET level shifting on TX/RX, and ties CH_PD high; RST is left floating.",
+    "Stock AT firmware usually runs at 115200 baud; SoftwareSerial on an Uno is unreliable at that speed, so lower the module baud rate or use a hardware UART.",
+    "Silkscreen labels differ between sellers: if there is no answer, swap the TX and RX wires. Pin order in the card follows the ProtoSupplies listing."
+  ],
+  "source": {
+    "datasheet": "https://protosupplies.com/product/esp8266-esp-01-adapter-with-voltage-regulator/",
+    "library": "https://github.com/bportaluri/WiFiEsp"
+  },
+  "status": "verified"
+}

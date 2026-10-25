@@ -1,0 +1,39 @@
+{
+  "id": "hc-sr04",
+  "name": "HC-SR04",
+  "title": "Ultrasonic distance sensor, 2…400 cm",
+  "titleRu": "Ультразвуковой дальномер, 2…400 см",
+  "group": "distance",
+  "interface": "digital",
+  "component": "hc-sr04",
+  "pins": [
+    {
+      "name": "VCC",
+      "role": "power"
+    },
+    {
+      "name": "TRIG",
+      "role": "mcu-out",
+      "desc": "10 µs pulse starts a measurement"
+    },
+    {
+      "name": "ECHO",
+      "role": "mcu-in",
+      "desc": "Pulse width = echo time"
+    },
+    {
+      "name": "GND",
+      "role": "ground"
+    }
+  ],
+  "supply": {
+    "min": 4.5,
+    "max": 5.5
+  },
+  "libraries": [],
+  "example": "const int TRIG_PIN = {{TRIG}};\nconst int ECHO_PIN = {{ECHO}};\n\nvoid setup() {\n  Serial.begin(115200);\n  pinMode(TRIG_PIN, OUTPUT);\n  pinMode(ECHO_PIN, INPUT);\n}\n\nvoid loop() {\n  digitalWrite(TRIG_PIN, LOW);\n  delayMicroseconds(2);\n  digitalWrite(TRIG_PIN, HIGH);\n  delayMicroseconds(10);\n  digitalWrite(TRIG_PIN, LOW);\n  long duration = pulseIn(ECHO_PIN, HIGH, 30000);\n  Serial.print(\"Distance: \");\n  Serial.print(duration / 58.0);\n  Serial.println(\" cm\");\n  delay(200);\n}\n",
+  "notes": [
+    "Needs 5 V. ECHO outputs 5 V: on a 3.3 V board (ESP32, Pico) put a divider (1k/2k) on ECHO."
+  ],
+  "status": "verified"
+}

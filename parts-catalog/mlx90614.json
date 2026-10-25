@@ -1,0 +1,70 @@
+{
+  "id": "mlx90614",
+  "name": "MLX90614",
+  "title": "Non-contact infrared thermometer (I2C), -70…380 °C",
+  "titleRu": "Бесконтактный ИК-термометр (I2C), -70…380 °C",
+  "group": "climate",
+  "interface": "i2c",
+  "pins": [
+    {
+      "name": "VIN",
+      "role": "power"
+    },
+    {
+      "name": "GND",
+      "role": "ground"
+    },
+    {
+      "name": "SCL",
+      "role": "i2c-scl"
+    },
+    {
+      "name": "SDA",
+      "role": "i2c-sda"
+    }
+  ],
+  "supply": {
+    "min": 3.0,
+    "max": 5.0
+  },
+  "i2c": {
+    "addresses": [
+      "0x5A"
+    ]
+  },
+  "libraries": [
+    "Adafruit MLX90614 Library",
+    "Adafruit BusIO"
+  ],
+  "example": "#include <Adafruit_MLX90614.h>\n\nAdafruit_MLX90614 mlx = Adafruit_MLX90614();\n\nvoid setup() {\n  Serial.begin(115200);\n  if (!mlx.begin()) {\n    Serial.println(\"MLX90614 not found - check SDA/SCL\");\n    while (true) delay(10);\n  }\n}\n\nvoid loop() {\n  Serial.print(\"Ambient: \");\n  Serial.print(mlx.readAmbientTempC());\n  Serial.print(\" C, object: \");\n  Serial.print(mlx.readObjectTempC());\n  Serial.println(\" C\");\n  delay(500);\n}\n",
+  "notes": [
+    "GY-906 boards with a regulator take 3-5 V; the bare 3V version only 3.3 V."
+  ],
+  "source": {
+    "library": "https://github.com/adafruit/Adafruit-MLX90614-Library"
+  },
+  "sim": {
+    "model": "mlx90614",
+    "controls": [
+      {
+        "key": "objectTemp",
+        "label": "Object temperature",
+        "min": -70,
+        "max": 380,
+        "step": 0.5,
+        "unit": "°C",
+        "default": 36.5
+      },
+      {
+        "key": "ambientTemp",
+        "label": "Ambient temperature",
+        "min": -40,
+        "max": 125,
+        "step": 0.5,
+        "unit": "°C",
+        "default": 25
+      }
+    ]
+  },
+  "status": "verified"
+}

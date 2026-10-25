@@ -1,0 +1,63 @@
+{
+  "id": "water-level",
+  "name": "Water lvl",
+  "title": "Water level sensor (resistive strip), analog",
+  "titleRu": "Датчик уровня воды (резистивная полоса), аналоговый",
+  "group": "water",
+  "interface": "analog",
+  "pins": [
+    {
+      "name": "GND",
+      "role": "ground"
+    },
+    {
+      "name": "VCC",
+      "role": "power"
+    },
+    {
+      "name": "SIG",
+      "role": "analog-in",
+      "desc": "Higher = more of the strip under water"
+    }
+  ],
+  "supply": {
+    "min": 3.0,
+    "max": 5.0
+  },
+  "libraries": [],
+  "example": "const int SENSOR_PIN = {{SIG}};\n\nvoid setup() {\n  Serial.begin(115200);\n}\n\nvoid loop() {\n  int level = analogRead(SENSOR_PIN);\n  Serial.print(\"Water level: \");\n  Serial.println(level);\n  delay(500);\n}\n",
+  "notes": [
+    "Power VCC from a GPIO and switch it on only to measure: the strip corrodes under constant current."
+  ],
+  "sim": {
+    "controls": [
+      {
+        "key": "level",
+        "label": "Water level",
+        "min": 0,
+        "max": 40,
+        "step": 1,
+        "unit": "mm",
+        "default": 0
+      }
+    ],
+    "outputs": [
+      {
+        "pin": "SIG",
+        "kind": "analog",
+        "from": "level",
+        "ratio": [
+          [
+            0,
+            0
+          ],
+          [
+            40,
+            0.68
+          ]
+        ]
+      }
+    ]
+  },
+  "status": "verified"
+}

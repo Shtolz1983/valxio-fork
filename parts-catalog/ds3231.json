@@ -1,0 +1,45 @@
+{
+  "id": "ds3231",
+  "name": "DS3231",
+  "title": "Precision real-time clock (I2C) with battery backup",
+  "titleRu": "Точные часы реального времени (I2C) с батарейкой",
+  "group": "other",
+  "interface": "i2c",
+  "component": "ds3231",
+  "pins": [
+    {
+      "name": "GND",
+      "role": "ground"
+    },
+    {
+      "name": "VCC",
+      "role": "power"
+    },
+    {
+      "name": "SDA",
+      "role": "i2c-sda"
+    },
+    {
+      "name": "SCL",
+      "role": "i2c-scl"
+    }
+  ],
+  "supply": {
+    "min": 2.3,
+    "max": 5.5
+  },
+  "i2c": {
+    "addresses": [
+      "0x68"
+    ]
+  },
+  "libraries": [
+    "RTClib",
+    "Adafruit BusIO"
+  ],
+  "example": "#include <RTClib.h>\n\nRTC_DS3231 rtc;\n\nvoid setup() {\n  Serial.begin(115200);\n  if (!rtc.begin()) {\n    Serial.println(\"DS3231 not found - check SDA/SCL\");\n    while (true) delay(10);\n  }\n  if (rtc.lostPower()) rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));\n}\n\nvoid loop() {\n  DateTime now = rtc.now();\n  Serial.print(now.hour());\n  Serial.print(':');\n  Serial.print(now.minute());\n  Serial.print(':');\n  Serial.println(now.second());\n  delay(1000);\n}\n",
+  "notes": [
+    "Shares 0x68 with the MPU6050: set the MPU6050's AD0 high (0x69) to use both."
+  ],
+  "status": "verified"
+}

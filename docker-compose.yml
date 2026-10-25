@@ -34,8 +34,12 @@ services:
       # to disable without rebuilding the image (fallback to per-compile
       # tempfile.TemporaryDirectory behaviour).
       - VELXIO_PERSISTENT_BUILD_DIR=1
+      # Sensor/module cards (parts-catalog/*.json). Bind-mounted so cards
+      # the AI assistant adds land in the working tree, ready to commit.
+      - PARTS_CATALOG_DIR=/app/parts-catalog
     volumes:
       - ./data:/app/data
+      - ./parts-catalog:/app/parts-catalog
       - arduino-libs:/root/.arduino15
       - ccache:/var/cache/ccache
       - velxio-build:/var/lib/velxio-build

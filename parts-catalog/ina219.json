@@ -1,0 +1,84 @@
+{
+  "id": "ina219",
+  "name": "INA219",
+  "title": "Current, voltage and power monitor (I2C), up to 26 V / 3.2 A",
+  "titleRu": "Измеритель тока, напряжения и мощности (I2C), до 26 В / 3,2 А",
+  "group": "electrical",
+  "interface": "i2c",
+  "pins": [
+    {
+      "name": "VCC",
+      "role": "power"
+    },
+    {
+      "name": "GND",
+      "role": "ground"
+    },
+    {
+      "name": "SCL",
+      "role": "i2c-scl"
+    },
+    {
+      "name": "SDA",
+      "role": "i2c-sda"
+    },
+    {
+      "name": "VIN+",
+      "role": "passive",
+      "desc": "Load supply in (high side)"
+    },
+    {
+      "name": "VIN-",
+      "role": "passive",
+      "desc": "To the load"
+    }
+  ],
+  "supply": {
+    "min": 3.0,
+    "max": 5.5
+  },
+  "i2c": {
+    "addresses": [
+      "0x40",
+      "0x41",
+      "0x44",
+      "0x45"
+    ]
+  },
+  "libraries": [
+    "Adafruit INA219",
+    "Adafruit BusIO"
+  ],
+  "example": "#include <Adafruit_INA219.h>\n\nAdafruit_INA219 ina219;\n\nvoid setup() {\n  Serial.begin(115200);\n  if (!ina219.begin()) {\n    Serial.println(\"INA219 not found - check SDA/SCL\");\n    while (true) delay(10);\n  }\n}\n\nvoid loop() {\n  Serial.print(\"Bus: \");\n  Serial.print(ina219.getBusVoltage_V());\n  Serial.print(\" V, current: \");\n  Serial.print(ina219.getCurrent_mA());\n  Serial.print(\" mA, power: \");\n  Serial.print(ina219.getPower_mW());\n  Serial.println(\" mW\");\n  delay(1000);\n}\n",
+  "notes": [
+    "Put VIN+ / VIN- in series with the load's positive supply (high side).",
+    "Address 0x40 by default; A0/A1 solder pads select 0x41/0x44/0x45."
+  ],
+  "source": {
+    "library": "https://github.com/adafruit/Adafruit_INA219"
+  },
+  "sim": {
+    "model": "ina219",
+    "controls": [
+      {
+        "key": "busVoltage",
+        "label": "Bus voltage",
+        "min": 0,
+        "max": 26,
+        "step": 0.1,
+        "unit": "V",
+        "default": 5
+      },
+      {
+        "key": "current",
+        "label": "Current",
+        "min": -3200,
+        "max": 3200,
+        "step": 10,
+        "unit": "mA",
+        "default": 100
+      }
+    ]
+  },
+  "status": "verified"
+}

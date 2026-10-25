@@ -1,0 +1,72 @@
+{
+  "id": "aht20",
+  "name": "AHT20",
+  "title": "Temperature and humidity sensor (I2C), ±0.3 °C, ±2 % RH",
+  "titleRu": "Датчик температуры и влажности (I2C), ±0,3 °C, ±2 % RH",
+  "group": "climate",
+  "interface": "i2c",
+  "pins": [
+    {
+      "name": "VIN",
+      "role": "power"
+    },
+    {
+      "name": "GND",
+      "role": "ground"
+    },
+    {
+      "name": "SCL",
+      "role": "i2c-scl"
+    },
+    {
+      "name": "SDA",
+      "role": "i2c-sda"
+    }
+  ],
+  "supply": {
+    "min": 2.0,
+    "max": 5.5
+  },
+  "i2c": {
+    "addresses": [
+      "0x38"
+    ]
+  },
+  "libraries": [
+    "Adafruit AHTX0",
+    "Adafruit BusIO",
+    "Adafruit Unified Sensor"
+  ],
+  "example": "#include <Adafruit_AHTX0.h>\n\nAdafruit_AHTX0 aht;\n\nvoid setup() {\n  Serial.begin(115200);\n  if (!aht.begin()) {\n    Serial.println(\"AHT20 not found - check SDA/SCL\");\n    while (true) delay(10);\n  }\n}\n\nvoid loop() {\n  sensors_event_t humidity, temp;\n  aht.getEvent(&humidity, &temp);\n  Serial.print(\"Temperature: \");\n  Serial.print(temp.temperature);\n  Serial.print(\" C, humidity: \");\n  Serial.print(humidity.relative_humidity);\n  Serial.println(\" %\");\n  delay(1000);\n}\n",
+  "notes": [
+    "Fixed address 0x38: only one AHT20 per I2C bus.",
+    "Often sold as an AHT20+BMP280 combo board."
+  ],
+  "source": {
+    "library": "https://github.com/adafruit/Adafruit_AHTX0"
+  },
+  "sim": {
+    "model": "aht20",
+    "controls": [
+      {
+        "key": "temperature",
+        "label": "Temperature",
+        "min": -40,
+        "max": 85,
+        "step": 0.5,
+        "unit": "°C",
+        "default": 24
+      },
+      {
+        "key": "humidity",
+        "label": "Humidity",
+        "min": 0,
+        "max": 100,
+        "step": 1,
+        "unit": "%",
+        "default": 50
+      }
+    ]
+  },
+  "status": "verified"
+}

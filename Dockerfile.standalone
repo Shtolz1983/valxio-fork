@@ -270,6 +270,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy backend application code
 COPY backend/app/ ./app/
+# Sensor/module cards; docker-compose bind-mounts the repo folder over it.
+COPY parts-catalog/ ./parts-catalog/
+ENV PARTS_CATALOG_DIR=/app/parts-catalog
 
 # The custom-chip SDK header. chip_compile.py passes this directory to clang
 # as -I, and reports available:false without it, so a chip that includes

@@ -1,0 +1,33 @@
+{
+  "id": "ir-receiver",
+  "name": "IR recv",
+  "title": "Infrared remote receiver (38 kHz)",
+  "titleRu": "Приёмник ИК-пульта (38 кГц)",
+  "group": "other",
+  "interface": "digital",
+  "component": "ir-receiver",
+  "pins": [
+    {
+      "name": "GND",
+      "role": "ground"
+    },
+    {
+      "name": "VCC",
+      "role": "power"
+    },
+    {
+      "name": "DAT",
+      "role": "mcu-in"
+    }
+  ],
+  "supply": {
+    "min": 2.7,
+    "max": 5.5
+  },
+  "libraries": [
+    "IRremote"
+  ],
+  "example": "#include <IRremote.hpp>\n\nconst int IR_PIN = {{DAT}};\n\nvoid setup() {\n  Serial.begin(115200);\n  IrReceiver.begin(IR_PIN, ENABLE_LED_FEEDBACK);\n}\n\nvoid loop() {\n  if (IrReceiver.decode()) {\n    Serial.print(\"Button code: 0x\");\n    Serial.println(IrReceiver.decodedIRData.command, HEX);\n    IrReceiver.resume();\n  }\n}\n",
+  "notes": [],
+  "status": "verified"
+}

@@ -39,6 +39,10 @@
       "exportLabel": "Export project (.zip)",
       "exportBomLabel": "Bill of Materials (CSV)",
       "exportScreenshotLabel": "Schematic image (PNG)",
+      "exportScreenshotEmpty": "Add at least one component to export an image.",
+      "exportScreenshotFailed": "Screenshot export failed.",
+      "exportedFile": "Exported {{file}}",
+      "bom": { "qty": "Qty", "part": "Part", "value": "Value", "libraries": "Arduino libraries", "ids": "On the canvas", "wires": "Jumper wires" },
       "shareLabel": "Share / Embed",
       "githubSyncLabel": "Sync to GitHub",
       "uploadFirmwareLabel": "Upload firmware",
@@ -48,7 +52,7 @@
     },
     "fileExplorer": {
       "workspace": "WORKSPACE",
-      "newWorkspace": "New workspace (choose a starter template)",
+      "newWorkspace": "New project: choose a board template (replaces the current project)",
       "confirmNew": {
         "title": "Start a new workspace?",
         "message": "This clears every board, component, wire and file. This cannot be undone.",
@@ -60,7 +64,7 @@
         "message": "Load this {{type}} project? Your current workspace will be replaced. This cannot be undone.",
         "confirm": "Load"
       },
-      "saveProject": "Save project (Ctrl+S)",
+      "saveProject": "Save project to a .vlx file (Ctrl+S)",
       "clickToEdit": "click to edit",
       "collapse": "Collapse",
       "expand": "Expand",
@@ -81,7 +85,23 @@
       "lastSaved": "last saved",
       "saving": "saving…",
       "saved": "saved",
-      "saveFailed": "save failed"
+      "saveFailed": "save failed",
+      "openProject": "Open project from a file (.vlx Velxio or .zip Wokwi)",
+      "saveDialog": {
+        "title": "Save project",
+        "label": "Project name",
+        "placeholder": "e.g. weather-station",
+        "hint": "The project is saved as a .vlx file in your Downloads folder. Open it again with the \"Open project\" button.",
+        "save": "Save",
+        "cancel": "Cancel",
+        "folderHint": "Next you pick a folder. The project is saved there in its own folder: <name>.vlx (open it again with \"Open project\") and each board's code as files that open in the Arduino IDE.",
+        "chooseFolder": "Choose folder…",
+        "conflictsTitle_one": "{{folder}} already has {{count}} of these files, with other content:",
+        "conflictsTitle_other": "{{folder}} already has {{count}} of these files, with other content:",
+        "conflictsHint": "Replace them with this project? Their old content is lost.",
+        "replace": "Replace",
+        "writeFailed": "Could not write the files: {{error}}"
+      }
     },
     "fileTabs": {
       "unsavedChanges": "Unsaved changes",
@@ -193,7 +213,9 @@
         "rotate": "Rotate (R)",
         "copy": "Copy board (Ctrl+C)",
         "paste": "Paste (Ctrl+V)"
-      }
+      },
+      "sensors": "Sensors",
+      "sensorsTitle": "Sensors catalogue: place a sensor wired to the board, insert its example code"
     },
     "componentPicker": {
       "title": "Add Component",
@@ -455,7 +477,9 @@
       "appearance": "Appearance",
       "themeDark": "Dark",
       "themeLight": "Light",
-      "themeSystem": "Match system"
+      "themeSystem": "Match system",
+      "routeWires": "Route wires",
+      "routeWiresHint": "Lay out every wire without hand-made bends side by side and around parts"
     },
     "inspector": {
       "propertiesTab": "Properties",
@@ -527,6 +551,15 @@
       "revision": "Real board revision",
       "saveToDrive": "Copy to the board's drive",
       "savedToDrive": "Copied {{file}} onto {{drive}}. The board reboots into your sketch."
+    },
+    "wiring": {
+      "tab": "Connections",
+      "tabTitle": "Which controller pin every part is wired to, as text",
+      "copy": "Copy",
+      "copied": "Copied",
+      "notConnected": "not connected",
+      "via": "via",
+      "empty": "Nothing is wired to the board yet."
     }
   },
   "about": {

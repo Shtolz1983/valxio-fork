@@ -14,7 +14,7 @@ from fastapi.responses import JSONResponse
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import compile, compile_chip, compile_rom, flash, intellisense, libraries, micropython_libs
+from app.api.routes import compile, compile_chip, compile_rom, flash, intellisense, libraries, micropython_libs, parts_catalog
 from app.core.config import settings
 from app.core.hooks import run_lifespan_startup
 from app.core.hooks import health_detail, health_probe
@@ -96,6 +96,7 @@ app.include_router(compile.router, prefix="/api/compile", tags=["compilation"])
 app.include_router(compile_chip.router, prefix="/api/compile-chip", tags=["custom-chips"])
 app.include_router(compile_rom.router, prefix="/api/compile-rom", tags=["custom-chips"])
 app.include_router(libraries.router, prefix="/api/libraries", tags=["libraries"])
+app.include_router(parts_catalog.router, prefix="/api/parts-catalog", tags=["parts-catalog"])
 # MicroPython libraries (issue #214): resolves the official micropython-lib
 # index into .py files the frontend writes into the board's workspace.
 app.include_router(

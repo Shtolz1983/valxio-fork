@@ -1,0 +1,85 @@
+{
+  "id": "bme280",
+  "name": "BME280",
+  "title": "Temperature, humidity and pressure sensor (I2C)",
+  "titleRu": "Датчик температуры, влажности и давления (I2C)",
+  "group": "climate",
+  "interface": "i2c",
+  "pins": [
+    {
+      "name": "VIN",
+      "role": "power"
+    },
+    {
+      "name": "GND",
+      "role": "ground"
+    },
+    {
+      "name": "SCL",
+      "role": "i2c-scl"
+    },
+    {
+      "name": "SDA",
+      "role": "i2c-sda"
+    }
+  ],
+  "supply": {
+    "min": 3.3,
+    "max": 5.0
+  },
+  "i2c": {
+    "addresses": [
+      "0x76",
+      "0x77"
+    ]
+  },
+  "libraries": [
+    "Adafruit BME280 Library",
+    "Adafruit Unified Sensor",
+    "Adafruit BusIO"
+  ],
+  "example": "#include <Adafruit_BME280.h>\n\nAdafruit_BME280 bme;\n\nvoid setup() {\n  Serial.begin(115200);\n  if (!bme.begin(0x76)) {\n    Serial.println(\"BME280 not found at 0x76 - try 0x77, check SDA/SCL\");\n    while (true) delay(10);\n  }\n}\n\nvoid loop() {\n  Serial.print(\"Temperature: \");\n  Serial.print(bme.readTemperature());\n  Serial.print(\" C, humidity: \");\n  Serial.print(bme.readHumidity());\n  Serial.print(\" %, pressure: \");\n  Serial.print(bme.readPressure() / 100.0F);\n  Serial.println(\" hPa\");\n  delay(1000);\n}\n",
+  "notes": [
+    "Cheap purple 4-pin boards are often a BMP280 (no humidity): the chip id tells them apart.",
+    "Boards without a regulator are 3.3 V only.",
+    "SDO low = 0x76, high = 0x77."
+  ],
+  "source": {
+    "datasheet": "https://www.bosch-sensortec.com/products/environmental-sensors/humidity-sensors-bme280/",
+    "library": "https://github.com/adafruit/Adafruit_BME280_Library"
+  },
+  "sim": {
+    "model": "bme280",
+    "controls": [
+      {
+        "key": "temperature",
+        "label": "Temperature",
+        "min": -40,
+        "max": 85,
+        "step": 0.5,
+        "unit": "°C",
+        "default": 24
+      },
+      {
+        "key": "humidity",
+        "label": "Humidity",
+        "min": 0,
+        "max": 100,
+        "step": 1,
+        "unit": "%",
+        "default": 50
+      },
+      {
+        "key": "pressure",
+        "label": "Pressure",
+        "min": 300,
+        "max": 1100,
+        "step": 0.5,
+        "unit": "hPa",
+        "default": 1013
+      }
+    ]
+  },
+  "status": "verified",
+  "color": "#4b2a7a"
+}

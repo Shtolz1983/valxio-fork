@@ -142,6 +142,42 @@ except ImportError:
     _bmp280_slave = _mod.bmp280_slave  # type: ignore[assignment]
     _mpu6050_slave = _mod.mpu6050_slave  # type: ignore[assignment]
 
+# DS18B20 on 1-Wire (esp32_onewire.py): the tab's line model, line for line.
+try:
+    from app.services.esp32_onewire import Ds18b20Line as _Ds18b20Line
+except ImportError:
+    import importlib.util as _ilu_ow, pathlib as _pl_ow, sys as _sys_ow
+    _spec_ow = _ilu_ow.spec_from_file_location(
+        'esp32_onewire', _pl_ow.Path(__file__).parent / 'esp32_onewire.py')
+    _mod_ow = _ilu_ow.module_from_spec(_spec_ow)  # type: ignore[arg-type]
+    _sys_ow.modules['esp32_onewire'] = _mod_ow
+    _spec_ow.loader.exec_module(_mod_ow)  # type: ignore[union-attr]
+    _Ds18b20Line = _mod_ow.Ds18b20Line  # type: ignore[assignment]
+
+# Parts-catalog chips (catalog-i2c records): Python twins of the tab's models.
+try:
+    from app.services.catalog_i2c_models import catalog_slave as _catalog_slave
+except ImportError:
+    import importlib.util as _ilu_cat, pathlib as _pl_cat, sys as _sys_cat
+    _spec_cat = _ilu_cat.spec_from_file_location(
+        'catalog_i2c_models', _pl_cat.Path(__file__).parent / 'catalog_i2c_models.py')
+    _mod_cat = _ilu_cat.module_from_spec(_spec_cat)  # type: ignore[arg-type]
+    _sys_cat.modules['catalog_i2c_models'] = _mod_cat
+    _spec_cat.loader.exec_module(_mod_cat)  # type: ignore[union-attr]
+    _catalog_slave = _mod_cat.catalog_slave  # type: ignore[assignment]
+
+# Parts-catalog SPI chips (bus-map entries naming `model.catalog`).
+try:
+    from app.services.catalog_spi_models import catalog_spi_runtime as _catalog_spi_runtime
+except ImportError:
+    import importlib.util as _ilu_cs, pathlib as _pl_cs, sys as _sys_cs
+    _spec_cs = _ilu_cs.spec_from_file_location(
+        'catalog_spi_models', _pl_cs.Path(__file__).parent / 'catalog_spi_models.py')
+    _mod_cs = _ilu_cs.module_from_spec(_spec_cs)  # type: ignore[arg-type]
+    _sys_cs.modules['catalog_spi_models'] = _mod_cs
+    _spec_cs.loader.exec_module(_mod_cs)  # type: ignore[union-attr]
+    _catalog_spi_runtime = _mod_cs.catalog_spi_runtime  # type: ignore[assignment]
+
 # The table those slaves answer from, by (controller, address) and removed by
 # identity (project board-buses-2026-09, F5). Same fallback dance.
 try:
@@ -651,10 +687,14 @@ ICOUNT_SHIFT_LINE_SENSORS = 4
 # (refuse_unmodelled_line_sensor below). The list it used to mirror —
 # Esp32Bridge.WORKER_LINE_MODELS — is how the keypad model stayed invisible to
 # the boards that could have run it.
-LINE_MODEL_TYPES = ('dht22', 'dht11', 'hc-sr04', 'ir-nec', 'matrix-keypad')
+LINE_MODEL_TYPES = ('dht22', 'dht11', 'hc-sr04', 'ir-nec', 'matrix-keypad', 'ds18b20')
 # Of those, the ones whose pulse WIDTHS the guest measures, which is what the
 # icount decision below is about. A keypad level is read, never timed.
-LINE_SENSOR_TYPES = ('dht22', 'dht11', 'hc-sr04', 'ir-nec')
+LINE_SENSOR_TYPES = ('dht22', 'dht11', 'hc-sr04', 'ir-nec', 'ds18b20')
+# Sensors that need guest time whatever the firmware: a 1-Wire slave tells a
+# written 1 from a 0 by the width of the master's low (10 us against 65 us),
+# and on host time each pin callback into this worker adds tens of us to it.
+ICOUNT_ALWAYS_TYPES = ('ds18b20',)
 
 
 def icount_shift_for_run(machine: str, wifi_enabled: bool, sensors: list,
@@ -662,7 +702,11 @@ def icount_shift_for_run(machine: str, wifi_enabled: bool, sensors: list,
     """The `-icount` shift for this run, or None to leave guest time on host time."""
     if 'c3' in machine:
         return ICOUNT_SHIFT_C3
-    if wifi_enabled or not firmware_is_upy:
+    if wifi_enabled:
+        return None
+    if any(str(s.get('sensor_type', '')) in ICOUNT_ALWAYS_TYPES for s in sensors):
+        return ICOUNT_SHIFT_LINE_SENSORS
+    if not firmware_is_upy:
         return None
     if not any(str(s.get('sensor_type', '')) in LINE_SENSOR_TYPES for s in sensors):
         return None
@@ -932,6 +976,12 @@ def main() -> None:  # noqa: C901  (complexity OK for inline worker)
     # came first in this file won the whole bus.
     SPI_IDLE_MISO = 0xFF
     _spi_models: list = []        # responders built from the browser's map
+    # MISO pads a hosted parts-catalog chip drives itself while a sketch
+    # bit-bangs it (catalog_spi_models.py). The tab's own software decoder
+    # drives the same pad from gpio_change events that arrive long after the
+    # guest read it, so its set_pin would land on a later bit: ignored here,
+    # as for a keypad wire.
+    _spi_model_pads: set = set()
     _spi_resp:   list = []        # every responder on the bus, in one list
     _spi_sel:    list = []        # the selected ones; recomputed on CS edges
     _spi_any_bus_id = [False]     # does any entry name one controller?
@@ -1265,7 +1315,7 @@ def main() -> None:  # noqa: C901  (complexity OK for inline worker)
                 _log(f'[custom-chip pin_watch] error: {e!r}')
         _recompute_spi_selection()
 
-    _LINE_OWNED = ('dht22', 'dht11', 'ir-nec', 'hc-sr04')
+    _LINE_OWNED = ('dht22', 'dht11', 'ir-nec', 'hc-sr04', 'ds18b20')
 
     def _pad_owned_elsewhere(gpio: int) -> bool:
         # A line model or a keypad wire answers for its pad on its own clock.
@@ -1437,6 +1487,57 @@ def main() -> None:  # noqa: C901  (complexity OK for inline worker)
             t.start()
 
         _later(reply.reads)
+
+    # ── DS18B20 (1-Wire) ─────────────────────────────────────────────────────
+    # The model is esp32_onewire.py. OneWire's bit-banging writes LOW to the
+    # latch while the pad is an input (QEMU does not report that write) and
+    # then enables the output, so an input -> output switch is the master
+    # pulling the line low; a reported 1 or the switch back to input lets it
+    # go. At every GPIO_IN read the sensor puts its own level on the released
+    # line: low for presence and for a transmitted 0, else the pull-up.
+    class _OneWireHandler:
+        def __init__(self, gpio: int, line) -> None:
+            self.gpio = gpio
+            self.line = line
+            self.driving_low = False
+            self.done = False
+
+        def master_dir(self, is_output: bool, was_output: bool) -> None:
+            if is_output and not was_output:
+                self._low()
+            elif not is_output:
+                self._release()
+
+        def master_write(self, level: int) -> None:
+            if level:
+                self._release()
+            else:
+                self._low()
+
+        def _low(self) -> None:
+            if not self.driving_low:
+                self.driving_low = True
+                self.line.master_low(_guest_now_us())
+
+        def _release(self) -> None:
+            if self.driving_low:
+                self.driving_low = False
+                self.line.master_release(_guest_now_us())
+
+        def step(self) -> bool:
+            if self.done:
+                return True
+            if not self.driving_low and _pin_dir.get(self.gpio) != 1:
+                lib.qemu_picsimlab_set_pin(self.gpio + 1, self.line.level(_guest_now_us()))
+            return False
+
+    def _onewire_install(gpio: int, sensor_data: dict) -> None:
+        line = _Ds18b20Line(str(sensor_data.get('rom_seed') or f'ds18b20@{gpio}'),
+                            _dht22_num(sensor_data.get('temperature'), 25.0))
+        handler = _OneWireHandler(gpio, line)
+        sensor_data['onewire'] = handler
+        _sync_handlers.append(handler)
+        _log(f'DS18B20 on gpio {gpio}, ROM {line.device.rom.hex()}')
 
     def _dht22_trigger(sensor: dict):
         trig = sensor.get('_dht22_trigger')
@@ -1734,7 +1835,12 @@ def main() -> None:  # noqa: C901  (complexity OK for inline worker)
 
         stype = sensor.get('type', '')
 
-        if stype in ('dht22', 'dht11'):
+        if stype == 'ds18b20':
+            ow = sensor.get('onewire')
+            if ow is not None:
+                ow.master_write(value & 1)
+
+        elif stype in ('dht22', 'dht11'):
             # A level the guest wrote while the pad is an output (QEMU reports
             # no others). The LOW is the start signal; a 1 after it is the
             # open-drain release, how MicroPython's dht driver lets go of the
@@ -1829,6 +1935,10 @@ def main() -> None:  # noqa: C901  (complexity OK for inline worker)
                 _keypad_apply(_kp.on_enable(gpio, direction))
             with _sensors_lock:
                 sensor = _sensors.get(gpio)
+            if sensor is not None and sensor.get('type') == 'ds18b20' and direction in (0, 1):
+                ow = sensor.get('onewire')
+                if ow is not None:
+                    ow.master_dir(direction == 1, _pin_dir.get(gpio) == 1)
             if sensor is not None and sensor.get('type') in ('dht22', 'dht11') and direction in (0, 1):
                 # The push-pull release: the pad went INPUT after the LOW.
                 if _dht22_trigger(sensor).on_direction(direction == 1):
@@ -2554,10 +2664,19 @@ def main() -> None:  # noqa: C901  (complexity OK for inline worker)
             model = entry.get('model') or {}
             wasm_b64 = model.get('wasm_b64') or ''
             owner = str(entry.get('owner') or 'responder')
-            if not wasm_b64 or WasmChipRuntime is None:
+            # A parts-catalog chip names its Python twin instead of shipping
+            # an artifact (catalog_spi_models.py).
+            catalog = str(model.get('catalog') or '')
+            if catalog:
+                identity = 'catalog:' + json.dumps(
+                    [catalog, entry.get('cs'), entry.get('bus_id'), model.get('pin_map'),
+                     model.get('regmap')],
+                    sort_keys=True, default=str)
+            elif not wasm_b64 or WasmChipRuntime is None:
                 _log(f'[bus_map] {owner}: no portable model, not hosted here')
                 continue
-            identity = model_identity(model, entry.get('cs'), entry.get('bus_id'))
+            else:
+                identity = model_identity(model, entry.get('cs'), entry.get('bus_id'))
             old = previous.get(owner)
             if old is not None and old.get('identity') == identity \
                     and not any(m['owner'] == owner for m in models):
@@ -2569,6 +2688,21 @@ def main() -> None:  # noqa: C901  (complexity OK for inline worker)
                     except Exception as e:  # noqa: BLE001
                         _log(f'[bus_map] {owner}: attrs on a kept model failed: {e!r}')
                 models.append(old)
+                continue
+            if catalog:
+                runtime = _catalog_spi_runtime(
+                    catalog, model.get('attrs') or {},
+                    {str(k): int(v) for k, v in (model.get('pin_map') or {}).items()},
+                    entry.get('cs'),
+                    pin_writer=_map_pin_writer, pin_reader=_map_pin_reader,
+                    regmap=model.get('regmap'))
+                if runtime is None:
+                    _log(f'[bus_map] {owner}: no catalogue SPI model {catalog!r} here')
+                    continue
+                _chip_pin_watch_runtimes.append(runtime)
+                r = _model_responder(entry, runtime)
+                r['identity'] = identity
+                models.append(r)
                 continue
             try:
                 runtime = WasmChipRuntime(
@@ -2612,6 +2746,11 @@ def main() -> None:  # noqa: C901  (complexity OK for inline worker)
                 while rt in lst:
                     lst.remove(rt)
         _spi_models[:] = models
+        _spi_model_pads.clear()
+        for r in models:
+            miso = getattr(r.get('runtime'), 'miso_pad', None)
+            if miso is not None:
+                _spi_model_pads.add(int(miso))
         _spi_population_changed()
         _log(f'[bus_map] {len(models)} portable SPI responder(s) hosted here')
 
@@ -3177,6 +3316,16 @@ def main() -> None:  # noqa: C901  (complexity OK for inline worker)
                 _i2c_add(gpio, s, sink, i2c_addr)
                 sensor_data['i2c_addr'] = i2c_addr
                 sensor_data['slave'] = sink
+            elif sensor_type == 'ds18b20':
+                _onewire_install(gpio, sensor_data)
+            elif sensor_type == 'catalog-i2c':
+                # A parts-catalog module (catalog_i2c_models.py); a model this
+                # worker does not have is taken and left silent.
+                slave = _catalog_slave(s, now_ns=_guest_clock_ns)
+                if slave is not None:
+                    _i2c_add(gpio, s, slave, slave.addr)
+                    sensor_data['i2c_addr'] = slave.addr
+                    sensor_data['slave'] = slave
             elif sensor_type == 'custom-chip':
                 _attach_custom_chip_sensor(gpio, s, sensor_data)
             _sensors[gpio] = sensor_data
@@ -3328,7 +3477,7 @@ def main() -> None:  # noqa: C901  (complexity OK for inline worker)
             # interrupt never walked that path, which is why every ordinary
             # button and sensor worked while a rotary encoder ISR died on the
             # first real edge.
-            if int(cmd['pin']) not in _keypad_by_gpio:
+            if int(cmd['pin']) not in _keypad_by_gpio and int(cmd['pin']) not in _spi_model_pads:
                 if _lock_iothread:
                     _lock_iothread(b'esp32_worker.py:set_pin', 0)
                 try:
@@ -3505,6 +3654,14 @@ def main() -> None:  # noqa: C901  (complexity OK for inline worker)
                     _i2c_add(gpio, cmd, slave, i2c_addr)
                     sensor_data['i2c_addr'] = i2c_addr
                     sensor_data['slave'] = slave
+                elif sensor_type == 'ds18b20':
+                    _onewire_install(gpio, sensor_data)
+                elif sensor_type == 'catalog-i2c':
+                    slave = _catalog_slave(cmd, now_ns=_guest_clock_ns)
+                    if slave is not None:
+                        _i2c_add(gpio, cmd, slave, slave.addr)
+                        sensor_data['i2c_addr'] = slave.addr
+                        sensor_data['slave'] = slave
                 elif sensor_type == 'custom-chip':
                     _attach_custom_chip_sensor(gpio, cmd, sensor_data)
                 elif sensor_type in ('ssd1306', 'pcf8574', 'i2c-write-sink'):
@@ -3575,6 +3732,14 @@ def main() -> None:  # noqa: C901  (complexity OK for inline worker)
                         # Only what this update names: the temperature the
                         # slider moved to, or the tab's clock sent again.
                         slave.update(**cmd)
+                    elif stype == 'catalog-i2c' and slave is not None:
+                        # The panel values this update names.
+                        slave.update(**cmd)
+                    elif stype == 'ds18b20' and 'temperature' in cmd:
+                        ow = sensor.get('onewire')
+                        if ow is not None:
+                            ow.line.device.temperature_c = _dht22_num(
+                                cmd['temperature'], ow.line.device.temperature_c)
                     elif stype == 'custom-chip':
                         # Live control values (chip.json `controls`) land on
                         # the chip runtime's attr store; the running WASM
@@ -3612,6 +3777,9 @@ def main() -> None:  # noqa: C901  (complexity OK for inline worker)
                     _keypad_uninstall(sensor)
                 if sensor and sensor.get('type') == 'custom-chip':
                     _detach_custom_chip_sensor(sensor)
+                if sensor and sensor.get('onewire') is not None:
+                    # Its sync handler drops itself at the next read.
+                    sensor['onewire'].done = True
                 _int_drv = sensor.get('int_driver') if sensor else None
                 if _int_drv is not None:
                     while _int_drv in _chip_timer_runtimes:

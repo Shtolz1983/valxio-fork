@@ -1,0 +1,41 @@
+{
+  "id": "hx711",
+  "name": "HX711",
+  "title": "24-bit load cell amplifier (scales)",
+  "titleRu": "24-битный усилитель тензодатчика (весы)",
+  "group": "electrical",
+  "interface": "digital",
+  "component": "hx711",
+  "pins": [
+    {
+      "name": "VCC",
+      "role": "power"
+    },
+    {
+      "name": "DT",
+      "role": "mcu-in",
+      "desc": "Data"
+    },
+    {
+      "name": "SCK",
+      "role": "mcu-out",
+      "desc": "Clock"
+    },
+    {
+      "name": "GND",
+      "role": "ground"
+    }
+  ],
+  "supply": {
+    "min": 2.6,
+    "max": 5.5
+  },
+  "libraries": [
+    "HX711 Arduino Library"
+  ],
+  "example": "#include <HX711.h>\n\nconst int DT_PIN = {{DT}};\nconst int SCK_PIN = {{SCK}};\nHX711 scale;\n\nvoid setup() {\n  Serial.begin(115200);\n  scale.begin(DT_PIN, SCK_PIN);\n}\n\nvoid loop() {\n  if (scale.is_ready()) {\n    Serial.print(\"Raw reading: \");\n    Serial.println(scale.read());\n  } else {\n    Serial.println(\"HX711 not ready\");\n  }\n  delay(500);\n}\n",
+  "notes": [
+    "Calibrate: scale.set_scale(factor) and scale.tare(), then get_units()."
+  ],
+  "status": "verified"
+}

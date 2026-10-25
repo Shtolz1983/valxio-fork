@@ -1,0 +1,76 @@
+{
+  "id": "rain-sensor",
+  "name": "Rain",
+  "title": "Rain / water drop sensor board (FC-37, YL-83), analog + threshold",
+  "titleRu": "Датчик дождя / капель (FC-37, YL-83), аналоговый + порог",
+  "group": "water",
+  "interface": "analog",
+  "pins": [
+    {
+      "name": "VCC",
+      "role": "power"
+    },
+    {
+      "name": "GND",
+      "role": "ground"
+    },
+    {
+      "name": "DO",
+      "role": "mcu-in",
+      "desc": "Digital threshold output (set by the trimmer)"
+    },
+    {
+      "name": "AO",
+      "role": "analog-in",
+      "desc": "Analog output"
+    }
+  ],
+  "supply": {
+    "min": 3.3,
+    "max": 5.5
+  },
+  "libraries": [],
+  "example": "// Rain: analog level on AO, threshold output on DO.\nconst int ANALOG_PIN = {{AO}};\nconst int DIGITAL_PIN = {{DO}};\n\nvoid setup() {\n  Serial.begin(115200);\n  pinMode(DIGITAL_PIN, INPUT);\n}\n\nvoid loop() {\n  int level = analogRead(ANALOG_PIN);\n  bool triggered = digitalRead(DIGITAL_PIN) == LOW;\n  Serial.print(\"Rain level: \");\n  Serial.print(level);\n  Serial.println(triggered ? \"  (threshold reached)\" : \"\");\n  delay(500);\n}\n",
+  "notes": [
+    "The reading falls as the plate gets wet; DO goes LOW past the trimmer threshold.",
+    "Power the plate only while measuring to slow down corrosion."
+  ],
+  "sim": {
+    "controls": [
+      {
+        "key": "rain",
+        "label": "Rain",
+        "min": 0,
+        "max": 100,
+        "step": 1,
+        "unit": "%",
+        "default": 0
+      }
+    ],
+    "outputs": [
+      {
+        "pin": "AO",
+        "kind": "analog",
+        "from": "rain",
+        "ratio": [
+          [
+            0,
+            0.98
+          ],
+          [
+            100,
+            0.2
+          ]
+        ]
+      },
+      {
+        "pin": "DO",
+        "kind": "digital",
+        "from": "rain",
+        "above": 50,
+        "activeLow": true
+      }
+    ]
+  },
+  "status": "verified"
+}

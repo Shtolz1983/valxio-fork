@@ -1,0 +1,42 @@
+{
+  "id": "dht22",
+  "name": "DHT22",
+  "title": "Temperature and humidity sensor (AM2302), -40…80 °C, 0…100 % RH",
+  "titleRu": "Датчик температуры и влажности (AM2302), -40…80 °C, 0…100 % RH",
+  "group": "climate",
+  "interface": "single-wire",
+  "component": "dht22",
+  "pins": [
+    {
+      "name": "VCC",
+      "role": "power"
+    },
+    {
+      "name": "SDA",
+      "role": "bidir",
+      "desc": "Single-wire data (not I2C)"
+    },
+    {
+      "name": "NC",
+      "role": "nc"
+    },
+    {
+      "name": "GND",
+      "role": "ground"
+    }
+  ],
+  "supply": {
+    "min": 3.3,
+    "max": 6.0
+  },
+  "libraries": [
+    "DHT sensor library",
+    "Adafruit Unified Sensor"
+  ],
+  "example": "#include <DHT.h>\n\nDHT dht({{SDA}}, DHT22);\n\nvoid setup() {\n  Serial.begin(115200);\n  dht.begin();\n}\n\nvoid loop() {\n  delay(2000);  // the DHT22 measures at most every 2 s\n  float h = dht.readHumidity();\n  float t = dht.readTemperature();\n  if (isnan(h) || isnan(t)) {\n    Serial.println(\"DHT22 read failed\");\n    return;\n  }\n  Serial.print(\"Temperature: \");\n  Serial.print(t);\n  Serial.print(\" C, humidity: \");\n  Serial.print(h);\n  Serial.println(\" %\");\n}\n",
+  "notes": [
+    "The SDA pin is the single-wire data line, not I2C.",
+    "Read at most every 2 s."
+  ],
+  "status": "verified"
+}

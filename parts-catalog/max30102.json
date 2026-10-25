@@ -1,0 +1,76 @@
+{
+  "id": "max30102",
+  "name": "MAX30102",
+  "title": "Pulse oximeter and heart-rate sensor (I2C)",
+  "titleRu": "Пульсоксиметр и датчик пульса (I2C)",
+  "group": "biometric",
+  "interface": "i2c",
+  "pins": [
+    {
+      "name": "VIN",
+      "role": "power"
+    },
+    {
+      "name": "GND",
+      "role": "ground"
+    },
+    {
+      "name": "SCL",
+      "role": "i2c-scl"
+    },
+    {
+      "name": "SDA",
+      "role": "i2c-sda"
+    },
+    {
+      "name": "INT",
+      "role": "nc",
+      "desc": "Interrupt (optional)"
+    }
+  ],
+  "supply": {
+    "min": 3.3,
+    "max": 5.0
+  },
+  "i2c": {
+    "addresses": [
+      "0x57"
+    ]
+  },
+  "libraries": [
+    "SparkFun MAX3010x Pulse and Proximity Sensor Library"
+  ],
+  "example": "#include <Wire.h>\n#include \"MAX30105.h\"\n#include \"heartRate.h\"\n\nMAX30105 particleSensor;\n\nconst byte RATE_SIZE = 4;  // beats averaged\nbyte rates[RATE_SIZE];\nbyte rateSpot = 0;\nlong lastBeat = 0;\nint beatAvg = 0;\nunsigned long lastPrint = 0;\n\nvoid setup() {\n  Serial.begin(115200);\n  if (!particleSensor.begin(Wire, I2C_SPEED_FAST)) {\n    Serial.println(\"MAX30102 not found - check SDA/SCL\");\n    while (true) delay(10);\n  }\n  particleSensor.setup();                    // 400 Hz, 4x averaging: 100 samples/s\n  particleSensor.setPulseAmplitudeRed(0x0A); // red LED low, IR does the work\n}\n\nvoid loop() {\n  long ir = particleSensor.getIR();\n  if (checkForBeat(ir)) {\n    long delta = millis() - lastBeat;\n    lastBeat = millis();\n    float bpm = 60 / (delta / 1000.0);\n    if (bpm > 20 && bpm < 255) {\n      rates[rateSpot++] = (byte)bpm;\n      rateSpot %= RATE_SIZE;\n      beatAvg = 0;\n      for (byte i = 0; i < RATE_SIZE; i++) beatAvg += rates[i];\n      beatAvg /= RATE_SIZE;\n    }\n  }\n  if (millis() - lastPrint >= 500) {\n    lastPrint = millis();\n    Serial.print(\"IR: \");\n    Serial.print(ir);\n    if (ir < 50000) {\n      Serial.println(\"  (no finger)\");\n    } else {\n      Serial.print(\"  BPM: \");\n      Serial.println(beatAvg);\n    }\n  }\n}\n",
+  "notes": [
+    "The SparkFun MAX3010x library drives the MAX30102 (use MAX30105.h).",
+    "Heart rate: checkForBeat() from heartRate.h finds a beat in the IR samples; the example averages the last 4 beats."
+  ],
+  "source": {
+    "library": "https://github.com/sparkfun/SparkFun_MAX3010x_Sensor_Library"
+  },
+  "sim": {
+    "model": "max30102",
+    "controls": [
+      {
+        "key": "bpm",
+        "label": "Heart rate",
+        "min": 40,
+        "max": 180,
+        "step": 1,
+        "unit": "bpm",
+        "default": 72
+      },
+      {
+        "key": "finger",
+        "label": "Finger on sensor",
+        "min": 0,
+        "max": 1,
+        "step": 1,
+        "unit": "",
+        "default": 1
+      }
+    ]
+  },
+  "status": "verified",
+  "color": "#5b1f6e"
+}

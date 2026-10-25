@@ -144,8 +144,9 @@ describe('AVRSimulator — ADC', () => {
     sim.getADC()!.channelValues[0] = 3.3;
 
     sim.reset();
-    // After reset a fresh AVRADC is created — channel[0] is unset (undefined) or 0
-    expect(sim.getADC()!.channelValues[0] ?? 0).toBe(0);
+    // After reset a fresh AVRADC is created, and it keeps the circuit's
+    // voltages: the parts that set them do not set them again.
+    expect(sim.getADC()!.channelValues[0]).toBe(3.3);
   });
 });
 

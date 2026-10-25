@@ -28,6 +28,7 @@ import './components/velxio-components/OpAmpElements';
 import './components/velxio-components/PiPicoWElement';
 import './components/velxio-components/PowerElements';
 import './components/velxio-components/RaspberryPi3Element';
+import './components/velxio-components/SensorModuleElement';
 import './components/velxio-components/RaspberryPi4Element';
 import './components/velxio-components/RaspberryPi5Element';
 import './components/velxio-components/RelayElements';

@@ -1,0 +1,37 @@
+{
+  "id": "small-sound-sensor",
+  "name": "Sound",
+  "title": "Sound sensor module (microphone), analog + threshold",
+  "titleRu": "Датчик звука (микрофон), аналоговый + порог",
+  "group": "sound",
+  "interface": "analog",
+  "component": "small-sound-sensor",
+  "pins": [
+    {
+      "name": "VCC",
+      "role": "power"
+    },
+    {
+      "name": "GND",
+      "role": "ground"
+    },
+    {
+      "name": "DOUT",
+      "role": "mcu-in",
+      "desc": "Digital threshold output (set by the trimmer)"
+    },
+    {
+      "name": "AOUT",
+      "role": "analog-in",
+      "desc": "Analog output"
+    }
+  ],
+  "supply": {
+    "min": 3.3,
+    "max": 5.5
+  },
+  "libraries": [],
+  "example": "// Sound: analog level on AOUT, threshold output on DOUT.\nconst int ANALOG_PIN = {{AOUT}};\nconst int DIGITAL_PIN = {{DOUT}};\n\nvoid setup() {\n  Serial.begin(115200);\n  pinMode(DIGITAL_PIN, INPUT);\n}\n\nvoid loop() {\n  int level = analogRead(ANALOG_PIN);\n  bool triggered = digitalRead(DIGITAL_PIN) == LOW;\n  Serial.print(\"Sound level: \");\n  Serial.print(level);\n  Serial.println(triggered ? \"  (threshold reached)\" : \"\");\n  delay(500);\n}\n",
+  "notes": [],
+  "status": "verified"
+}

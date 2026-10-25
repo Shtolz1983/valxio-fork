@@ -126,6 +126,10 @@ export interface RemoteSpiMapEntry {
     | { kind: 'none' };
   model: {
     wasm_b64: string;
+    /** A parts-catalog chip the host runs natively (RemoteSpiModel.catalog). */
+    catalog?: string;
+    /** Its register map, for catalog 'regmap'. */
+    regmap?: object;
     pin_map: Record<string, number>;
     attrs: Record<string, number>;
     blobs: Record<string, string>;
@@ -909,6 +913,8 @@ export class BusRegistry {
         cs: this.remoteCs(e),
         model: {
           wasm_b64: model.wasmB64,
+          ...(model.catalog ? { catalog: model.catalog } : {}),
+          ...(model.regmap ? { regmap: model.regmap } : {}),
           pin_map: { ...this.remotePinMap(e, model.chipPads), ...(model.pinMap ?? {}) },
           attrs,
           blobs: model.blobs ?? {},

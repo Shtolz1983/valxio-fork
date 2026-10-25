@@ -1,0 +1,48 @@
+{
+  "id": "bmp280",
+  "name": "BMP280",
+  "title": "Barometric pressure and temperature sensor (I2C)",
+  "titleRu": "Датчик атмосферного давления и температуры (I2C)",
+  "group": "climate",
+  "interface": "i2c",
+  "component": "bmp280",
+  "pins": [
+    {
+      "name": "SDA",
+      "role": "i2c-sda"
+    },
+    {
+      "name": "SCL",
+      "role": "i2c-scl"
+    },
+    {
+      "name": "GND",
+      "role": "ground"
+    },
+    {
+      "name": "VCC",
+      "role": "power"
+    }
+  ],
+  "supply": {
+    "min": 1.8,
+    "max": 3.6
+  },
+  "i2c": {
+    "addresses": [
+      "0x76",
+      "0x77"
+    ]
+  },
+  "libraries": [
+    "Adafruit BMP280 Library",
+    "Adafruit Unified Sensor",
+    "Adafruit BusIO"
+  ],
+  "example": "#include <Adafruit_BMP280.h>\n\nAdafruit_BMP280 bmp;\n\nvoid setup() {\n  Serial.begin(115200);\n  if (!bmp.begin(0x76)) {\n    Serial.println(\"BMP280 not found at 0x76 - check SDA/SCL\");\n    while (true) delay(10);\n  }\n}\n\nvoid loop() {\n  Serial.print(\"Temperature: \");\n  Serial.print(bmp.readTemperature());\n  Serial.print(\" C, pressure: \");\n  Serial.print(bmp.readPressure() / 100.0);\n  Serial.println(\" hPa\");\n  delay(1000);\n}\n",
+  "notes": [
+    "Power from 3.3 V.",
+    "SDO low = 0x76 (the simulated part answers there), high = 0x77."
+  ],
+  "status": "verified"
+}

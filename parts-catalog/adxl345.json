@@ -1,0 +1,81 @@
+{
+  "id": "adxl345",
+  "name": "ADXL345",
+  "title": "3-axis accelerometer (I2C), ±2/4/8/16 g, GY-291",
+  "titleRu": "3-осевой акселерометр (I2C), ±2/4/8/16 g, GY-291",
+  "group": "motion",
+  "interface": "i2c",
+  "pins": [
+    {
+      "name": "GND",
+      "role": "ground"
+    },
+    {
+      "name": "VCC",
+      "role": "power"
+    },
+    {
+      "name": "SDA",
+      "role": "i2c-sda"
+    },
+    {
+      "name": "SCL",
+      "role": "i2c-scl"
+    }
+  ],
+  "supply": {
+    "min": 3.3,
+    "max": 5.0
+  },
+  "i2c": {
+    "addresses": [
+      "0x53",
+      "0x1D"
+    ]
+  },
+  "libraries": [
+    "Adafruit ADXL345",
+    "Adafruit Unified Sensor",
+    "Adafruit BusIO"
+  ],
+  "example": "#include <Adafruit_ADXL345_U.h>\n\nAdafruit_ADXL345_Unified accel = Adafruit_ADXL345_Unified(12345);\n\nvoid setup() {\n  Serial.begin(115200);\n  if (!accel.begin()) {\n    Serial.println(\"ADXL345 not found - check SDA/SCL\");\n    while (true) delay(10);\n  }\n  accel.setRange(ADXL345_RANGE_16_G);\n}\n\nvoid loop() {\n  sensors_event_t event;\n  accel.getEvent(&event);\n  Serial.print(\"X: \");\n  Serial.print(event.acceleration.x);\n  Serial.print(\"  Y: \");\n  Serial.print(event.acceleration.y);\n  Serial.print(\"  Z: \");\n  Serial.print(event.acceleration.z);\n  Serial.println(\" m/s^2\");\n  delay(200);\n}\n",
+  "notes": [
+    "SDO low = 0x53 (default on GY-291), high = 0x1D. CS must stay high for I2C (pulled up on the board)."
+  ],
+  "source": {
+    "library": "https://github.com/adafruit/Adafruit_ADXL345"
+  },
+  "sim": {
+    "model": "adxl345",
+    "controls": [
+      {
+        "key": "accelX",
+        "label": "Acceleration X",
+        "min": -16,
+        "max": 16,
+        "step": 0.1,
+        "unit": "g",
+        "default": 0
+      },
+      {
+        "key": "accelY",
+        "label": "Acceleration Y",
+        "min": -16,
+        "max": 16,
+        "step": 0.1,
+        "unit": "g",
+        "default": 0
+      },
+      {
+        "key": "accelZ",
+        "label": "Acceleration Z",
+        "min": -16,
+        "max": 16,
+        "step": 0.1,
+        "unit": "g",
+        "default": 1
+      }
+    ]
+  },
+  "status": "verified"
+}

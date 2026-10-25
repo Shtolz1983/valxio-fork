@@ -1,0 +1,91 @@
+{
+  "id": "bme680",
+  "name": "BME680",
+  "title": "Gas (VOC), temperature, humidity and pressure sensor (I2C)",
+  "titleRu": "Датчик газа (VOC), температуры, влажности и давления (I2C)",
+  "group": "air",
+  "interface": "i2c",
+  "pins": [
+    {
+      "name": "VCC",
+      "role": "power"
+    },
+    {
+      "name": "GND",
+      "role": "ground"
+    },
+    {
+      "name": "SCL",
+      "role": "i2c-scl"
+    },
+    {
+      "name": "SDA",
+      "role": "i2c-sda"
+    }
+  ],
+  "supply": {
+    "min": 3.3,
+    "max": 5.0
+  },
+  "i2c": {
+    "addresses": [
+      "0x77",
+      "0x76"
+    ]
+  },
+  "libraries": [
+    "Adafruit BME680 Library",
+    "Adafruit Unified Sensor",
+    "Adafruit BusIO"
+  ],
+  "example": "#include <Adafruit_BME680.h>\n\nAdafruit_BME680 bme;\n\nvoid setup() {\n  Serial.begin(115200);\n  if (!bme.begin()) {\n    Serial.println(\"BME680 not found at 0x77 - check SDA/SCL\");\n    while (true) delay(10);\n  }\n  bme.setTemperatureOversampling(BME680_OS_8X);\n  bme.setHumidityOversampling(BME680_OS_2X);\n  bme.setPressureOversampling(BME680_OS_4X);\n  bme.setGasHeater(320, 150);  // 320 C for 150 ms\n}\n\nvoid loop() {\n  if (!bme.performReading()) {\n    Serial.println(\"BME680 reading failed\");\n    return;\n  }\n  Serial.print(\"T: \");\n  Serial.print(bme.temperature);\n  Serial.print(\" C, RH: \");\n  Serial.print(bme.humidity);\n  Serial.print(\" %, P: \");\n  Serial.print(bme.pressure / 100.0);\n  Serial.print(\" hPa, gas: \");\n  Serial.print(bme.gas_resistance / 1000.0);\n  Serial.println(\" kOhm\");\n  delay(2000);\n}\n",
+  "notes": [
+    "Gas resistance rises in clean air and falls with VOCs; it is not a calibrated ppm value."
+  ],
+  "source": {
+    "library": "https://github.com/adafruit/Adafruit_BME680"
+  },
+  "sim": {
+    "model": "bme680",
+    "controls": [
+      {
+        "key": "temperature",
+        "label": "Temperature",
+        "min": -40,
+        "max": 85,
+        "step": 0.5,
+        "unit": "°C",
+        "default": 24
+      },
+      {
+        "key": "humidity",
+        "label": "Humidity",
+        "min": 0,
+        "max": 100,
+        "step": 1,
+        "unit": "%",
+        "default": 50
+      },
+      {
+        "key": "pressure",
+        "label": "Pressure",
+        "min": 300,
+        "max": 1100,
+        "step": 0.5,
+        "unit": "hPa",
+        "default": 1013
+      },
+      {
+        "key": "gas",
+        "label": "Gas resistance",
+        "min": 1,
+        "max": 500,
+        "step": 1,
+        "unit": "kΩ",
+        "default": 100
+      }
+    ]
+  },
+  "status": "verified",
+  "color": "#4b2a7a"
+}

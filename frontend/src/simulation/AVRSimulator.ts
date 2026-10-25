@@ -1043,6 +1043,11 @@ export class AVRSimulator implements LineCapable, BusCapableSimulator {
    */
   private buildMcu(): void {
     if (!this.program) return;
+    // The voltages on the analog inputs belong to the circuit, not to the
+    // chip: a part sets them once when it attaches and again only when its
+    // value moves, so a rebuilt ADC that starts at zero would read 0 V on
+    // every analog sensor after Stop -> Run until its slider was touched.
+    const heldAdcVolts = this.adc ? Array.from(this.adc.channelValues) : null;
     // ATmega2560 data space: 0x0000–0x21FF = 8704 bytes total.
     // avr8js: data.length = sramBytes + registerSpace (0x100 = 256).
     // So sramBytes must be >= 8704 − 256 = 8448 to fit RAMEND=0x21FF on the stack.
@@ -1136,6 +1141,12 @@ export class AVRSimulator implements LineCapable, BusCapableSimulator {
           this.megaPortValues.set(name, 0);
         }
       }
+    }
+
+    if (heldAdcVolts && this.adc) {
+      heldAdcVolts.forEach((v, ch) => {
+        if (ch < this.adc!.channelValues.length) this.adc!.channelValues[ch] = v;
+      });
     }
 
     this.attachEeprom();

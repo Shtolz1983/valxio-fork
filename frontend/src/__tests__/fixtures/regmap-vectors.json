@@ -1,0 +1,782 @@
+{
+  "_doc": "Cases both register-map engines must answer: frontend/src/partsCatalog/regmap.ts (regmap-core.test.ts) and backend/app/services/catalog_regmap.py (backend/tests/test_catalog_regmap.py). ops: w = I2C write transaction, r = I2C read of n bytes, spi = one select with these MOSI bytes, set = panel values. wn / rn: the same without START (a host that does not report it); a stop follows each.",
+  "bytes": [
+    {
+      "value": {
+        "reg": 0,
+        "from": "t",
+        "bytes": 2,
+        "signed": true,
+        "scale": 2,
+        "shift": 7
+      },
+      "v": 25.5,
+      "expect": [
+        25,
+        128
+      ]
+    },
+    {
+      "value": {
+        "reg": 0,
+        "from": "t",
+        "bytes": 2,
+        "signed": true,
+        "scale": 2,
+        "shift": 7
+      },
+      "v": -10.5,
+      "expect": [
+        245,
+        128
+      ]
+    },
+    {
+      "value": {
+        "reg": 0,
+        "from": "t",
+        "bytes": 2,
+        "signed": true,
+        "scale": 2,
+        "shift": 7
+      },
+      "v": 200,
+      "expect": [
+        127,
+        128
+      ]
+    },
+    {
+      "value": {
+        "reg": 0,
+        "from": "lux",
+        "bytes": 2,
+        "order": "le",
+        "scale": 1.2
+      },
+      "v": 500,
+      "expect": [
+        88,
+        2
+      ]
+    },
+    {
+      "value": {
+        "reg": 0,
+        "from": "x",
+        "bytes": 1,
+        "signed": true
+      },
+      "v": 2.5,
+      "expect": [
+        3
+      ]
+    },
+    {
+      "value": {
+        "reg": 0,
+        "from": "x",
+        "bytes": 1,
+        "signed": true
+      },
+      "v": -2.5,
+      "expect": [
+        254
+      ]
+    },
+    {
+      "value": {
+        "reg": 0,
+        "from": "x",
+        "bytes": 1
+      },
+      "v": -5,
+      "expect": [
+        0
+      ]
+    },
+    {
+      "value": {
+        "reg": 0,
+        "from": "t",
+        "bytes": 1,
+        "points": [
+          [
+            0,
+            10
+          ],
+          [
+            10,
+            110
+          ],
+          [
+            20,
+            130
+          ]
+        ]
+      },
+      "v": 5,
+      "expect": [
+        60
+      ]
+    },
+    {
+      "value": {
+        "reg": 0,
+        "from": "t",
+        "bytes": 1,
+        "points": [
+          [
+            0,
+            10
+          ],
+          [
+            10,
+            110
+          ],
+          [
+            20,
+            130
+          ]
+        ]
+      },
+      "v": 15,
+      "expect": [
+        120
+      ]
+    },
+    {
+      "value": {
+        "reg": 0,
+        "from": "t",
+        "bytes": 1,
+        "points": [
+          [
+            0,
+            10
+          ],
+          [
+            10,
+            110
+          ],
+          [
+            20,
+            130
+          ]
+        ]
+      },
+      "v": -3,
+      "expect": [
+        10
+      ]
+    },
+    {
+      "value": {
+        "reg": 0,
+        "from": "t",
+        "bytes": 1,
+        "points": [
+          [
+            0,
+            10
+          ],
+          [
+            10,
+            110
+          ],
+          [
+            20,
+            130
+          ]
+        ]
+      },
+      "v": 25,
+      "expect": [
+        130
+      ]
+    },
+    {
+      "value": {
+        "reg": 0,
+        "from": "t",
+        "bytes": 1,
+        "points": [
+          [
+            0,
+            10
+          ],
+          [
+            10,
+            110
+          ],
+          [
+            20,
+            130
+          ]
+        ]
+      },
+      "v": 2.5,
+      "expect": [
+        35
+      ]
+    },
+    {
+      "value": {
+        "reg": 0,
+        "from": "t",
+        "bytes": 2,
+        "shift": 4,
+        "or": "0x0001"
+      },
+      "v": 100,
+      "expect": [
+        6,
+        65
+      ]
+    },
+    {
+      "value": {
+        "reg": 0,
+        "from": "p",
+        "bytes": 4,
+        "order": "le",
+        "signed": true,
+        "scale": 100
+      },
+      "v": -1.5,
+      "expect": [
+        106,
+        255,
+        255,
+        255
+      ]
+    },
+    {
+      "value": {
+        "reg": 0,
+        "from": "p",
+        "bytes": 4,
+        "scale": 1000,
+        "offset": 7
+      },
+      "v": 4000000,
+      "expect": [
+        238,
+        107,
+        40,
+        7
+      ]
+    },
+    {
+      "value": {
+        "reg": 0,
+        "from": "h",
+        "bytes": 3,
+        "shift": 4,
+        "scale": 10485.75
+      },
+      "v": 50,
+      "expect": [
+        128,
+        0,
+        0
+      ]
+    }
+  ],
+  "chips": [
+    {
+      "name": "LM75 on I2C: 16-bit registers, a 9-bit left-justified temperature, config written and read back",
+      "spec": {
+        "bus": "i2c",
+        "width": 2,
+        "registers": {
+          "0x01": "0x00",
+          "0x02": [
+            "0x4B",
+            "0x00"
+          ],
+          "0x03": [
+            "0x50",
+            "0x00"
+          ]
+        },
+        "values": [
+          {
+            "reg": "0x00",
+            "from": "temperature",
+            "bytes": 2,
+            "signed": true,
+            "scale": 2,
+            "shift": 7
+          }
+        ]
+      },
+      "values": {
+        "temperature": 25.5
+      },
+      "ops": [
+        {
+          "w": [
+            0
+          ]
+        },
+        {
+          "r": 2,
+          "expect": [
+            25,
+            128
+          ]
+        },
+        {
+          "set": {
+            "temperature": -10.5
+          }
+        },
+        {
+          "w": [
+            0
+          ]
+        },
+        {
+          "r": 2,
+          "expect": [
+            245,
+            128
+          ]
+        },
+        {
+          "w": [
+            1,
+            24
+          ]
+        },
+        {
+          "w": [
+            1
+          ]
+        },
+        {
+          "r": 1,
+          "expect": [
+            24
+          ]
+        },
+        {
+          "w": [
+            3
+          ]
+        },
+        {
+          "r": 2,
+          "expect": [
+            80,
+            0
+          ]
+        },
+        {
+          "r": 3,
+          "expect": [
+            80,
+            0,
+            80
+          ]
+        },
+        {
+          "w": [
+            0
+          ]
+        },
+        {
+          "r": 3,
+          "expect": [
+            245,
+            128,
+            245
+          ]
+        }
+      ]
+    },
+    {
+      "name": "I2C without a pointer: every read streams the reading from register 0, writes are commands",
+      "spec": {
+        "bus": "i2c",
+        "pointer": 0,
+        "values": [
+          {
+            "reg": 0,
+            "from": "lux",
+            "bytes": 2,
+            "scale": 1.2
+          }
+        ]
+      },
+      "values": {
+        "lux": 500
+      },
+      "ops": [
+        {
+          "w": [
+            16
+          ]
+        },
+        {
+          "r": 2,
+          "expect": [
+            2,
+            88
+          ]
+        },
+        {
+          "r": 2,
+          "expect": [
+            2,
+            88
+          ]
+        },
+        {
+          "set": {
+            "lux": 100
+          }
+        },
+        {
+          "r": 3,
+          "expect": [
+            0,
+            120,
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "name": "I2C with a 16-bit pointer",
+      "spec": {
+        "bus": "i2c",
+        "pointer": 2,
+        "registers": {
+          "0x1234": [
+            "0xAB",
+            "0xCD"
+          ]
+        },
+        "values": [
+          {
+            "reg": "0x0000",
+            "from": "x",
+            "bytes": 1
+          }
+        ]
+      },
+      "values": {
+        "x": 7
+      },
+      "ops": [
+        {
+          "w": [
+            18,
+            52
+          ]
+        },
+        {
+          "r": 2,
+          "expect": [
+            171,
+            205
+          ]
+        },
+        {
+          "w": [
+            0,
+            0
+          ]
+        },
+        {
+          "r": 1,
+          "expect": [
+            7
+          ]
+        },
+        {
+          "w": [
+            0,
+            1,
+            99
+          ]
+        },
+        {
+          "w": [
+            0,
+            1
+          ]
+        },
+        {
+          "r": 1,
+          "expect": [
+            99
+          ]
+        }
+      ]
+    },
+    {
+      "name": "SPI, Bosch style: bit 7 set reads, clear writes, address auto-increments",
+      "spec": {
+        "bus": "spi",
+        "registers": {
+          "0x50": "0x58"
+        },
+        "values": [
+          {
+            "reg": "0x7A",
+            "from": "t",
+            "bytes": 2
+          }
+        ]
+      },
+      "values": {
+        "t": 300
+      },
+      "ops": [
+        {
+          "spi": [
+            208,
+            0
+          ],
+          "expect": [
+            0,
+            88
+          ]
+        },
+        {
+          "spi": [
+            116,
+            39
+          ],
+          "expect": [
+            0,
+            0
+          ]
+        },
+        {
+          "spi": [
+            244,
+            0
+          ],
+          "expect": [
+            0,
+            39
+          ]
+        },
+        {
+          "spi": [
+            250,
+            0,
+            0
+          ],
+          "expect": [
+            0,
+            1,
+            44
+          ]
+        },
+        {
+          "set": {
+            "t": 1
+          }
+        },
+        {
+          "spi": [
+            250,
+            0,
+            0
+          ],
+          "expect": [
+            0,
+            0,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "name": "SPI, MAX31865 style: bit 7 set writes (readWhen 0)",
+      "spec": {
+        "bus": "spi",
+        "readWhen": 0,
+        "spiMode": 1,
+        "registers": {
+          "0x00": "0x00"
+        },
+        "values": [
+          {
+            "reg": "0x01",
+            "from": "r",
+            "bytes": 2,
+            "shift": 1
+          }
+        ]
+      },
+      "values": {
+        "r": 8000
+      },
+      "ops": [
+        {
+          "spi": [
+            128,
+            194
+          ],
+          "expect": [
+            0,
+            0
+          ]
+        },
+        {
+          "spi": [
+            0,
+            0
+          ],
+          "expect": [
+            0,
+            194
+          ]
+        },
+        {
+          "spi": [
+            1,
+            0,
+            0
+          ],
+          "expect": [
+            0,
+            62,
+            128
+          ]
+        }
+      ]
+    },
+    {
+      "name": "SPI without an address: a converter that shifts its word out on every select",
+      "spec": {
+        "bus": "spi",
+        "pointer": 0,
+        "values": [
+          {
+            "reg": 0,
+            "from": "temperature",
+            "bytes": 2,
+            "scale": 4,
+            "shift": 3
+          }
+        ]
+      },
+      "values": {
+        "temperature": 25
+      },
+      "ops": [
+        {
+          "spi": [
+            0,
+            0
+          ],
+          "expect": [
+            3,
+            32
+          ]
+        },
+        {
+          "set": {
+            "temperature": 100.25
+          }
+        },
+        {
+          "spi": [
+            255,
+            255
+          ],
+          "expect": [
+            12,
+            136
+          ]
+        }
+      ]
+    },
+    {
+      "name": "A host that reports no START: transactions follow from the bytes",
+      "spec": {
+        "bus": "i2c",
+        "width": 2,
+        "registers": {
+          "0x01": "0x00",
+          "0x02": [
+            "0x4B",
+            "0x00"
+          ],
+          "0x03": [
+            "0x50",
+            "0x00"
+          ]
+        },
+        "values": [
+          {
+            "reg": "0x00",
+            "from": "temperature",
+            "bytes": 2,
+            "signed": true,
+            "scale": 2,
+            "shift": 7
+          }
+        ]
+      },
+      "values": {
+        "temperature": 25.5
+      },
+      "ops": [
+        {
+          "wn": [
+            0
+          ]
+        },
+        {
+          "rn": 2,
+          "expect": [
+            25,
+            128
+          ]
+        },
+        {
+          "set": {
+            "temperature": -10.5
+          }
+        },
+        {
+          "wn": [
+            0
+          ]
+        },
+        {
+          "rn": 2,
+          "expect": [
+            245,
+            128
+          ]
+        },
+        {
+          "wn": [
+            1,
+            24
+          ]
+        },
+        {
+          "wn": [
+            1
+          ]
+        },
+        {
+          "rn": 1,
+          "expect": [
+            24
+          ]
+        }
+      ]
+    }
+  ]
+}

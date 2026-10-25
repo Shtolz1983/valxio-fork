@@ -1,0 +1,66 @@
+{
+  "id": "qmc5883l",
+  "name": "QMC5883L",
+  "title": "3-axis magnetometer / compass (I2C), GY-271",
+  "titleRu": "3-осевой магнитометр / компас (I2C), GY-271",
+  "group": "motion",
+  "interface": "i2c",
+  "pins": [
+    {
+      "name": "VCC",
+      "role": "power"
+    },
+    {
+      "name": "GND",
+      "role": "ground"
+    },
+    {
+      "name": "SCL",
+      "role": "i2c-scl"
+    },
+    {
+      "name": "SDA",
+      "role": "i2c-sda"
+    },
+    {
+      "name": "DRDY",
+      "role": "nc",
+      "desc": "Data ready (optional)"
+    }
+  ],
+  "supply": {
+    "min": 3.0,
+    "max": 5.0
+  },
+  "i2c": {
+    "addresses": [
+      "0x0D"
+    ]
+  },
+  "libraries": [
+    "QMC5883LCompass"
+  ],
+  "example": "#include <QMC5883LCompass.h>\n\nQMC5883LCompass compass;\n\nvoid setup() {\n  Serial.begin(115200);\n  compass.init();\n}\n\nvoid loop() {\n  compass.read();\n  Serial.print(\"Azimuth: \");\n  Serial.print(compass.getAzimuth());\n  Serial.println(\" deg\");\n  delay(250);\n}\n",
+  "notes": [
+    "Most GY-271 boards sold today carry a QMC5883L (0x0D), not the original HMC5883L (0x1E).",
+    "Keep it away from motors and magnets; calibrate with compass.calibrate()."
+  ],
+  "source": {
+    "library": "https://github.com/mprograms/QMC5883LCompass"
+  },
+  "sim": {
+    "model": "qmc5883l",
+    "controls": [
+      {
+        "key": "heading",
+        "label": "Heading",
+        "min": 0,
+        "max": 359,
+        "step": 1,
+        "unit": "°",
+        "default": 0
+      }
+    ]
+  },
+  "status": "verified"
+}

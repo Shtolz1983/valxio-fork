@@ -1,0 +1,83 @@
+{
+  "id": "rc522",
+  "name": "RC522",
+  "title": "RFID / NFC reader 13.56 MHz (SPI), MIFARE cards and tags",
+  "titleRu": "RFID/NFC-считыватель 13,56 МГц (SPI), карты и метки MIFARE",
+  "group": "rfid",
+  "interface": "spi",
+  "pins": [
+    {
+      "name": "SDA",
+      "role": "spi-cs",
+      "desc": "SPI chip select (labelled SDA)"
+    },
+    {
+      "name": "SCK",
+      "role": "spi-sck"
+    },
+    {
+      "name": "MOSI",
+      "role": "spi-mosi"
+    },
+    {
+      "name": "MISO",
+      "role": "spi-miso"
+    },
+    {
+      "name": "IRQ",
+      "role": "nc"
+    },
+    {
+      "name": "GND",
+      "role": "ground"
+    },
+    {
+      "name": "RST",
+      "role": "mcu-out",
+      "desc": "Reset"
+    },
+    {
+      "name": "3V3",
+      "role": "power"
+    }
+  ],
+  "supply": {
+    "min": 3.0,
+    "max": 3.6
+  },
+  "libraries": [
+    "MFRC522"
+  ],
+  "example": "#include <SPI.h>\n#include <MFRC522.h>\n\nMFRC522 rfid({{SDA}}, {{RST}});\n\nvoid setup() {\n  Serial.begin(115200);\n  SPI.begin();\n  rfid.PCD_Init();\n  Serial.println(\"Hold a card near the reader\");\n}\n\nvoid loop() {\n  if (!rfid.PICC_IsNewCardPresent() || !rfid.PICC_ReadCardSerial()) return;\n  Serial.print(\"Card UID:\");\n  for (byte i = 0; i < rfid.uid.size; i++) {\n    Serial.print(rfid.uid.uidByte[i] < 0x10 ? \" 0\" : \" \");\n    Serial.print(rfid.uid.uidByte[i], HEX);\n  }\n  Serial.println();\n  rfid.PICC_HaltA();\n}\n",
+  "notes": [
+    "Power from 3.3 V only - 5 V on 3V3 destroys the module.",
+    "SPI pins are fixed: Uno SCK 13, MISO 12, MOSI 11; ESP32 SCK 18, MISO 19, MOSI 23."
+  ],
+  "source": {
+    "library": "https://github.com/miguelbalboa/rfid"
+  },
+  "sim": {
+    "model": "rc522",
+    "controls": [
+      {
+        "key": "card",
+        "label": "Tag on the reader",
+        "min": 0,
+        "max": 1,
+        "step": 1,
+        "unit": "",
+        "default": 1
+      },
+      {
+        "key": "tag",
+        "label": "Tag UID preset (0-3)",
+        "min": 0,
+        "max": 3,
+        "step": 1,
+        "unit": "",
+        "default": 0
+      }
+    ]
+  },
+  "status": "verified"
+}

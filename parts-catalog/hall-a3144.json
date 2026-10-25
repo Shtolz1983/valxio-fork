@@ -1,0 +1,55 @@
+{
+  "id": "hall-a3144",
+  "name": "A3144",
+  "title": "Hall-effect magnet switch, KY-003",
+  "titleRu": "Датчик Холла (магнитный выключатель), KY-003",
+  "group": "motion",
+  "interface": "digital",
+  "pins": [
+    {
+      "name": "GND",
+      "role": "ground"
+    },
+    {
+      "name": "VCC",
+      "role": "power"
+    },
+    {
+      "name": "OUT",
+      "role": "mcu-in",
+      "desc": "LOW while a magnet is near"
+    }
+  ],
+  "supply": {
+    "min": 4.5,
+    "max": 24.0
+  },
+  "libraries": [],
+  "example": "const int HALL_PIN = {{OUT}};\n\nvoid setup() {\n  Serial.begin(115200);\n  pinMode(HALL_PIN, INPUT_PULLUP);\n}\n\nvoid loop() {\n  if (digitalRead(HALL_PIN) == LOW) {\n    Serial.println(\"Magnet detected\");\n  }\n  delay(100);\n}\n",
+  "notes": [
+    "Open-collector output: LOW near a magnet's south pole, needs a pull-up (INPUT_PULLUP or the module's).",
+    "Needs 4.5 V or more: power from 5 V; the output is safe on 3.3 V boards with INPUT_PULLUP."
+  ],
+  "sim": {
+    "controls": [
+      {
+        "key": "magnet",
+        "label": "Magnet near",
+        "min": 0,
+        "max": 1,
+        "step": 1,
+        "unit": "",
+        "default": 0
+      }
+    ],
+    "outputs": [
+      {
+        "pin": "OUT",
+        "kind": "digital",
+        "from": "magnet",
+        "activeLow": true
+      }
+    ]
+  },
+  "status": "verified"
+}

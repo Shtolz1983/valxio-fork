@@ -1,0 +1,67 @@
+{
+  "id": "lm35",
+  "name": "LM35",
+  "title": "Analog temperature sensor, 10 mV/°C, 2…150 °C",
+  "titleRu": "Аналоговый датчик температуры, 10 мВ/°C, 2…150 °C",
+  "group": "climate",
+  "interface": "analog",
+  "pins": [
+    {
+      "name": "VCC",
+      "role": "power"
+    },
+    {
+      "name": "OUT",
+      "role": "analog-in",
+      "desc": "10 mV per °C"
+    },
+    {
+      "name": "GND",
+      "role": "ground"
+    }
+  ],
+  "supply": {
+    "min": 4.0,
+    "max": 20.0
+  },
+  "libraries": [],
+  "example": "// LM35: OUT = 10 mV per degree Celsius.\nconst int SENSOR_PIN = {{OUT}};\n\n#if defined(ESP32)\nconst float ADC_MAX = 4095.0;  // 12-bit ADC\nconst float ADC_VREF = 3.3;\n#else\nconst float ADC_MAX = 1023.0;  // 10-bit ADC\nconst float ADC_VREF = 5.0;\n#endif\n\nvoid setup() {\n  Serial.begin(115200);\n}\n\nvoid loop() {\n  float volts = analogRead(SENSOR_PIN) * ADC_VREF / ADC_MAX;\n  float celsius = volts * 100.0;\n  Serial.print(\"Temperature: \");\n  Serial.print(celsius);\n  Serial.println(\" C\");\n  delay(1000);\n}\n",
+  "notes": [
+    "Needs at least 4 V: power it from 5 V even on a 3.3 V board (OUT stays below 1.5 V).",
+    "Reads only positive temperatures in this basic wiring."
+  ],
+  "source": {
+    "datasheet": "https://www.ti.com/lit/ds/symlink/lm35.pdf"
+  },
+  "sim": {
+    "controls": [
+      {
+        "key": "temperature",
+        "label": "Temperature",
+        "min": 0,
+        "max": 150,
+        "step": 0.5,
+        "unit": "°C",
+        "default": 25
+      }
+    ],
+    "outputs": [
+      {
+        "pin": "OUT",
+        "kind": "analog",
+        "from": "temperature",
+        "volts": [
+          [
+            0,
+            0
+          ],
+          [
+            150,
+            1.5
+          ]
+        ]
+      }
+    ]
+  },
+  "status": "verified"
+}

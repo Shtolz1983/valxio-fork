@@ -1,0 +1,31 @@
+{
+  "id": "heart-beat-sensor",
+  "name": "Pulse",
+  "title": "Analog pulse sensor (finger clip)",
+  "titleRu": "Аналоговый датчик пульса (на палец)",
+  "group": "biometric",
+  "interface": "analog",
+  "component": "heart-beat-sensor",
+  "pins": [
+    {
+      "name": "GND",
+      "role": "ground"
+    },
+    {
+      "name": "VCC",
+      "role": "power"
+    },
+    {
+      "name": "OUT",
+      "role": "analog-in"
+    }
+  ],
+  "supply": {
+    "min": 3.0,
+    "max": 5.5
+  },
+  "libraries": [],
+  "example": "const int PULSE_PIN = {{OUT}};\n\nvoid setup() {\n  Serial.begin(115200);\n}\n\nvoid loop() {\n  // Plot it with the Serial Plotter: the peaks are heart beats.\n  Serial.println(analogRead(PULSE_PIN));\n  delay(20);\n}\n",
+  "notes": [],
+  "status": "verified"
+}

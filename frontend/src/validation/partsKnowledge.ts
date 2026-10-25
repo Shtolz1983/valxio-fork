@@ -517,6 +517,14 @@ export function boardKnowledge(boardKind: string): BoardKnowledge | undefined {
   return BOARD_FAMILY[boardKind];
 }
 
+/**
+ * Add knowledge for a part the parts catalogue brings (parts-catalog/*.json).
+ * The hand-written entries above stay authoritative for their ids.
+ */
+export function registerPartKnowledge(metadataId: string, knowledge: PartKnowledge): void {
+  if (!PART_KNOWLEDGE[metadataId]) PART_KNOWLEDGE[metadataId] = knowledge;
+}
+
 export function partKnowledge(metadataId: string): PartKnowledge | undefined {
   return PART_KNOWLEDGE[metadataId] ?? PART_KNOWLEDGE[metadataId.replace(/^(wokwi|velxio)-/, '')];
 }

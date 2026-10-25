@@ -26,4 +26,7 @@ export const WORKER_I2C_MODELS: ReadonlySet<string> = new Set([
   'pcf8574',
   'i2c-write-sink',
   'custom-chip',
+  // Parts-catalog modules (backend/app/services/catalog_i2c_models.py); the
+  // record's `model` names the chip.
+  'catalog-i2c',
 ]);

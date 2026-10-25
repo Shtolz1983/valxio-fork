@@ -1,0 +1,55 @@
+{
+  "id": "max7219-matrix",
+  "name": "MAX7219",
+  "title": "8×8 LED matrix with MAX7219 driver (chainable)",
+  "titleRu": "Светодиодная матрица 8×8 с драйвером MAX7219 (каскадируется)",
+  "group": "display",
+  "interface": "spi",
+  "pins": [
+    {
+      "name": "VCC",
+      "role": "power"
+    },
+    {
+      "name": "GND",
+      "role": "ground"
+    },
+    {
+      "name": "DIN",
+      "role": "mcu-out",
+      "desc": "Data in"
+    },
+    {
+      "name": "CS",
+      "role": "spi-cs",
+      "desc": "Load"
+    },
+    {
+      "name": "CLK",
+      "role": "mcu-out",
+      "desc": "Clock"
+    }
+  ],
+  "supply": {
+    "min": 4.0,
+    "max": 5.5
+  },
+  "libraries": [
+    "MD_MAX72XX"
+  ],
+  "example": "#include <MD_MAX72xx.h>\n\n// FC16_HW suits most modules; try GENERIC_HW if the image is rotated or mirrored.\n#define HARDWARE_TYPE MD_MAX72XX::FC16_HW\nconst int DIN_PIN = {{DIN}};\nconst int CLK_PIN = {{CLK}};\nconst int CS_PIN = {{CS}};\nconst int MODULES = 1;  // chained 8x8 modules\n\nMD_MAX72XX mx = MD_MAX72XX(HARDWARE_TYPE, DIN_PIN, CLK_PIN, CS_PIN, MODULES);\n\nvoid setup() {\n  mx.begin();\n  mx.control(MD_MAX72XX::INTENSITY, 4);  // brightness 0..15\n  mx.clear();\n}\n\nvoid loop() {\n  for (uint8_t row = 0; row < 8; row++) {\n    mx.setRow(row, 0xFF);\n    delay(100);\n  }\n  mx.clear();\n  delay(300);\n}\n",
+  "notes": [
+    "Needs 5 V; on a 3.3 V board the MAX7219 usually still accepts 3.3 V logic but is out of spec.",
+    "Chain modules DOUT→DIN and set MODULES to their count.",
+    "The popular LedControl library builds only for AVR boards (Uno, Nano, Mega); MD_MAX72XX builds for ESP32 too."
+  ],
+  "source": {
+    "library": "https://github.com/MajicDesigns/MD_MAX72XX"
+  },
+  "sim": {
+    "model": "max7219",
+    "controls": []
+  },
+  "status": "verified",
+  "color": "#1a1a1a"
+}

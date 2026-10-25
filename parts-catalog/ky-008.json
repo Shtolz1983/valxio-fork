@@ -1,0 +1,41 @@
+{
+  "id": "ky-008",
+  "name": "KY-008",
+  "title": "650 nm 5 mW red laser diode module, digital on/off, 3–5 V",
+  "titleRu": "Лазерный модуль 650 нм 5 мВт, цифровое включение, 3–5 В",
+  "group": "other",
+  "interface": "digital",
+  "pins": [
+    {
+      "name": "S",
+      "role": "mcu-out",
+      "desc": "Signal: HIGH turns the laser on"
+    },
+    {
+      "name": "VCC",
+      "role": "power",
+      "desc": "Unlabelled middle pin, +5V per most sources"
+    },
+    {
+      "name": "-",
+      "role": "ground"
+    }
+  ],
+  "supply": {
+    "min": 3,
+    "max": 5
+  },
+  "libraries": [],
+  "example": "const int LASER_PIN = {{S}};\n\nvoid setup() {\n  Serial.begin(115200);\n  pinMode(LASER_PIN, OUTPUT);\n}\n\nvoid loop() {\n  digitalWrite(LASER_PIN, HIGH);\n  Serial.println(\"Laser ON\");\n  delay(300);\n  digitalWrite(LASER_PIN, LOW);\n  Serial.println(\"Laser OFF\");\n  delay(700);\n}\n",
+  "notes": [
+    "Pins from the silkscreen: S (signal), unlabelled middle, - (GND). Most sources call the middle pin +5V; some say it is unused (it reaches the diode via a resistor), so S and - alone may also work.",
+    "Draws about 30–40 mA, within an Arduino pin limit; on 3.3 V the beam is dimmer than at 5 V.",
+    "Never look into the beam or point it at eyes.",
+    "Do not leave the laser on constantly for long; the diode heats up."
+  ],
+  "source": {
+    "datasheet": "https://www.espboards.dev/sensors/ky-008/",
+    "library": "https://www.build-electronic-circuits.com/arduino-laser-module-ky-008/"
+  },
+  "status": "verified"
+}

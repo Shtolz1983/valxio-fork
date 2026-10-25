@@ -17,6 +17,8 @@ import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { adcPinMapFor } from '../velxio-components/Esp32Element';
 import { ComponentPickerModal } from '../ComponentPickerModal';
+import { openSensorCatalog } from '../sensors/SensorCatalogModal';
+import { Cpu } from 'lucide-react';
 import { PartInspectorDialog, type InspectorAction } from './PartInspectorDialog';
 import { CustomChipDialog } from '../customChips/CustomChipDialog';
 import { seedChipFileGroups, isChipSourceFile } from '../../services/chipFiles';
@@ -3230,6 +3232,17 @@ export const SimulatorCanvas = ({ headerSlot }: SimulatorCanvasProps = {}) => {
                   </svg>
                   {components.length}
                 </span>
+
+                {/* Sensors catalogue (parts-catalog cards) */}
+                <button
+                  className="add-component-btn add-component-btn-secondary"
+                  onClick={() => openSensorCatalog()}
+                  title={t('editor.canvas.sensorsTitle', 'Sensors catalogue: place a sensor wired to the board, insert its example code')}
+                  disabled={running}
+                >
+                  <Cpu size={15} />
+                  {t('editor.canvas.sensors', 'Sensors')}
+                </button>
 
                 {/* Add Component */}
                 <button

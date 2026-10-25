@@ -1,0 +1,64 @@
+{
+  "id": "soil-moisture",
+  "name": "Soil v1.2",
+  "title": "Capacitive soil moisture sensor v1.2, analog",
+  "titleRu": "Ёмкостный датчик влажности почвы v1.2, аналоговый",
+  "group": "water",
+  "interface": "analog",
+  "pins": [
+    {
+      "name": "GND",
+      "role": "ground"
+    },
+    {
+      "name": "VCC",
+      "role": "power"
+    },
+    {
+      "name": "AOUT",
+      "role": "analog-in",
+      "desc": "Lower voltage = wetter soil"
+    }
+  ],
+  "supply": {
+    "min": 3.3,
+    "max": 5.5
+  },
+  "libraries": [],
+  "example": "// Capacitive soil moisture: the reading drops as the soil gets wetter.\nconst int SENSOR_PIN = {{AOUT}};\n\n// Calibrate: read the sensor in dry air and in a glass of water.\nconst int DRY_READING = 520;\nconst int WET_READING = 260;\n\nvoid setup() {\n  Serial.begin(115200);\n}\n\nvoid loop() {\n  int raw = analogRead(SENSOR_PIN);\n  int percent = constrain(map(raw, DRY_READING, WET_READING, 0, 100), 0, 100);\n  Serial.print(\"Soil moisture: \");\n  Serial.print(percent);\n  Serial.print(\" % (raw \");\n  Serial.print(raw);\n  Serial.println(\")\");\n  delay(1000);\n}\n",
+  "notes": [
+    "Calibrate DRY_READING/WET_READING on your board: a 12-bit ESP32 ADC reads about 4× the Uno values.",
+    "Capacitive probes do not corrode like the resistive two-prong ones."
+  ],
+  "sim": {
+    "controls": [
+      {
+        "key": "moisture",
+        "label": "Moisture",
+        "min": 0,
+        "max": 100,
+        "step": 1,
+        "unit": "%",
+        "default": 40
+      }
+    ],
+    "outputs": [
+      {
+        "pin": "AOUT",
+        "kind": "analog",
+        "from": "moisture",
+        "volts": [
+          [
+            0,
+            2.54
+          ],
+          [
+            100,
+            1.27
+          ]
+        ]
+      }
+    ]
+  },
+  "status": "verified"
+}

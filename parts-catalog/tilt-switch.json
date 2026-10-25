@@ -1,0 +1,31 @@
+{
+  "id": "tilt-switch",
+  "name": "Tilt",
+  "title": "Tilt switch module",
+  "titleRu": "Датчик наклона",
+  "group": "motion",
+  "interface": "digital",
+  "component": "tilt-switch",
+  "pins": [
+    {
+      "name": "GND",
+      "role": "ground"
+    },
+    {
+      "name": "VCC",
+      "role": "power"
+    },
+    {
+      "name": "OUT",
+      "role": "mcu-in"
+    }
+  ],
+  "supply": {
+    "min": 3.3,
+    "max": 5.5
+  },
+  "libraries": [],
+  "example": "const int TILT_PIN = {{OUT}};\n\nvoid setup() {\n  Serial.begin(115200);\n  pinMode(TILT_PIN, INPUT);\n}\n\nvoid loop() {\n  Serial.println(digitalRead(TILT_PIN) == HIGH ? \"Tilted\" : \"Level\");\n  delay(300);\n}\n",
+  "notes": [],
+  "status": "verified"
+}

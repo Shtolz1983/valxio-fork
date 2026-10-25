@@ -1,0 +1,499 @@
+/* Sensors catalogue — dark modal, same family as NewProjectDialog */
+
+.sc-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--color-bg-overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9000;
+}
+
+.sc-dialog {
+  display: flex;
+  flex-direction: column;
+  width: min(1000px, 96vw);
+  height: min(720px, 90vh);
+  background: var(--wb-2);
+  border: 1px solid var(--wb-7);
+  border-radius: 10px;
+  box-shadow: var(--shadow-3);
+  color: var(--wb-13);
+  font-size: 13px;
+  overflow: hidden;
+}
+
+.sc-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--wb-6);
+}
+
+.sc-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.sc-search {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 120px;
+  padding: 5px 8px;
+  background: var(--wb-4);
+  border: 1px solid var(--wb-6);
+  border-radius: 6px;
+  color: var(--wb-10);
+}
+.sc-search input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--wb-13);
+  font: inherit;
+}
+
+.sc-body {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.sc-list {
+  width: 270px;
+  flex-shrink: 0;
+  overflow-y: auto;
+  border-right: 1px solid var(--wb-6);
+  padding: 6px 0 12px;
+}
+
+.sc-group {
+  padding: 10px 14px 4px;
+  color: var(--wb-10);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+
+.sc-item {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  column-gap: 6px;
+  width: 100%;
+  padding: 5px 14px;
+  text-align: left;
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+}
+.sc-item:hover {
+  background: var(--color-wash-hover);
+}
+.sc-item.is-active {
+  background: var(--color-accent-soft);
+}
+.sc-item-name {
+  font-weight: 600;
+}
+.sc-item-sub {
+  grid-column: 1 / -1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--wb-10);
+  font-size: 11.5px;
+}
+
+.sc-badge {
+  justify-self: start;
+  padding: 0 6px;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 16px;
+}
+.sc-badge-draft {
+  background: var(--color-feedback-warning-soft, rgba(255, 170, 0, 0.18));
+  color: var(--color-feedback-warning);
+}
+
+.sc-detail {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  padding: 16px 20px 20px;
+}
+
+.sc-empty,
+.sc-muted {
+  color: var(--wb-10);
+  line-height: 1.5;
+}
+.sc-empty {
+  padding: 16px;
+}
+
+.sc-card-top {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.sc-preview {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 170px;
+  height: 120px;
+  background: var(--wb-4);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.sc-preview > * {
+  transform-origin: center;
+}
+
+.sc-card-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 18px;
+  font-weight: 700;
+}
+.sc-card-title {
+  margin-top: 4px;
+  color: var(--wb-11);
+  line-height: 1.4;
+}
+
+.sc-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.sc-chip {
+  padding: 1px 8px;
+  border: 1px solid var(--wb-7);
+  border-radius: 10px;
+  color: var(--wb-11);
+  font-size: 11px;
+}
+.sc-chip-sim {
+  border-color: var(--color-feedback-success);
+  color: var(--color-feedback-success);
+}
+
+.sc-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 14px 0 10px;
+}
+
+.sc-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--wb-4);
+  border: 1px solid var(--wb-7);
+  border-radius: 6px;
+  color: var(--wb-13);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.sc-btn:hover:not(:disabled) {
+  background: var(--color-wash-hover);
+}
+.sc-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.sc-btn-primary {
+  background: var(--color-action-primary);
+  border-color: transparent;
+  color: var(--color-action-primary-fg);
+}
+.sc-btn-primary:hover:not(:disabled) {
+  background: var(--color-action-primary);
+  filter: brightness(1.1);
+}
+.sc-btn-ok {
+  color: var(--color-feedback-success);
+}
+.sc-btn-danger {
+  color: var(--color-feedback-error);
+}
+
+.sc-icon {
+  display: inline-flex;
+  padding: 4px;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  color: var(--wb-11);
+  cursor: pointer;
+}
+.sc-icon:hover:not(:disabled) {
+  background: var(--color-wash-hover);
+}
+
+.sc-notice {
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  line-height: 1.5;
+}
+.sc-notice-ok {
+  background: var(--color-feedback-success-soft);
+  color: var(--color-feedback-success);
+}
+.sc-notice-error {
+  background: var(--color-feedback-warning-soft, rgba(255, 170, 0, 0.15));
+  color: var(--color-feedback-warning);
+}
+
+.sc-pins {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 4px 0 12px;
+}
+.sc-pins th,
+.sc-pins td {
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--wb-6);
+  text-align: left;
+  vertical-align: top;
+}
+.sc-pins th {
+  color: var(--wb-10);
+  font-size: 11px;
+  font-weight: 600;
+}
+.sc-mono {
+  font-family: var(--font-mono, monospace);
+  font-weight: 600;
+}
+
+.sc-line {
+  margin: 6px 0;
+  line-height: 1.5;
+}
+.sc-notes {
+  margin: 6px 0;
+  padding-left: 18px;
+  color: var(--wb-11);
+  line-height: 1.5;
+}
+.sc-links {
+  display: flex;
+  gap: 14px;
+}
+.sc-links a {
+  color: var(--color-accent-fg, var(--color-action-primary));
+}
+
+.sc-link {
+  margin-top: 6px;
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--color-accent-fg, var(--color-action-primary));
+  font: inherit;
+  cursor: pointer;
+}
+.sc-code {
+  margin: 8px 0 0;
+  padding: 10px;
+  max-height: 320px;
+  overflow: auto;
+  background: var(--wb-4);
+  border-radius: 6px;
+  font-family: var(--font-mono, monospace);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.sc-add h4 {
+  margin: 0 0 6px;
+  font-size: 15px;
+}
+.sc-add-row {
+  display: flex;
+  gap: 8px;
+  margin: 12px 0;
+}
+.sc-add-row input {
+  flex: 1;
+  padding: 7px 10px;
+  background: var(--wb-4);
+  border: 1px solid var(--wb-6);
+  border-radius: 6px;
+  color: var(--wb-13);
+  font: inherit;
+}
+.sc-job {
+  margin: 0;
+  padding: 10px 12px;
+  list-style: none;
+  background: var(--wb-4);
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.sc-job-search,
+.sc-job-read {
+  color: var(--wb-10);
+}
+.sc-job-check {
+  color: var(--color-accent-fg, var(--color-action-primary));
+}
+.sc-job-error {
+  color: var(--color-feedback-error);
+}
+.sc-job-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sc-spin {
+  animation: sc-spin 1s linear infinite;
+}
+@keyframes sc-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 720px) {
+  .sc-body {
+    flex-direction: column;
+  }
+  .sc-list {
+    width: auto;
+    max-height: 35%;
+    border-right: none;
+    border-bottom: 1px solid var(--wb-6);
+  }
+  .sc-card-top {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+/* Photo identification in "+ Add sensor" */
+.sc-photos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.sc-photo {
+  position: relative;
+  width: 84px;
+  height: 84px;
+}
+.sc-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid var(--wb-6);
+}
+.sc-photo button {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 1px solid var(--wb-6);
+  border-radius: 50%;
+  background: var(--wb-4);
+  color: var(--wb-13);
+  cursor: pointer;
+}
+.sc-identifying {
+  margin-bottom: 12px;
+}
+.sc-identify {
+  margin-bottom: 12px;
+}
+.sc-identify-head {
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.sc-candidate {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  border: 1px solid var(--wb-6);
+  border-radius: 6px;
+  cursor: pointer;
+}
+.sc-candidate.is-chosen {
+  border-color: var(--color-action-primary);
+  background: var(--wb-4);
+}
+.sc-candidate input {
+  margin-top: 3px;
+}
+.sc-candidate-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.sc-candidate-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+}
+.sc-candidate-title {
+  font-size: 13px;
+}
+.sc-conf-high {
+  background: rgba(46, 160, 67, 0.2);
+  color: #3fb950;
+}
+.sc-conf-medium {
+  background: rgba(210, 153, 34, 0.2);
+  color: #d29922;
+}
+.sc-conf-low {
+  background: rgba(248, 81, 73, 0.15);
+  color: #f85149;
+}
+.sc-identify-q {
+  margin: 4px 0 8px;
+  font-style: italic;
+}
+.sc-badge-known {
+  background: var(--wb-5);
+  color: var(--wb-12);
+}
