@@ -7,13 +7,17 @@
   "main": "server.mjs",
   "scripts": {
     "start": "node server.mjs",
-    "test": "node --test test/*.test.mjs"
+    "test": "node --test test/*.test.mjs",
+    "verify-cards": "node scripts/verify-cards.mjs"
   },
   "engines": {
     "node": ">=20"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^1.3.0",
     "@modelcontextprotocol/sdk": "^1.32.1",
+    "avr8js": "0.21.0",
+    "openai": "^7.43.0",
     "ws": "^8.22.0",
     "zod": "^4.6.7"
   }

@@ -1,0 +1,160 @@
+.ai-big-dialog.aic-dialog {
+  width: min(640px, 100%);
+  height: auto;
+  max-height: min(720px, 100%);
+  overflow-y: auto;
+}
+.aic-intro {
+  margin: 0;
+  color: var(--color-fg-muted);
+  font-size: 12px;
+}
+.aic-error {
+  color: var(--color-feedback-error);
+  font-size: 12px;
+}
+.aic-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.aic-item,
+.aic-add {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-input);
+}
+.aic-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.aic-end {
+  justify-content: flex-end;
+}
+.aic-spacer {
+  flex: 1;
+}
+.aic-label {
+  font-weight: 600;
+}
+.aic-kind,
+.aic-account {
+  font-size: 12px;
+  color: var(--color-fg-muted);
+  overflow-wrap: anywhere;
+}
+.aic-account {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.aic-ok {
+  color: var(--color-feedback-success, #3fb950);
+}
+.aic-bad {
+  color: var(--color-feedback-warning, #d29922);
+}
+.aic-radio {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.aic-input,
+.aic-select {
+  font: inherit;
+  font-size: 12px;
+  color: var(--color-fg-default);
+  background: var(--color-bg-header);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-sm);
+  padding: 4px 6px;
+}
+.aic-input {
+  flex: 1;
+  min-width: 160px;
+}
+.aic-input:focus,
+.aic-select:focus {
+  outline: none;
+  border-color: var(--color-focus-ring);
+}
+.aic-primary {
+  height: 28px;
+  padding: 0 12px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--color-action-primary);
+  color: var(--color-action-primary-fg);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.aic-primary:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.aic-add-btn {
+  align-self: flex-start;
+}
+.aic-add-title {
+  font-weight: 600;
+}
+.aic-link {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--color-fg-link, var(--color-action-primary));
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.aic-login {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+}
+.aic-login ol {
+  margin: 0;
+  padding-left: 18px;
+}
+.aic-login a {
+  color: var(--color-fg-link, var(--color-action-primary));
+}
+
+/* The "answers: <connection> · <model>" row under the chat header. */
+.ai-responder {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-bottom: 1px solid var(--color-border-default);
+  font-size: 12px;
+  color: var(--color-fg-muted);
+}
+.ai-responder-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-fg-default);
+}
+.aic-filter {
+  flex: 0 1 140px;
+  min-width: 100px;
+}
+.aic-link:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

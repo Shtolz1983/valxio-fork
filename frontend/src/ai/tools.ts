@@ -64,6 +64,25 @@ const WIRE_COLORS: Record<string, string> = {
   grey: '#888888',
 };
 
+/** A file in get_project: whole when short, else its start and how to read the rest. */
+const PROJECT_FILE_CHARS = 12_000;
+const PROJECT_FILE_HEAD = 3_000;
+/** What one read_file call returns at most. */
+const READ_MAX_LINES = 1_500;
+const READ_MAX_CHARS = 60_000;
+
+function projectFile(f: { name: string; content: string }) {
+  const lines = f.content.split('\n').length;
+  if (f.content.length <= PROJECT_FILE_CHARS) return { name: f.name, lines, content: f.content };
+  return {
+    name: f.name,
+    lines,
+    chars: f.content.length,
+    content: f.content.slice(0, PROJECT_FILE_HEAD),
+    truncated: `Only the first ${PROJECT_FILE_HEAD} of ${f.content.length} characters are shown. Read the whole file with read_file before changing it.`,
+  };
+}
+
 function clip(text: string, max: number): string {
   return text.length > max ? `${text.slice(0, max)}… [${text.length - max} more chars]` : text;
 }
@@ -173,7 +192,7 @@ function projectSummary() {
       running: b.running,
       languageMode: b.languageMode,
       libraries: b.libraries ?? [],
-      files: ed.getGroupFiles(b.activeFileGroupId).map((f) => ({ name: f.name, content: clip(f.content, 6000) })),
+      files: ed.getGroupFiles(b.activeFileGroupId).map(projectFile),
     })),
     components: s.components.map((c) => ({
       id: c.id,
@@ -241,7 +260,7 @@ async function compileBoard(board: BoardInstance) {
   }
   await ensureLibraries(board.libraries ?? []);
   const lines: string[] = [];
-  const out = await compileBoardForFlash(board, (line) => lines.push(line));
+  const out = await compileBoardForFlash(board, (line) => lines.push(line), { initiatedBy: 'agent' });
   if (out.ok) return { boardId: board.id, success: true, elapsedMs: Math.round(out.elapsedMs) };
   // Compiler diagnostics only ("file:12:5: error: …", linker errors) — not the
   // ninja/ccache lines whose object paths merely contain the word "error".
@@ -383,6 +402,10 @@ export const AI_TOOLS: Record<string, AiToolHandler> = {
       end: { componentId: b.partId, pinName: b.pinName, x: 0, y: 0 },
       waypoints: [],
       color: c,
+      // The system owns the shape: recalculateAllWirePositions routes it
+      // around parts and beside the other wires instead of the default
+      // elbow, which stacked every wire of a module on one line.
+      autoRouted: true,
     };
     sim().recordAddWire(wire);
     await nextPaint();
@@ -396,6 +419,56 @@ export const AI_TOOLS: Record<string, AiToolHandler> = {
     if (!sim().wires.some((w) => w.id === id)) throw new Error(`No wire with id "${id}".`);
     sim().recordRemoveWire(id);
     return { removed: id };
+  },
+
+  async read_file({ boardId, name, startLine, maxLines }) {
+    const board = findBoard(boardId);
+    const fileName = str(name, 'name');
+    const file = editor().getGroupFiles(board.activeFileGroupId).find((f) => f.name === fileName);
+    if (!file) {
+      const names = editor().getGroupFiles(board.activeFileGroupId).map((f) => f.name);
+      throw new Error(`Board "${board.id}" has no file "${fileName}". Its files: ${names.join(', ') || 'none'}`);
+    }
+    const all = file.content.split('\n');
+    const from = Math.max(1, Math.floor(optNum(startLine) ?? 1));
+    const want = Math.min(READ_MAX_LINES, Math.max(1, Math.floor(optNum(maxLines) ?? READ_MAX_LINES)));
+    const out: string[] = [];
+    let chars = 0;
+    for (let i = from - 1; i < all.length && out.length < want; i++) {
+      if (out.length && chars + all[i].length + 1 > READ_MAX_CHARS) break;
+      out.push(all[i]);
+      chars += all[i].length + 1;
+    }
+    const endLine = from + out.length - 1;
+    return {
+      boardId: board.id,
+      file: fileName,
+      totalLines: all.length,
+      startLine: from,
+      endLine,
+      content: out.join('\n'),
+      ...(endLine < all.length ? { more: `Lines ${endLine + 1}–${all.length} follow: call read_file with startLine ${endLine + 1}.` } : {}),
+    };
+  },
+
+  async edit_file({ boardId, name, oldText, newText, replaceAll }) {
+    const board = findBoard(boardId);
+    const fileName = str(name, 'name');
+    if (typeof oldText !== 'string' || !oldText) throw new Error('"oldText" must be the exact text to replace');
+    if (typeof newText !== 'string') throw new Error('"newText" must be a string');
+    const gid = board.activeFileGroupId;
+    const ed = editor();
+    const file = ed.getGroupFiles(gid).find((f) => f.name === fileName);
+    if (!file) throw new Error(`Board "${board.id}" has no file "${fileName}" — create it with write_file`);
+    const count = file.content.split(oldText).length - 1;
+    if (count === 0) throw new Error('oldText was not found in the file. Copy it exactly from read_file (spaces and line breaks included).');
+    if (count > 1 && replaceAll !== true) {
+      throw new Error(`oldText occurs ${count} times. Add surrounding lines to make it unique, or pass replaceAll: true.`);
+    }
+    const content = replaceAll === true ? file.content.split(oldText).join(newText) : file.content.replace(oldText, () => newText);
+    if (ed.activeGroupId === gid) ed.setFileContent(file.id, content);
+    else ed.setGroupFileContent(gid, file.id, content);
+    return { boardId: board.id, file: fileName, replaced: replaceAll === true ? count : 1, chars: content.length };
   },
 
   async write_file({ boardId, name, content }) {

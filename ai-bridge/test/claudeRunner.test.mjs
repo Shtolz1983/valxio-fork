@@ -12,6 +12,25 @@ test('buildClaudeArgs disables built-in tools and wires the MCP server', () => {
   assert.ok(!args.includes('--resume'));
 });
 
+test('buildClaudeArgs enables the built-in tools it is given', () => {
+  const args = buildClaudeArgs({ mcpUrl: 'u', systemPrompt: 's', tools: 'WebSearch,WebFetch', allowedTools: 'mcp__velxio WebSearch WebFetch' });
+  assert.equal(args[args.indexOf('--tools') + 1], 'WebSearch,WebFetch');
+  assert.equal(args[args.indexOf('--allowedTools') + 1], 'mcp__velxio WebSearch WebFetch');
+});
+
+test('mapStreamEvent marks a resume of a session Claude no longer has', () => {
+  const [lost] = mapStreamEvent({
+    type: 'result',
+    subtype: 'error_during_execution',
+    is_error: true,
+    num_turns: 0,
+    errors: ['No conversation found with session ID: 3f0c2a1e-1111-4222-8333-944455556666'],
+  });
+  assert.equal(lost.sessionLost, true);
+  const [ok] = mapStreamEvent({ type: 'result', subtype: 'success', is_error: false, result: 'hi' });
+  assert.equal(ok.sessionLost, false);
+});
+
 test('buildClaudeArgs resumes an existing session', () => {
   const args = buildClaudeArgs({ mcpUrl: 'u', systemPrompt: 's', sessionId: 'abc' });
   assert.equal(args[args.indexOf('--resume') + 1], 'abc');
@@ -48,4 +67,12 @@ test('mapStreamEvent: init, text delta, tool use, tool result, result', () => {
 test('mapStreamEvent ignores unrelated events', () => {
   assert.deepEqual(mapStreamEvent({ type: 'rate_limit_event' }), []);
   assert.deepEqual(mapStreamEvent({ type: 'system', subtype: 'thinking_tokens' }), []);
+});
+
+test('withReplyLanguage adds the reply-language rule for known codes only', async () => {
+  const { withReplyLanguage } = await import('../claudeRunner.mjs');
+  assert.match(withReplyLanguage('SP', 'ru'), /Always write your messages to the user in Russian/);
+  assert.ok(withReplyLanguage('SP', 'ru').startsWith('SP'));
+  assert.equal(withReplyLanguage('SP', 'xx'), 'SP');
+  assert.equal(withReplyLanguage('SP', undefined), 'SP');
 });

@@ -14,7 +14,7 @@ export const TOOLS = [
     name: 'get_project',
     where: 'browser',
     description:
-      'Current workspace: boards (id, kind), components (id, type, position, properties), wires (id, from, to) and code files per board. Call this first.',
+      'Current workspace: boards (id, kind), components (id, type, position, properties), wires (id, from, to) and code files per board. Call this first. A long file comes back cut short (its "truncated" says so): read it with read_file.',
     input: {},
   },
   {
@@ -90,9 +90,34 @@ export const TOOLS = [
     input: { wireId: z.string() },
   },
   {
+    name: 'read_file',
+    where: 'browser',
+    description:
+      'Read a code file of a board in full (up to 1500 lines per call; "more" says where to continue). Read a file whole before changing it.',
+    input: {
+      boardId: z.string().optional().describe('Defaults to the active board.'),
+      name: z.string().describe('File name, e.g. "sketch.ino".'),
+      startLine: z.number().int().optional().describe('First line to return, 1-based (default 1).'),
+      maxLines: z.number().int().optional(),
+    },
+  },
+  {
+    name: 'edit_file',
+    where: 'browser',
+    description:
+      'Change part of an existing file: replace oldText (exact, as read_file shows it, unique in the file unless replaceAll) with newText. Prefer this to write_file for changes to existing code.',
+    input: {
+      boardId: z.string().optional().describe('Defaults to the active board.'),
+      name: z.string(),
+      oldText: z.string(),
+      newText: z.string(),
+      replaceAll: z.boolean().optional(),
+    },
+  },
+  {
     name: 'write_file',
     where: 'browser',
-    description: 'Create or overwrite a code file of a board (the main sketch is "sketch.ino").',
+    description: 'Create a code file of a board, or replace one whole (the main sketch is "sketch.ino"). To change existing code use edit_file.',
     input: {
       boardId: z.string().optional().describe('Defaults to the active board.'),
       name: z.string(),
