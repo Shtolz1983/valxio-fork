@@ -31,6 +31,7 @@ import './components/velxio-components/Bmp280Element';
 import './components/velxio-components/Ds3231Element';
 import './components/velxio-components/GpsNeo6mElement';
 import './components/velxio-components/EPaperElement';
+import './components/velxio-components/SensorModuleElement';
 import App from './App.tsx';
 
 // Configure monaco-editor for offline use via local static assets
@@ -117,6 +118,10 @@ if (import.meta.env.VITE_PRO_BUILD) {
   // What the registries have now is all there will be.
   markProOverlaySettled();
 }
+
+// A compile that fails on a missing library offers to install it and retry
+// (every build: the handler only asks the backend's Library Manager).
+void import('./utils/missingLibraries').then((m) => m.installMissingLibraryHandler());
 
 // Desktop-only hooks (ESP32 QEMU prompt now, welcome screen in Phase 3).
 // Dynamic import so the OSS bundle never pulls this in.

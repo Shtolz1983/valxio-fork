@@ -2,11 +2,14 @@ import { describe, it, expect } from 'vitest';
 import { flashAvrOverLink, programPages, type SerialLink } from '../flash/avrWebFlash';
 
 /** A fake Optiboot: answers STK500v1 commands and keeps the flash it was sent. */
-function fakeOptiboot(opts: { baud?: number; signature?: number[]; corruptReadback?: boolean } = {}) {
+function fakeOptiboot(
+  opts: { baud?: number; signature?: number[]; corruptReadback?: boolean; loseFirstReadTail?: boolean } = {},
+) {
   const flash = new Uint8Array(32 * 1024).fill(0xff);
   const log: string[] = [];
   let address = 0;
   let out: number[] = [];
+  let reads = 0;
 
   const reply = (payload: number[] = []) => out.push(0x14, ...payload, 0x10);
 
@@ -46,7 +49,9 @@ function fakeOptiboot(opts: { baud?: number; signature?: number[]; corruptReadba
             const len = (bytes[1] << 8) | bytes[2];
             const data = [...flash.subarray(address, address + len)];
             if (opts.corruptReadback) data[0] ^= 0xff;
-            reply(data);
+            // What Chrome + CH340 does: part of the answer never arrives.
+            if (opts.loseFirstReadTail && reads++ === 0) out.push(0x14, ...data.slice(0, 5));
+            else reply(data);
             break;
           }
         }
@@ -118,6 +123,13 @@ describe('AVR Web Serial flasher (STK500v1)', () => {
   it('reports a failed read-back', async () => {
     const board = fakeOptiboot({ corruptReadback: true });
     await expect(flashAvrOverLink(board.open, hexOf(PROGRAM), () => {})).rejects.toThrow(/Verification failed/);
+  });
+
+  it('reads a lost read-back piece again after a resync', async () => {
+    const board = fakeOptiboot({ loseFirstReadTail: true });
+    const result = await flashAvrOverLink(board.open, hexOf(PROGRAM), () => {});
+    expect(result.chipName).toBe('ATmega328P');
+    expect(board.log.filter((l) => l === 'sync')).toHaveLength(2);
   });
 
   it('explains a board that never answers', async () => {

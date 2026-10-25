@@ -44,6 +44,21 @@ export interface SerialLink {
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+const hex4 = (n: number) => n.toString(16).padStart(4, '0');
+
+/**
+ * Largest single Web Serial write. CH340 USB-serial chips (most Nano / Uno
+ * clones) on macOS can drop the tail of a 133-byte page sent in one write,
+ * leaving the bootloader waiting for bytes that never come.
+ */
+const WRITE_CHUNK = 32;
+
+/**
+ * Largest read-back asked for at once. The same CH340 setups can lose part of
+ * a 130-byte READ_PAGE answer in Chrome (the bytes never arrive), so the
+ * verification reads small pieces and retries a piece once after a resync.
+ */
+const READ_CHUNK = 32;
 
 class Stk500 {
   private link: SerialLink;
@@ -52,14 +67,26 @@ class Stk500 {
     this.link = link;
   }
 
-  /** Send a command and read INSYNC, `replyLength` payload bytes, OK. */
-  async command(bytes: number[], replyLength = 0, timeoutMs = 500): Promise<Uint8Array> {
+  /**
+   * Send a command and read INSYNC, `replyLength` payload bytes, OK. A
+   * failure names the command (`what`) and how far the reply got, so a
+   * flash that stalls on real hardware says where.
+   */
+  async command(what: string, bytes: number[], replyLength = 0, timeoutMs = 500): Promise<Uint8Array> {
     await this.link.write(new Uint8Array([...bytes, STK.CRC_EOP]));
-    const head = await this.link.read(1, timeoutMs);
-    if (head[0] !== STK.INSYNC) throw new Error(`bootloader out of sync (got 0x${head[0].toString(16)})`);
-    const payload = replyLength ? await this.link.read(replyLength, timeoutMs) : new Uint8Array();
-    const tail = await this.link.read(1, timeoutMs);
-    if (tail[0] !== STK.OK) throw new Error(`bootloader refused the command (got 0x${tail[0].toString(16)})`);
+    const step = async (part: string, n: number) => {
+      try {
+        return await this.link.read(n, timeoutMs);
+      } catch (err) {
+        const got = err instanceof Error && err.message.startsWith('got ') ? ` (${err.message})` : '';
+        throw new Error(`${what}: no ${part} from the bootloader within ${timeoutMs} ms${got}`);
+      }
+    };
+    const head = await step('reply', 1);
+    if (head[0] !== STK.INSYNC) throw new Error(`${what}: bootloader out of sync (got 0x${head[0].toString(16)})`);
+    const payload = replyLength ? await step(`${replyLength}-byte answer`, replyLength) : new Uint8Array();
+    const tail = await step('end of reply', 1);
+    if (tail[0] !== STK.OK) throw new Error(`${what}: bootloader refused the command (got 0x${tail[0].toString(16)})`);
     return payload;
   }
 
@@ -67,7 +94,7 @@ class Stk500 {
     for (let attempt = 0; attempt < 8; attempt++) {
       this.link.drain();
       try {
-        await this.command([STK.GET_SYNC], 0, 200);
+        await this.command('GET_SYNC', [STK.GET_SYNC], 0, 200);
         return;
       } catch {
         await sleep(50);
@@ -77,22 +104,52 @@ class Stk500 {
   }
 
   signature(): Promise<Uint8Array> {
-    return this.command([STK.READ_SIGN], 3);
+    return this.command('READ_SIGN', [STK.READ_SIGN], 3);
   }
 
   async loadAddress(byteAddress: number): Promise<void> {
     const word = byteAddress >> 1;
-    await this.command([STK.LOAD_ADDRESS, word & 0xff, (word >> 8) & 0xff]);
+    await this.command(`LOAD_ADDRESS 0x${hex4(byteAddress)}`, [STK.LOAD_ADDRESS, word & 0xff, (word >> 8) & 0xff]);
   }
 
   async writePage(byteAddress: number, data: Uint8Array): Promise<void> {
     await this.loadAddress(byteAddress);
-    await this.command([STK.PROG_PAGE, (data.length >> 8) & 0xff, data.length & 0xff, 0x46, ...data], 0, 1000);
+    await this.command(
+      `PROG_PAGE 0x${hex4(byteAddress)}`,
+      [STK.PROG_PAGE, (data.length >> 8) & 0xff, data.length & 0xff, 0x46, ...data],
+      0,
+      1000,
+    );
   }
 
   async readPage(byteAddress: number, length: number): Promise<Uint8Array> {
     await this.loadAddress(byteAddress);
-    return this.command([STK.READ_PAGE, (length >> 8) & 0xff, length & 0xff, 0x46], length, 1000);
+    return this.command(
+      `READ_PAGE 0x${hex4(byteAddress)}`,
+      [STK.READ_PAGE, (length >> 8) & 0xff, length & 0xff, 0x46],
+      length,
+      1000,
+    );
+  }
+
+  /** A page read back in READ_CHUNK pieces; a lost piece is read again once. */
+  async readBack(byteAddress: number, length: number): Promise<Uint8Array> {
+    const out = new Uint8Array(length);
+    for (let off = 0; off < length; off += READ_CHUNK) {
+      const n = Math.min(READ_CHUNK, length - off);
+      let piece: Uint8Array;
+      try {
+        piece = await this.readPage(byteAddress + off, n);
+      } catch {
+        // Let the rest of the broken answer arrive, drop it, and resync.
+        await sleep(100);
+        this.link.drain();
+        await this.sync();
+        piece = await this.readPage(byteAddress + off, n);
+      }
+      out.set(piece, off);
+    }
+    return out;
   }
 }
 
@@ -135,21 +192,22 @@ export async function flashAvrOverLink(
       }
       onProgress({ phase: 'connecting', pct: 0, line: 'Bootloader answered: ATmega328P.' });
 
-      await stk.command([STK.ENTER_PROGMODE]);
+      await stk.command('ENTER_PROGMODE', [STK.ENTER_PROGMODE]);
       for (let i = 0; i < pages.length; i++) {
         if (signal?.aborted) throw new Error('Cancelled.');
         await stk.writePage(i * PAGE_SIZE, pages[i]);
         onProgress({ phase: 'writing', pct: Math.round(((i + 1) / pages.length) * 90) });
       }
       for (let i = 0; i < pages.length; i++) {
-        const back = await stk.readPage(i * PAGE_SIZE, PAGE_SIZE);
+        if (signal?.aborted) throw new Error('Cancelled.');
+        const back = await stk.readBack(i * PAGE_SIZE, PAGE_SIZE);
         if (!back.every((b, j) => b === pages[i][j])) {
           throw new Error(`Verification failed at 0x${(i * PAGE_SIZE).toString(16)} — the flash did not take. Try again.`);
         }
       }
       onProgress({ phase: 'writing', pct: 100, line: `Wrote and verified ${pages.length * PAGE_SIZE} bytes.` });
       onProgress({ phase: 'resetting', pct: 100, line: 'Starting the sketch…' });
-      await stk.command([STK.LEAVE_PROGMODE]);
+      await stk.command('LEAVE_PROGMODE', [STK.LEAVE_PROGMODE]);
       return { chipName: 'ATmega328P', elapsedMs: Math.round(performance.now() - t0) };
     } catch (err) {
       lastError = err;
@@ -191,13 +249,15 @@ export function webSerialLink(port: SerialPort) {
 
     return {
       async write(bytes) {
-        await writer.write(bytes);
+        for (let at = 0; at < bytes.length; at += WRITE_CHUNK) {
+          await writer.write(bytes.subarray(at, at + WRITE_CHUNK));
+        }
       },
       async read(n, timeoutMs) {
         const deadline = Date.now() + timeoutMs;
         while (buffer.length < n) {
           const left = deadline - Date.now();
-          if (left <= 0 || closed) throw new Error('timeout');
+          if (left <= 0 || closed) throw new Error(`got ${buffer.length} of ${n} bytes`);
           await new Promise<void>((resolve) => {
             const timer = setTimeout(resolve, left);
             wake.fn = () => {

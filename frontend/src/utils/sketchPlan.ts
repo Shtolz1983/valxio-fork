@@ -122,6 +122,7 @@ const KNOWN_LIBRARIES: Record<string, string> = {
   'newping.h': 'NewPing',
   'tft_espi.h': 'TFT_eSPI',
   'mpu6050.h': 'MPU6050',
+  'ledcontrol.h': 'LedControl',
 };
 
 export interface LibraryResolution {
@@ -202,4 +203,16 @@ export async function withLibraryDependencies(
     frontier = next;
   }
   return out;
+}
+
+/**
+ * Headers a failed build could not find: gcc's "fatal error: X.h: No such
+ * file or directory" and the backend's "<X.h>: none of the libraries in this
+ * project provides it".
+ */
+export function missingHeadersFromLog(log: string): string[] {
+  const found = new Set<string>();
+  for (const m of log.matchAll(/fatal error:\s*([\w./+-]+\.(?:h|hpp|hh))\s*: No such file or directory/g)) found.add(m[1]);
+  for (const m of log.matchAll(/<([\w./+-]+\.(?:h|hpp|hh))>:\s*none of the libraries/g)) found.add(m[1]);
+  return [...found];
 }

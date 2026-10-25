@@ -64,6 +64,9 @@ export interface VlxPayload {
   components: Component[];
   wires: Wire[];
   activeBoardId: string | null;
+  /** The workspace identity (useProjectStore.workspaceId): reopening the
+   *  file finds its AI chat. Absent in older files. */
+  workspaceId?: string;
 }
 
 function serialisableBoard(b: BoardInstance) {
@@ -127,6 +130,7 @@ export function buildVlxPayload(opts: { name?: string } = {}): VlxPayload {
     components: sim.components,
     wires: sim.wires,
     activeBoardId: sim.activeBoardId,
+    workspaceId: useProjectStore.getState().workspaceId,
   };
 }
 
@@ -137,14 +141,19 @@ export function buildVlxBlob(opts: { name?: string } = {}): Blob {
   return new Blob([json], { type: 'application/json' });
 }
 
-/** Sanitise a filename: keep letters, digits, dashes, dots, underscores. */
-function safeFilename(name?: string): string {
+/** Sanitise a filename: keep letters (any script), digits, dashes, dots, underscores. */
+/** A project name as a file or folder name: letters, digits, ".", "_", "-". */
+export function safeProjectName(name?: string): string {
   const base = (name ?? 'velxio-project').trim() || 'velxio-project';
   const cleaned = base
-    .replace(/[^a-zA-Z0-9._-]+/g, '-')
+    .replace(/[^\p{L}\p{N}._-]+/gu, '-')
     .replace(/^-+|-+$/g, '')
     .slice(0, 80);
-  return `${cleaned || 'velxio-project'}.vlx`;
+  return cleaned || 'velxio-project';
+}
+
+function safeFilename(name?: string): string {
+  return `${safeProjectName(name)}.vlx`;
 }
 
 /**
@@ -211,6 +220,10 @@ function validatePayload(data: unknown): VlxPayload {
   if (!isPlainObject(data.fileGroups)) {
     throw new VlxParseError('Missing or invalid "fileGroups" object.');
   }
+  if (data.workspaceId !== undefined && !(typeof data.workspaceId === 'string' && /^[\w-]{1,64}$/.test(data.workspaceId))) {
+    // Optional: a file without a usable one just starts a new chat.
+    delete data.workspaceId;
+  }
   if (data.folderGroups !== undefined && !isPlainObject(data.folderGroups)) {
     // Optional field (empty folders per group) — drop silently if malformed.
     delete data.folderGroups;
@@ -258,6 +271,7 @@ export async function importVlxFile(file: File): Promise<VlxPayload> {
   // projectId and silently PUT the .vlx contents over the user's saved
   // project (and push the clobber to GitHub when the project is linked).
   useProjectStore.getState().clearCurrentProject();
+  if (payload.workspaceId) useProjectStore.getState().setWorkspaceId(payload.workspaceId);
   useSimulatorStore.getState().loadProjectState({
     boards: payload.boards as unknown as BoardInstance[],
     fileGroups: payload.fileGroups,

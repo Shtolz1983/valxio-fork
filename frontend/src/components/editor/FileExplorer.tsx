@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback, useSyncExternalStore }
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { useEditorStore, chipFileGroupId } from '../../store/useEditorStore';
+import { HoverTip } from '../ui/HoverTip';
 import type { AutoSaveState } from '../../hooks/useAutoSaveProject';
 import type { WorkspaceFile } from '../../store/useEditorStore';
 import { useSimulatorStore } from '../../store/useSimulatorStore';
@@ -921,20 +922,16 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({ onSaveClick, onNewCl
       <div className="file-explorer-header">
         <span className="file-explorer-title">{t('editor.fileExplorer.workspace')}</span>
         <div className="file-explorer-header-actions">
-          <button
-            className="file-explorer-new-btn"
-            title={t('editor.fileExplorer.newWorkspace')}
-            onClick={onNewClick}
-          >
-            <IcoNewWorkspace />
-          </button>
-          <button
-            className="file-explorer-save-btn"
-            title="Open project (.vlx Velxio or .zip Wokwi)"
-            onClick={handleOpenProjectClick}
-          >
-            <IcoOpen />
-          </button>
+          <HoverTip text={t('editor.fileExplorer.newWorkspace')}>
+            <button className="file-explorer-new-btn" onClick={onNewClick}>
+              <IcoNewWorkspace />
+            </button>
+          </HoverTip>
+          <HoverTip text={t('editor.fileExplorer.openProject', 'Open project (.vlx Velxio or .zip Wokwi)')}>
+            <button className="file-explorer-save-btn" onClick={handleOpenProjectClick}>
+              <IcoOpen />
+            </button>
+          </HoverTip>
           <input
             ref={fileInputRef}
             type="file"
@@ -942,14 +939,11 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({ onSaveClick, onNewCl
             onChange={handleProjectFilePicked}
             style={{ display: 'none' }}
           />
-          <button
-            className="file-explorer-save-btn"
-            title={t('openSketch.button', 'Open sketch (.ino and its .h/.cpp files)')}
-            aria-label={t('openSketch.button', 'Open sketch (.ino and its .h/.cpp files)')}
-            onClick={handleOpenSketchClick}
-          >
-            <IcoOpenSketch />
-          </button>
+          <HoverTip text={t('openSketch.button', 'Open sketch (.ino and its .h/.cpp files)')}>
+            <button className="file-explorer-save-btn" onClick={handleOpenSketchClick}>
+              <IcoOpenSketch />
+            </button>
+          </HoverTip>
           <input
             ref={sketchInputRef}
             type="file"
@@ -965,14 +959,14 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({ onSaveClick, onNewCl
             style={{ display: 'none' }}
             onChange={onChipImageChosen}
           />
-          <button
-            className={`file-explorer-save-btn${autoSave ? ` ${SAVE_STATUS_CLASS[autoSave.status]}` : ''}`}
-            title={saveButtonTitle(t, autoSave)}
-            aria-label={saveButtonTitle(t, autoSave)}
-            onClick={onSaveClick}
-          >
-            <IcoSave />
-          </button>
+          <HoverTip text={saveButtonTitle(t, autoSave)}>
+            <button
+              className={`file-explorer-save-btn${autoSave ? ` ${SAVE_STATUS_CLASS[autoSave.status]}` : ''}`}
+              onClick={onSaveClick}
+            >
+              <IcoSave />
+            </button>
+          </HoverTip>
         </div>
       </div>
 

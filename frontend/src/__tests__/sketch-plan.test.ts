@@ -1,5 +1,29 @@
 import { describe, it, expect } from 'vitest';
-import { NoInoFileError, planSketchImport, resolveSketchLibraries, withLibraryDependencies } from '../utils/sketchPlan';
+import {
+  NoInoFileError,
+  missingHeadersFromLog,
+  planSketchImport,
+  resolveSketchLibraries,
+  withLibraryDependencies,
+} from '../utils/sketchPlan';
+
+describe('missingHeadersFromLog', () => {
+  it('reads gcc and backend missing-header errors, once each', () => {
+    const log = [
+      '/tmp/x/sketch/sketch.ino:31:10: fatal error: LedControl.h: No such file or directory',
+      ' #include <LedControl.h>',
+      'compilation terminated.',
+      '<DHT.h>: none of the libraries in this project provides it.',
+      '/tmp/y/Adafruit_SSD1306.h:42:10: fatal error: Adafruit_GFX.h: No such file or directory',
+      '/tmp/x/sketch/sketch.ino:31:10: fatal error: LedControl.h: No such file or directory',
+    ].join('\n');
+    expect(missingHeadersFromLog(log)).toEqual(['LedControl.h', 'Adafruit_GFX.h', 'DHT.h']);
+  });
+
+  it('ignores ordinary compile errors', () => {
+    expect(missingHeadersFromLog("sketch.ino:3:5: error: 'foo' was not declared in this scope")).toEqual([]);
+  });
+});
 
 describe('withLibraryDependencies', () => {
   const index = async (q: string) =>

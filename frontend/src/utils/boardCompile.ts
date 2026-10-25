@@ -87,6 +87,8 @@ export interface BoardCompileOptions {
    * runs as RP2350: the caller keeps the result.
    */
   record?: boolean;
+  /** 'agent' when the AI assistant compiles: missing libraries install without a prompt. */
+  initiatedBy?: 'agent';
 }
 
 /**
@@ -120,7 +122,7 @@ export async function compileBoardForFlash(
           if (line.trim() && !isNoiseBuildLine(line)) onLine(line);
         }
       },
-      compileOptionsForBoard(board),
+      opts.initiatedBy ? { ...compileOptionsForBoard(board), initiatedBy: opts.initiatedBy } : compileOptionsForBoard(board),
     );
     // Intellisense seam: file:line markers in the editor (cleared on green).
     publishCompileOutput(

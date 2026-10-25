@@ -31,6 +31,7 @@ import { useSimulatorStore, DEFAULT_BOARD_POSITION } from '../../store/useSimula
 import { useProjectStore } from '../../store/useProjectStore';
 import { useEditorStore } from '../../store/useEditorStore';
 import { getLocaleFromPath, localizedPath } from '../../i18n/path';
+import { useLocalProjectStore } from '../../store/useLocalProjectStore';
 import { loadExample } from '../../utils/loadExample';
 import type { ExampleProject } from '../../data/examples';
 import { ExampleThumbnail } from '../examples/ExampleThumbnail';
@@ -109,6 +110,7 @@ export function clearWorkspaceForStarter(): void {
   // mutating the stores while a saved project is still "current" lets the
   // debounced PUT overwrite that project with the emptied content.
   useProjectStore.getState().clearCurrentProject();
+  useLocalProjectStore.getState().setName('');
   const sim = useSimulatorStore.getState();
   sim.boards.forEach((b) => sim.stopBoard(b.id));
   sim.boards.map((b) => b.id).forEach((id) => sim.removeBoard(id));

@@ -20,6 +20,14 @@ interface ProjectState {
    * so "which examples get compiled most" is answerable.
    */
   currentExampleId: string | null;
+  /**
+   * Identity of the local workspace (no server project open): what the AI
+   * chat's history is filed under (ai/chatHistory.ts). A fresh workspace
+   * (new project, example, import) gets a new one; the autosave and .vlx
+   * files keep it, so a reload or reopening the same file finds its chat.
+   */
+  workspaceId: string;
+  setWorkspaceId: (id: string) => void;
   setCurrentProject: (project: CurrentProject) => void;
   clearCurrentProject: () => void;
   setCurrentExampleId: (id: string | null) => void;
@@ -28,15 +36,25 @@ interface ProjectState {
   setVisibility: (next: boolean | ProjectVisibility) => void;
 }
 
+export function newWorkspaceId(): string {
+  return typeof crypto !== 'undefined' && 'randomUUID' in crypto
+    ? crypto.randomUUID()
+    : `ws-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+}
+
 export const useProjectStore = create<ProjectState>((set) => ({
   currentProject: null,
   currentExampleId: null,
+  workspaceId: newWorkspaceId(),
+  setWorkspaceId: (id) => set({ workspaceId: id }),
   // Loading a real project supersedes the example context.
   setCurrentProject: (project) => set({ currentProject: project, currentExampleId: null }),
   // Also drops the example context: every caller (new project, blank
   // workspace, logout cleanup) means "this workspace is no longer that".
-  // loadExample re-stamps its id right after calling this.
-  clearCurrentProject: () => set({ currentProject: null, currentExampleId: null }),
+  // loadExample re-stamps its id right after calling this. And it starts a
+  // new workspace identity: its AI chat starts empty (importVlxFile puts the
+  // file's own back).
+  clearCurrentProject: () => set({ currentProject: null, currentExampleId: null, workspaceId: newWorkspaceId() }),
   setCurrentExampleId: (id) => set({ currentExampleId: id }),
   setVisibility: (next) =>
     set((s) => {

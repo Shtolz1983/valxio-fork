@@ -7,9 +7,9 @@
  * in the pro overlay. The OSS editor exposes a stable `triggerSaveAction()`
  * that:
  *
- *   - In OSS without an overlay → downloads a portable `.vlx` snapshot
- *     of the current workspace. The user picks where it goes (browser
- *     save dialog) and can re-load it later via the "Open .vlx" button.
+ *   - In OSS without an overlay → asks for the project name
+ *     (SaveProjectDialog), then downloads a portable `.vlx` snapshot of
+ *     the current workspace, re-loadable via the "Open project" button.
  *     This is Phase 4 of the OSS split — gives self-hosters durable
  *     project persistence without requiring a DB or auth.
  *   - With the pro overlay loaded → installSaveActionImpl() overrides
@@ -21,8 +21,7 @@
  * is just the doorbell.
  */
 
-import { triggerDownloadVlx } from '../utils/vlxFile';
-import { useProjectStore } from '../store/useProjectStore';
+import { useLocalProjectStore } from '../store/useLocalProjectStore';
 
 let _impl: (() => void) | null = null;
 
@@ -31,14 +30,8 @@ export function installSaveActionImpl(impl: (() => void) | null): void {
 }
 
 function defaultSaveAction(): void {
-  // OSS fallback: dump the workspace to a `.vlx` file the user downloads.
-  // Use the loaded project's name if there is one (slug/identity tracking
-  // doesn't require auth — useProjectStore stays in OSS).
-  const proj = useProjectStore.getState().currentProject;
-  const name = proj?.slug ?? proj?.id ?? undefined;
-  const filename = triggerDownloadVlx({ name });
-  // eslint-disable-next-line no-console
-  console.info(`[oss] downloaded workspace as ${filename}`);
+  // OSS fallback: name the project, then download it as `<name>.vlx`.
+  useLocalProjectStore.getState().openSaveDialog();
 }
 
 export function triggerSaveAction(): void {

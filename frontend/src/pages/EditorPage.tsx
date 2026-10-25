@@ -8,6 +8,7 @@ import { startSimulation } from '../simulation/spice/start';
 import { useSEO } from '../utils/useSEO';
 import { getLocaleFromPath, localizedPath } from '../i18n/path';
 import { restoreStashedWorkspace } from '../utils/workspaceDraft';
+import { restoreLocalAutosave, startLocalAutosave } from '../utils/localAutosave';
 import { CodeEditor } from '../components/editor/CodeEditor';
 import { EditorToolbar } from '../components/editor/EditorToolbar';
 import { FileExplorer } from '../components/editor/FileExplorer';
@@ -32,6 +33,8 @@ import {
   NewProjectDialog,
   clearWorkspaceForStarter,
 } from '../components/editor/NewProjectDialog';
+import { SaveProjectDialog } from '../components/editor/SaveProjectDialog';
+import { SensorCatalogModal } from '../components/sensors/SensorCatalogModal';
 import { useAutoSaveProject } from '../hooks/useAutoSaveProject';
 import { registerEditorCommand } from '../lib/editorCommands';
 import { whenNewsClear } from '../lib/newsGate';
@@ -58,6 +61,14 @@ const EXPLORER_DEFAULT = 124;
 // again when the user closes it and later navigates away from and back to
 // /editor within the same SPA session.
 let starterDialogShownThisLoad = false;
+
+/** A bare /editor visit (no example, project or query) — the same test the starter dialog uses. */
+function isPlainEditorUrl(): boolean {
+  const locale = getLocaleFromPath(window.location.pathname);
+  return (
+    window.location.pathname.replace(/\/+$/, '') === localizedPath('/editor', locale) && !window.location.search
+  );
+}
 
 function announceStarBanner(action: 'shown' | 'click' | 'dismiss', round: 1 | 2): void {
   window.dispatchEvent(new CustomEvent('velxio-star-banner', { detail: { action, round } }));
@@ -120,8 +131,16 @@ export const EditorPage: React.FC = () => {
   // Restore an in-progress workspace stashed before a login redirect, so a
   // user who was building something and signed in lands back on their circuit
   // (not the empty starter board). One-shot; see utils/workspaceDraft.
+  //
+  // Otherwise, on a plain /editor visit, bring back the browser autosave
+  // (utils/localAutosave) — same synchronous load, so the pristine check of
+  // the starter dialog below sees it and stays quiet. Example / project URLs
+  // load their own content and are never overwritten by it. Autosave runs on
+  // every route from here on.
   useEffect(() => {
-    restoreStashedWorkspace();
+    const restoredDraft = restoreStashedWorkspace();
+    if (!restoredDraft && isPlainEditorUrl()) restoreLocalAutosave();
+    return startLocalAutosave();
   }, []);
 
   const [showNewProjectDialog, setShowNewProjectDialog] = useState(false);
@@ -837,6 +856,8 @@ export const EditorPage: React.FC = () => {
         isOpen={showNewProjectDialog}
         onClose={() => setShowNewProjectDialog(false)}
       />
+      <SaveProjectDialog />
+      <SensorCatalogModal />
       {/* Slot reserved for the private pro overlay (e.g. agent chat panel).
           Self-hosted builds without an overlay see nothing here. */}
       <div data-velxio-slot="agent-chat" />

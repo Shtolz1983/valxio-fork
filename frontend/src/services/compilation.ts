@@ -2,6 +2,7 @@ import axios from 'axios';
 import { getApiBase } from '../lib/apiBase';
 import type { ESP32BoardOptions, SpiffsFile } from '../types/boardOptions';
 import { implicitBoardOptions } from '../types/boardOptions';
+import { missingHeadersFromLog } from '../utils/sketchPlan';
 
 export interface SketchFile {
   name: string;
@@ -244,6 +245,49 @@ function readQueueInfo(status: CompileStatusResponse): Omit<
 export async function compileCode(
   files: SketchFile[],
   board: string = 'arduino:avr:uno',
+  projectId?: string | null,
+  onProgress?: CompileProgress,
+  extras?: CompileExtras,
+): Promise<CompileResult> {
+  let result = await compileOnce(files, board, projectId, onProgress, extras);
+  // A build that failed only for want of a library: let the installed
+  // handler (utils/missingLibraries.ts) install it — asking first unless the
+  // user opted into automatic installs — and build again. Two rounds cover a
+  // library whose own dependency was missing too.
+  const tried = new Set<string>();
+  for (let round = 0; round < 2 && !result.success && missingLibraryHandler; round++) {
+    const headers = missingHeadersFromLog([result.stderr, result.error].filter(Boolean).join('\n')).filter(
+      (h) => !tried.has(h),
+    );
+    if (!headers.length) break;
+    headers.forEach((h) => tried.add(h));
+    const added = await missingLibraryHandler(headers, { initiatedBy: extras?.initiatedBy });
+    if (!added?.length) break;
+    const libraries = extras?.libraries ? [...new Set([...extras.libraries, ...added])] : extras?.libraries;
+    extras = { ...extras, libraries };
+    result = await compileOnce(files, board, projectId, onProgress, extras);
+  }
+  return result;
+}
+
+/**
+ * Installs the libraries behind missing headers and returns their names
+ * (null = nothing installed, e.g. the user declined). Registered at startup.
+ */
+export type MissingLibraryHandler = (
+  headers: string[],
+  context: { initiatedBy?: 'agent' },
+) => Promise<string[] | null>;
+
+let missingLibraryHandler: MissingLibraryHandler | null = null;
+
+export function setMissingLibraryHandler(handler: MissingLibraryHandler | null): void {
+  missingLibraryHandler = handler;
+}
+
+async function compileOnce(
+  files: SketchFile[],
+  board: string,
   projectId?: string | null,
   onProgress?: CompileProgress,
   extras?: CompileExtras,

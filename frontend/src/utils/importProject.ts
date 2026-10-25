@@ -20,6 +20,8 @@
  */
 
 import { importVlxFile, VlxParseError } from './vlxFile';
+import { useLocalProjectStore } from '../store/useLocalProjectStore';
+import { newWorkspaceId, useProjectStore } from '../store/useProjectStore';
 import { importFromWokwiZip } from './wokwiZip';
 import type { ImportResult } from './wokwiZip';
 
@@ -52,7 +54,8 @@ export async function importProjectFile(file: File): Promise<ProjectImportResult
 
   if (lower.endsWith('.vlx') || (file.type === 'application/json' && !lower.endsWith('.zip'))) {
     try {
-      await importVlxFile(file);
+      const payload = await importVlxFile(file);
+      useLocalProjectStore.getState().setName(payload.name || baseName(file.name));
       return { kind: 'vlx' };
     } catch (err) {
       // Re-raise with a friendlier prefix.  VlxParseError already has a
@@ -64,6 +67,9 @@ export async function importProjectFile(file: File): Promise<ProjectImportResult
 
   if (lower.endsWith('.zip')) {
     const result = await importFromWokwiZip(file);
+    // A new workspace: its AI chat starts empty.
+    useProjectStore.getState().setWorkspaceId(newWorkspaceId());
+    useLocalProjectStore.getState().setName(baseName(file.name));
     return { kind: 'zip', ...result };
   }
 
@@ -75,3 +81,8 @@ export async function importProjectFile(file: File): Promise<ProjectImportResult
 
 /** File-input `accept` attribute that pairs with importProjectFile. */
 export const PROJECT_FILE_ACCEPT = '.vlx,.zip,application/json,application/zip';
+
+/** "weather-station.vlx" → "weather-station". */
+function baseName(fileName: string): string {
+  return fileName.replace(/\.[^.]+$/, '');
+}

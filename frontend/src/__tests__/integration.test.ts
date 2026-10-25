@@ -127,12 +127,12 @@ describe('Integration — AVRSimulator + PinManager', () => {
     expect(adc!.channelValues[3]).toBe(1.8);
   });
 
-  it('ADC resets to default on reset()', () => {
+  it('ADC keeps the circuit voltages through reset()', () => {
     sim.loadHex(EMPTY_HEX);
     sim.getADC()!.channelValues[0] = 4.5;
     sim.reset();
-    // Fresh AVRADC: channelValues[0] is unset (undefined) or 0 — either means no voltage
-    expect(sim.getADC()!.channelValues[0] ?? 0).toBe(0);
+    // Fresh AVRADC, same circuit: the part that set 4.5 V does not set it again.
+    expect(sim.getADC()!.channelValues[0]).toBe(4.5);
   });
 
   // ── start()/stop() — one frame via depth-limited RAF ───────────────────────
