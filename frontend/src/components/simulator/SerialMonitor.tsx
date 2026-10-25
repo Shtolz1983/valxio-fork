@@ -11,6 +11,8 @@ import { openDeviceGateway } from '../../lib/openDeviceGateway';
 import type { BoardKind } from '../../types/board';
 import { boardDisplayName, isPiBoardKind } from '../../types/board';
 import { PiTerminal } from '../raspberry-pi/PiTerminal';
+import { WiringPanel } from './WiringPanel';
+import { useWiringText } from './useWiringText';
 
 // Short labels for tabs
 const BOARD_SHORT_LABEL: Partial<Record<string, string>> = {
@@ -95,6 +97,11 @@ export const SerialMonitor: React.FC = () => {
   const [lineEnding, setLineEnding] = useState<'none' | 'nl' | 'cr' | 'both'>('nl');
   const [autoscroll, setAutoscroll] = useState(true);
   const outputRef = useRef<HTMLPreElement>(null);
+  // The "Connections" tab after the board tabs: the circuit as text.
+  const [view, setView] = useState<'serial' | 'wiring'>('serial');
+  const [copied, setCopied] = useState(false);
+  const wiring = useWiringText();
+  const showWiring = view === 'wiring';
 
   // Sync active tab to activeBoardId when it changes
   useEffect(() => {
@@ -175,6 +182,7 @@ export const SerialMonitor: React.FC = () => {
   );
 
   const handleTabClick = (boardId: string) => {
+    setView('serial');
     setActiveTabId(boardId);
     const board = boards.find((b) => b.id === boardId);
     if (board) {
@@ -198,7 +206,7 @@ export const SerialMonitor: React.FC = () => {
       {/* Tab strip */}
       <div style={styles.tabStrip}>
         {boards.map((board) => {
-          const isActive = board.id === resolvedTabId;
+          const isActive = !showWiring && board.id === resolvedTabId;
           const color = BOARD_COLOR[board.boardKind] ?? 'var(--wb-10)';
           const hasUnread = board.serialOutput.length > (lastSeenLen[board.id] ?? 0);
           return (
@@ -222,7 +230,34 @@ export const SerialMonitor: React.FC = () => {
           );
         })}
 
+        <button
+          style={{
+            ...styles.tab,
+            ...(showWiring ? { ...styles.tabActive, borderBottomColor: 'var(--wb-12)', color: 'var(--wb-12)' } : {}),
+          }}
+          onClick={() => setView('wiring')}
+          title={t('editor.wiring.tabTitle', 'Which controller pin every part is wired to, as text')}
+        >
+          {t('editor.wiring.tab', 'Connections')}
+        </button>
+
         {/* Right-side controls */}
+        {showWiring ? (
+          <div style={styles.tabControls}>
+            <button
+              style={styles.clearBtn}
+              disabled={!wiring}
+              onClick={() => {
+                void navigator.clipboard?.writeText(wiring).then(() => {
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 1500);
+                });
+              }}
+            >
+              {copied ? t('editor.wiring.copied', 'Copied') : t('editor.wiring.copy', 'Copy')}
+            </button>
+          </div>
+        ) : (
         <div style={styles.tabControls}>
           {isMicroPython && (
             <span style={{ color: '#ce93d8', fontSize: 11, fontWeight: 600 }}>
@@ -264,6 +299,7 @@ export const SerialMonitor: React.FC = () => {
           {/* Overlay slot for per-board terminal actions (empty in OSS). */}
           <span data-velxio-slot="serial-actions" />
         </div>
+        )}
       </div>
 
       {/* Overlay slot for a full-width notice about the LINK itself — e.g. the
@@ -274,7 +310,9 @@ export const SerialMonitor: React.FC = () => {
       {/* Output area. QEMU-Linux boards get the interactive xterm (shell
           input, line editing, ANSI) instead of the read-only mirror — this
           replaced the separate RaspberryPiWorkspace as the one terminal. */}
-      {isPiBoardKind(activeBoard?.boardKind ?? '') &&
+      {showWiring ? (
+        <WiringPanel text={wiring} />
+      ) : isPiBoardKind(activeBoard?.boardKind ?? '') &&
       activeBoard?.running &&
       activeBoard?.engineMode !== 'instant' ? (
         <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
@@ -389,7 +427,7 @@ export const SerialMonitor: React.FC = () => {
       )}
 
       {/* Input row — the xterm handles Pi input itself */}
-      {!(
+      {!showWiring && !(
         isPiBoardKind(activeBoard?.boardKind ?? '') &&
         activeBoard?.running &&
         activeBoard?.engineMode !== 'instant'
