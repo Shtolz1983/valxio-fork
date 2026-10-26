@@ -173,8 +173,12 @@ WORKDIR /app/frontend
 # on 2026-10-15. npm 11 resolves the same package.json.
 RUN npm install -g npm@11 --no-audit --no-fund \
  && rm -f package-lock.json \
- && npm install --include=optional \
- && npm run build:docker
+ && npm install --include=optional
+# The AI bridge folder on the host, for the AI panel's "start the bridge"
+# command (frontend/src/ai/bridgeHint.ts); docker-compose passes it. Declared
+# after the install so a different folder does not redo the install.
+ARG AI_BRIDGE_DIR=
+RUN npm run build:docker
 
 
 # ---- Stage 2: Final Production Image ----

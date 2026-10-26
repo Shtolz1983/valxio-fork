@@ -36,13 +36,24 @@ the web, not your files).
 
 ## Run
 
-Requires Node 20+ and Claude Code logged in (`claude` works in your terminal).
+Requires Node 22.18+ (it runs the TypeScript sources it shares with the frontend;
+`.nvmrc` names 24) and Claude Code logged in (`claude` works in your terminal).
+`start.mjs` checks the version before loading `server.mjs`.
 
 ```bash
 cd ai-bridge
 npm install
-npm start
+npm run autostart        # macOS: start now and at every login
+npm start                # or: run until the terminal closes
 ```
+
+`npm run autostart` (`scripts/autostart.mjs`) installs a LaunchAgent,
+`~/Library/LaunchAgents/dev.velxio.ai-bridge.plist`, that runs `start.mjs` with
+the Node it was run with, restarts the bridge after a crash, and logs to
+`~/Library/Logs/velxio-ai-bridge.log`. It keeps the env vars below and the
+shell's `PATH` as they were when it ran. `npm run autostart -- status` reports
+it, `npm run autostart:remove` uninstalls it. A second bridge on a taken port
+exits cleanly, so the agent does not restart it.
 
 Then open the editor (http://localhost:3080 from Docker, or http://localhost:5173 from
 `npm run dev`) and click the **AI** tab on the right edge. The dot in the panel header turns green

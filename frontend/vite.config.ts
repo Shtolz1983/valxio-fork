@@ -17,6 +17,14 @@ const proOverlayPath =
 
 export default defineConfig(({ command }) => ({
   plugins: [react()],
+  define: {
+    // The AI bridge folder on this computer, for the AI panel's "start the
+    // bridge" command (src/ai/bridgeHint.ts): this checkout when serving,
+    // AI_BRIDGE_DIR when building (docker-compose passes the host path).
+    __AI_BRIDGE_DIR__: JSON.stringify(
+      process.env.AI_BRIDGE_DIR ?? (command === 'serve' ? path.resolve(__dirname, '../ai-bridge') : ''),
+    ),
+  },
   resolve: {
     alias: {
       '@pro': proOverlayPath,

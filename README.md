@@ -52,7 +52,7 @@ What the fork adds:
 ## Setup
 
 You need: Git, Docker Desktop (or Docker Engine with Compose v2),
-Node.js 20+ for the AI assistant, and Chrome or Edge (saving into a folder
+Node.js 22.18+ (for example 24) for the AI assistant, and Chrome or Edge (saving into a folder
 needs them). For the AI: Claude Code installed and signed in (`claude` works
 in the terminal), or an API key (Anthropic, OpenAI, OpenRouter), or Ollama.
 
@@ -80,19 +80,29 @@ in the terminal), or an API key (Anthropic, OpenAI, OpenRouter), or Ollama.
    ```
    The first build takes 10–15 minutes. Open <http://localhost:3080>;
    `curl -f http://localhost:3080/health` answers when it is up.
-4. **Start the AI assistant** (in a second terminal, on the computer where
-   the browser runs):
+4. **Start the AI assistant** (once, on the computer where the browser
+   runs):
    ```bash
    cd ai-bridge
    npm install
-   npm start
+   npm run autostart
    ```
+   On macOS this starts the AI bridge now and at every login, and restarts
+   it if it crashes; the terminal can be closed. `npm run autostart -- status`
+   shows whether it runs, `npm run autostart:remove` turns it off, the log is
+   `~/Library/Logs/velxio-ai-bridge.log`. On other systems run `npm start`
+   and keep the terminal open. With an older Node the bridge says so: with
+   nvm, `nvm use` in `ai-bridge` picks version 24 (`.nvmrc`).
+
    In the IDE open the **AI** tab on the right edge: the dot in its header
-   turns green. The gear next to "Answers:" opens **AI connections**, where
+   turns green. While the bridge is not running, the panel shows this same
+   command with the full path and a Copy button, and connects by itself once
+   the bridge answers. The gear next to "Answers:" opens **AI connections**, where
    you add an account or an API key and pick the model. API keys are kept
    in the macOS Keychain (on other systems in `~/.velxio-ai/api-keys.json`,
    readable only by you) and never reach the browser or the server.
-5. **Update**: `git pull`, then step 3 again; restart the AI bridge.
+5. **Update**: `git pull`, then step 3 again; restart the AI bridge
+   (`npm run autostart` again).
 
 Get updates from Velxio itself:
 
@@ -114,7 +124,8 @@ password: do not open it to the internet.
 - **For other people**: put a reverse proxy with HTTPS and a password in
   front (nginx, Caddy). Each person runs the AI bridge on their own
   computer, allowing your address:
-  `AI_BRIDGE_ORIGINS=https://your-server VELXIO_URL=https://your-server npm start`.
+  `AI_BRIDGE_ORIGINS=https://your-server VELXIO_URL=https://your-server npm run autostart`
+  (the login agent keeps these settings).
   The bridge sends no password to the server, so installing libraries and
   adding sensor cards from the AI need the server reachable without one.
 
@@ -202,8 +213,8 @@ to share the code and let others build with their own key.
 
 ## Установка
 
-Нужно: Git, Docker Desktop (или Docker Engine с Compose v2), Node.js 20+
-для ИИ-ассистента, Chrome или Edge (сохранение в папку работает только в
+Нужно: Git, Docker Desktop (или Docker Engine с Compose v2), Node.js 22.18+
+(например, 24) для ИИ-ассистента, Chrome или Edge (сохранение в папку работает только в
 них). Для ИИ: установленный Claude Code с выполненным входом (команда
 `claude` работает в терминале), или API-ключ (Anthropic, OpenAI,
 OpenRouter), или Ollama.
@@ -232,20 +243,30 @@ OpenRouter), или Ollama.
    ```
    Первая сборка идёт 10–15 минут. Открой <http://localhost:3080>; когда
    всё поднялось, `curl -f http://localhost:3080/health` отвечает.
-4. **Запустить ИИ-ассистента** (во втором терминале, на том компьютере, где
-   открыт браузер):
+4. **Запустить ИИ-ассистента** (один раз, на том компьютере, где открыт
+   браузер):
    ```bash
    cd ai-bridge
    npm install
-   npm start
+   npm run autostart
    ```
+   На macOS мост ИИ запускается сразу и потом при каждом входе в систему, а
+   если упадёт — перезапускается; терминал можно закрыть.
+   `npm run autostart -- status` показывает, работает ли он,
+   `npm run autostart:remove` выключает автозапуск, журнал —
+   `~/Library/Logs/velxio-ai-bridge.log`. На других системах — `npm start`,
+   терминал не закрывать. На старом Node мост сам об этом скажет: с nvm
+   команда `nvm use` в папке `ai-bridge` выберет версию 24 (`.nvmrc`).
+
    В IDE открой вкладку **AI** у правого края: точка в её заголовке станет
-   зелёной. Шестерёнка рядом с «Отвечает:» открывает **«Подключения ИИ»** —
+   зелёной. Пока мост не запущен, панель показывает эту же команду с полным
+   путём и кнопкой «Копировать», а когда мост ответит — подключается сама. Шестерёнка рядом с «Отвечает:» открывает **«Подключения ИИ»** —
    там добавляется аккаунт или API-ключ и выбирается модель. API-ключи
    хранятся в Связке ключей macOS (на других системах — в
    `~/.velxio-ai/api-keys.json`, доступном только тебе) и не попадают ни в
    браузер, ни на сервер.
-5. **Обновить**: `git pull`, затем снова шаг 3; перезапустить мост ИИ.
+5. **Обновить**: `git pull`, затем снова шаг 3; перезапустить мост ИИ
+   (снова `npm run autostart`).
 
 Взять обновления из самого Velxio:
 
@@ -267,7 +288,8 @@ git merge upstream/master
 - **Для других людей**: перед сервером ставится обратный прокси с HTTPS и
   паролем (nginx, Caddy). Каждый запускает мост ИИ на своём компьютере и
   разрешает твой адрес:
-  `AI_BRIDGE_ORIGINS=https://your-server VELXIO_URL=https://your-server npm start`.
+  `AI_BRIDGE_ORIGINS=https://your-server VELXIO_URL=https://your-server npm run autostart`
+  (автозапуск запоминает эти настройки).
   Мост не передаёт серверу пароль, поэтому установка библиотек и добавление
   карточек датчиков от ИИ работают, только если сервер доступен без пароля.
 

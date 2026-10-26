@@ -10,6 +10,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.standalone
+      args:
+        # Shown in the AI panel as the folder to start the AI bridge from.
+        AI_BRIDGE_DIR: ${PWD}/ai-bridge
     container_name: velxio-dev
     restart: unless-stopped
     ports:

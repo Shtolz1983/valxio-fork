@@ -809,6 +809,15 @@ httpServer.on('upgrade', (req, socket, head) => {
   wss.handleUpgrade(req, socket, head, (ws) => onSocket(ws));
 });
 
+httpServer.on('error', (err) => {
+  if (err.code !== 'EADDRINUSE') throw err;
+  // Another bridge already answers on this port (the login agent, or one
+  // started in another terminal). A clean exit keeps the login agent from
+  // restarting this one over and over.
+  console.error(`[ai-bridge] port ${PORT} is already in use: another bridge is running (see: npm run autostart -- status)`);
+  process.exit(0);
+});
+
 httpServer.listen(PORT, HOST, () => {
   console.log(`[ai-bridge] listening on http://${HOST}:${PORT} (model: ${CLAUDE_MODEL}, Velxio: ${VELXIO_URL})`);
 });

@@ -4,14 +4,16 @@
   "private": true,
   "description": "Runs `claude -p` on the host and exposes the Velxio canvas to it as MCP tools executed in the browser",
   "type": "module",
-  "main": "server.mjs",
+  "main": "start.mjs",
   "scripts": {
-    "start": "node server.mjs",
+    "start": "node start.mjs",
+    "autostart": "node scripts/autostart.mjs",
+    "autostart:remove": "node scripts/autostart.mjs remove",
     "test": "node --test test/*.test.mjs",
     "verify-cards": "node scripts/verify-cards.mjs"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22.18"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.3.0",

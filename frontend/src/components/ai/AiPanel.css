@@ -96,6 +96,29 @@
   padding: 4px 6px;
   border-radius: var(--radius-sm);
   user-select: all;
+  overflow-wrap: anywhere;
+}
+.ai-hint strong {
+  color: var(--color-fg-default);
+}
+.ai-hint-copy {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-fg-default);
+  font: inherit;
+  cursor: pointer;
+}
+.ai-hint-copy:hover {
+  background: var(--color-wash-hover);
+}
+.ai-hint-note {
+  font-size: 0.92em;
 }
 
 .ai-msg {

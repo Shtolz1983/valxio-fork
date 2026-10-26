@@ -8,11 +8,46 @@ import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import ReactMarkdown from 'react-markdown';
-import { Bot, Loader2, Check, X, Plus, Send, Square, ChevronRight, Paperclip, Maximize2, Image as ImageIcon, Settings } from 'lucide-react';
+import { Bot, Loader2, Check, Copy, X, Plus, Send, Square, ChevronRight, Paperclip, Maximize2, Image as ImageIcon, Settings } from 'lucide-react';
 import { AiConnectionsDialog } from './AiConnectionsDialog';
+import { autostartCommand, bridgeDir } from '../../ai/bridgeHint';
 import { AI_REPLY_LANGUAGES, useAiStore, type AiChatItem } from '../../store/useAiStore';
 import { MAX_CHAT_IMAGES, imageFiles, prepareImage, type ChatImage } from '../../ai/images';
 import './AiPanel.css';
+
+/**
+ * Shown while the bridge does not answer: the one command that installs it
+ * and starts it at every login. The store keeps retrying, so the panel turns
+ * green by itself once the command has run.
+ */
+function BridgeOffHint() {
+  const { t } = useTranslation();
+  const [copied, setCopied] = useState(false);
+  const dir = bridgeDir();
+  const command = autostartCommand(dir, t('aiPanel.bridgeFolder', '<project folder>/ai-bridge'));
+  const copy = () => {
+    void navigator.clipboard?.writeText(command).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  };
+  return (
+    <div className="ai-hint">
+      <strong>{t('aiPanel.bridgeOff', 'The AI bridge is not running on this computer.')}</strong>
+      {t('aiPanel.bridgeOnce', 'Run once in a terminal: it starts the bridge now and at every login.')}
+      <code>{command}</code>
+      <button className="ai-hint-copy" onClick={copy}>
+        {copied ? <Check size={12} /> : <Copy size={12} />}
+        {copied ? t('aiPanel.copied', 'Copied') : t('aiPanel.copy', 'Copy')}
+      </button>
+      {!dir && t('aiPanel.bridgeFolderNote', '<project folder> is the folder you cloned the repository into.')}
+      <span className="ai-hint-note">
+        {t('aiPanel.bridgeNode', 'Needs Node.js 22.18 or newer (with nvm: nvm use 24). To run it only until the terminal closes: npm start.')}
+      </span>
+      <span className="ai-hint-note">{t('aiPanel.bridgeWaiting', 'This panel connects by itself once the bridge answers.')}</span>
+    </div>
+  );
+}
 
 function toolSummary(name: string, input: unknown): string {
   const a = (input ?? {}) as Record<string, unknown>;
@@ -275,12 +310,7 @@ export const AiPanel: React.FC = () => {
       {connectionsOpen && <AiConnectionsDialog onClose={() => setConnectionsOpen(false)} />}
 
       <div className="ai-panel-body" ref={listRef}>
-        {connection !== 'connected' && (
-          <div className="ai-hint">
-            {t('aiPanel.bridgeHint', 'Start the AI bridge on this computer:')}
-            <code>cd ai-bridge &amp;&amp; npm start</code>
-          </div>
-        )}
+        {connection !== 'connected' && <BridgeOffHint />}
         {connection === 'connected' && items.length === 0 && (
           <div className="ai-hint">
             {t(
