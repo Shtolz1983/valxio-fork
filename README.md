@@ -18,6 +18,9 @@ What the fork adds:
   compiles, runs the simulation and reads Serial. Who answers is chosen in
   **AI connections**: Claude Code accounts, Anthropic, OpenAI, OpenRouter, any
   OpenAI-compatible server, local Ollama. The chat is kept per project.
+  Typing `$` in the message box lists the parts (catalogue sensors first,
+  searchable in English and Russian); the picked one becomes a chip, and the
+  assistant gets its exact part type (`$[bme280]`) instead of guessing.
 - **Sensor catalogue** (`parts-catalog/`): ready modules with pinout,
   libraries and an example; most of them give simulated values on
   Uno / Nano and ESP32. **+ Add sensor** lets the AI write a new card,
@@ -178,7 +181,10 @@ to share the code and let others build with their own key.
   компилирует, запускает симуляцию и читает Serial. Кто отвечает, выбирается
   в окне **«Подключения ИИ»**: аккаунты Claude Code, Anthropic, OpenAI,
   OpenRouter, любой OpenAI-совместимый сервер, локальная Ollama. Переписка
-  хранится отдельно для каждого проекта.
+  хранится отдельно для каждого проекта. Если набрать `$` в поле сообщения,
+  появится список деталей (сначала датчики каталога, поиск по-русски и
+  по-английски); выбранная деталь встаёт в текст плашкой, и ИИ получает её
+  точный тип (`$[bme280]`), а не угадывает.
 - **Каталог датчиков** (`parts-catalog/`): готовые модули с распиновкой,
   библиотеками и примером; у большинства есть значения в симуляции на
   Uno / Nano и ESP32. **«+ Добавить датчик»** — ИИ составляет новую карточку,

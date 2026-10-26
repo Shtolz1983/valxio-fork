@@ -459,7 +459,7 @@
     "copied": "Copied",
     "emptyHint": "Describe your device, e.g. \"ESP32 weather station: DHT22 sensor and an SSD1306 OLED showing temperature\".",
     "working": "Working…",
-    "placeholder": "What should we build?",
+    "placeholder": "What should we build? $ — pick a part",
     "stop": "Stop",
     "send": "Send",
     "language": "Reply language",
@@ -473,7 +473,10 @@
     "bigHint": "Ctrl/Cmd+Enter — send, Esc — back to the panel",
     "answers": "Answers:",
     "responder": "Who answers the chat",
-    "sessionSwitched": "Now answering: {{label}}. It does not see the conversation above."
+    "sessionSwitched": "Now answering: {{label}}. It does not see the conversation above.",
+    "mentionCatalog": "Sensor catalogue",
+    "mentionParts": "Parts",
+    "mentionSim": "Simulated values"
   },
   "openSketch": {
     "title": "Open sketch",

@@ -10,7 +10,9 @@ import { useTranslation } from 'react-i18next';
 import ReactMarkdown from 'react-markdown';
 import { Bot, Loader2, Check, Copy, X, Plus, Send, Square, ChevronRight, Paperclip, Maximize2, Image as ImageIcon, Settings } from 'lucide-react';
 import { AiConnectionsDialog } from './AiConnectionsDialog';
+import { ChatInput } from './ChatInput';
 import { autostartCommand, bridgeDir } from '../../ai/bridgeHint';
+import { mentionLabel, splitMentions } from '../../ai/partMentions';
 import { AI_REPLY_LANGUAGES, useAiStore, type AiChatItem } from '../../store/useAiStore';
 import { MAX_CHAT_IMAGES, imageFiles, prepareImage, type ChatImage } from '../../ai/images';
 import './AiPanel.css';
@@ -105,7 +107,15 @@ const ChatItem: React.FC<{ item: AiChatItem }> = ({ item }) => {
               <ImageIcon size={12} /> {t('aiPanel.photosNotKept', { count: item.photos, defaultValue: '{{count}} photo(s)' })}
             </div>
           ) : null}
-          {item.text}
+          {splitMentions(item.text).map((part, i) =>
+            typeof part === 'string' ? (
+              part
+            ) : (
+              <span key={i} className="ai-mention" title={part.type}>
+                {mentionLabel(part.type)}
+              </span>
+            ),
+          )}
         </div>
       );
     case 'assistant':
@@ -243,13 +253,6 @@ export const AiPanel: React.FC = () => {
     window.addEventListener('pointerup', up);
   };
 
-  const onPastePhotos = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
-    const files = imageFiles(e.clipboardData.items);
-    if (!files.length) return;
-    e.preventDefault();
-    void attach(files);
-  };
-
   const attachmentsRow = (attached.length > 0 || attachError) && (
     <div className="ai-attachments">
       {attached.map((img, i) => (
@@ -354,8 +357,10 @@ export const AiPanel: React.FC = () => {
         }}
         onDragLeave={() => setDragOver(false)}
         onDrop={(e) => {
-          const files = imageFiles(e.dataTransfer.files);
           setDragOver(false);
+          // Dropped on the message box, which attached the images itself.
+          if (e.defaultPrevented) return;
+          const files = imageFiles(e.dataTransfer.files);
           if (!files.length) return;
           e.preventDefault();
           void attach(files);
@@ -374,17 +379,13 @@ export const AiPanel: React.FC = () => {
           }}
         />
         <div className="ai-input-wrap">
-          <textarea
-            onPaste={onPastePhotos}
+          <ChatInput
             value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                submit();
-              }
-            }}
-            placeholder={t('aiPanel.placeholder', 'What should we build?')}
+            onChange={setDraft}
+            onSubmit={submit}
+            sendKey="enter"
+            onImages={(files) => void attach(files)}
+            placeholder={t('aiPanel.placeholder', 'What should we build? $ — pick a part')}
             style={{ height: inputHeight }}
             disabled={connection !== 'connected'}
           />
@@ -442,23 +443,17 @@ export const AiPanel: React.FC = () => {
                 </button>
               </div>
               {attachmentsRow}
-              <textarea
+              {/* Enter is a new line here; Ctrl/Cmd+Enter sends, Esc goes back. */}
+              <ChatInput
                 className="ai-big-input"
                 autoFocus
                 value={draft}
-                onPaste={onPastePhotos}
-                onChange={(e) => setDraft(e.target.value)}
-                onKeyDown={(e) => {
-                  // Enter is a new line here; Ctrl/Cmd+Enter sends, Esc goes back.
-                  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-                    e.preventDefault();
-                    submit();
-                  } else if (e.key === 'Escape') {
-                    e.preventDefault();
-                    setExpanded(false);
-                  }
-                }}
-                placeholder={t('aiPanel.placeholder', 'What should we build?')}
+                onChange={setDraft}
+                onSubmit={submit}
+                sendKey="mod-enter"
+                onEscape={() => setExpanded(false)}
+                onImages={(files) => void attach(files)}
+                placeholder={t('aiPanel.placeholder', 'What should we build? $ — pick a part')}
               />
               <div className="ai-big-foot">
                 <button

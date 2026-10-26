@@ -304,21 +304,101 @@
   display: flex;
   min-width: 0;
 }
-.ai-panel-composer textarea {
+/* The message box (ChatInput.tsx, a CodeMirror editor). */
+.ai-cm {
   flex: 1;
   min-width: 0;
-  resize: none;
-  padding-right: 24px;
-  font: inherit;
-  color: inherit;
+  display: flex;
   background: var(--color-bg-input);
   border: 1px solid var(--color-border-default);
   border-radius: var(--radius-sm);
-  padding: 6px 8px;
 }
-.ai-panel-composer textarea:focus {
-  outline: none;
+.ai-cm:focus-within {
   border-color: var(--color-focus-ring);
+}
+.ai-cm.is-disabled {
+  opacity: 0.6;
+}
+.ai-cm .cm-editor {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  color: inherit;
+  background: transparent;
+}
+.ai-cm .cm-editor.cm-focused {
+  outline: none;
+}
+.ai-cm .cm-scroller {
+  font: inherit;
+  line-height: 1.45;
+  overflow: auto;
+}
+/* Room on the right for the expand button. */
+.ai-cm .cm-content {
+  padding: 6px 24px 6px 8px;
+  caret-color: currentColor;
+}
+.ai-cm .cm-line {
+  padding: 0;
+}
+.ai-cm .cm-placeholder {
+  color: var(--color-fg-muted);
+}
+
+/* A part picked with "$", in the message box and in sent messages. */
+.ai-mention {
+  display: inline-block;
+  padding: 0 5px;
+  border-radius: 3px;
+  background: var(--color-action-primary);
+  color: var(--color-action-primary-fg);
+  font-size: 0.92em;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+/* The "$" parts list. CodeMirror puts it in <body> (above the dialog), so the
+   selectors carry "body" (and the list's role) to win over CodeMirror's own
+   theme. */
+body .cm-tooltip.cm-tooltip-autocomplete {
+  z-index: 3000;
+  background: var(--color-bg-header);
+  color: var(--color-fg-default);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+  font-size: 12px;
+}
+body .cm-tooltip.cm-tooltip-autocomplete > ul[role='listbox'] {
+  max-height: 260px;
+  max-width: 380px;
+  font-family: inherit;
+}
+body .cm-tooltip.cm-tooltip-autocomplete > ul > li {
+  padding: 3px 8px;
+}
+body .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
+  background: var(--color-action-primary);
+  color: var(--color-action-primary-fg);
+}
+body .cm-tooltip.cm-tooltip-autocomplete > ul > completion-section {
+  padding: 4px 8px 2px;
+  border-bottom: 1px solid var(--color-border-default);
+  color: var(--color-fg-muted);
+  font-size: 11px;
+}
+body .cm-tooltip.cm-tooltip-autocomplete .cm-completionDetail {
+  margin-left: 8px;
+  font-style: normal;
+  opacity: 0.75;
+}
+body .cm-tooltip.cm-completionInfo {
+  z-index: 3000;
+  background: var(--color-bg-header);
+  color: var(--color-fg-default);
+  border: 1px solid var(--color-border-default);
+  font-size: 11px;
 }
 
 .ai-send-btn {
@@ -458,21 +538,14 @@
   margin-left: auto;
 }
 .ai-big-input {
-  flex: 1;
   min-height: 0;
-  resize: none;
-  font: inherit;
   font-size: 14px;
-  line-height: 1.5;
-  color: inherit;
-  background: var(--color-bg-input);
-  border: 1px solid var(--color-border-default);
-  border-radius: var(--radius-sm);
-  padding: 10px 12px;
 }
-.ai-big-input:focus {
-  outline: none;
-  border-color: var(--color-focus-ring);
+.ai-big-input .cm-scroller {
+  line-height: 1.5;
+}
+.ai-big-input .cm-content {
+  padding: 10px 12px;
 }
 .ai-big-foot {
   display: flex;
