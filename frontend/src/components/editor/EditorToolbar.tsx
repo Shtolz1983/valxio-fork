@@ -1,6 +1,8 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { registerEditorCommand } from '../../lib/editorCommands';
+import { registerEditorCommand, runEditorCommand } from '../../lib/editorCommands';
+import { isTauri } from '../../desktop/tauriBridge';
+import { flashOffer } from '../../utils/boardFlash';
 import { publishCompileOutput } from '../../lib/intellisenseRegistry';
 import { useEditorStore, chipFileGroupId } from '../../store/useEditorStore';
 import { useSimulatorStore, piRerunScript } from '../../store/useSimulatorStore';
@@ -197,6 +199,8 @@ export const EditorToolbar = ({
   } = useSimulatorStore();
 
   const activeBoard = boards.find((b) => b.id === activeBoardId) ?? boards[0];
+  // The upload button: can the active board go onto real hardware from here?
+  const flash = activeBoard ? flashOffer(activeBoard, isTauri()) : null;
   const currentProject = useProjectStore((s) => s.currentProject);
 
   // Board-less mode: digital / analog SPICE-only circuits. The Run / Stop
@@ -1891,6 +1895,39 @@ export const EditorToolbar = ({
               >
                 <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
                 <path d="M3 3v5h5" />
+              </svg>
+            </button>
+
+            {/* Upload — the board menu's "Flash to real board" for the active
+                board, one click away: the Flash dialog compiles when needed. */}
+            <button
+              onClick={() => runEditorCommand('board.flash')}
+              disabled={!flash?.enabled}
+              className="tb-btn tb-btn-flash"
+              title={
+                !activeBoard
+                  ? t('editor.toolbar.flash.addBoard', 'Add a board to upload a sketch to it')
+                  : flash
+                    ? t(`editor.canvas.flashHint.${flash.hint}`)
+                    : t(
+                        'editor.toolbar.flash.unavailable',
+                        'This board cannot be flashed from this browser: uploading needs Chrome or Edge and an Arduino Uno / Nano, ESP32 or Raspberry Pi Pico board',
+                      )
+              }
+            >
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M12 15V3" />
+                <path d="m7 8 5-5 5 5" />
+                <path d="M20 15v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-4" />
               </svg>
             </button>
 

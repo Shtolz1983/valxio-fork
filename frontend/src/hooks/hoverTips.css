@@ -1,0 +1,20 @@
+/* Toolbar tooltips (useHoverTips.ts). */
+.hover-tip {
+  position: fixed;
+  z-index: var(--z-tooltip);
+  max-width: 320px;
+  padding: 4px 8px;
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-header);
+  color: var(--color-fg-default);
+  box-shadow: var(--shadow-2);
+  font-size: 12px;
+  line-height: 1.35;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+.hover-tip.is-shown {
+  opacity: 1;
+}

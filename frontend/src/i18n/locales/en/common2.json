@@ -42,13 +42,24 @@
       "exportScreenshotEmpty": "Add at least one component to export an image.",
       "exportScreenshotFailed": "Screenshot export failed.",
       "exportedFile": "Exported {{file}}",
-      "bom": { "qty": "Qty", "part": "Part", "value": "Value", "libraries": "Arduino libraries", "ids": "On the canvas", "wires": "Jumper wires" },
+      "bom": {
+        "qty": "Qty",
+        "part": "Part",
+        "value": "Value",
+        "libraries": "Arduino libraries",
+        "ids": "On the canvas",
+        "wires": "Jumper wires"
+      },
       "shareLabel": "Share / Embed",
       "githubSyncLabel": "Sync to GitHub",
       "uploadFirmwareLabel": "Upload firmware",
       "recordLabel": "Record simulation",
       "themeToLight": "Switch to light theme",
-      "themeToDark": "Switch to dark theme"
+      "themeToDark": "Switch to dark theme",
+      "flash": {
+        "addBoard": "Add a board to upload a sketch to it",
+        "unavailable": "This board cannot be flashed from this browser: uploading needs Chrome or Edge and an Arduino Uno / Nano, ESP32 or Raspberry Pi Pico board"
+      }
     },
     "fileExplorer": {
       "workspace": "WORKSPACE",

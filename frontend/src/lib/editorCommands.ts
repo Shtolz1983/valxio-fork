@@ -53,6 +53,9 @@ export type EditorCommandId =
   | 'sim.run'
   | 'sim.stop'
   | 'sim.resetBoard'
+  // Opens the Flash dialog for the active board; registered by SimulatorCanvas,
+  // which owns that dialog.
+  | 'board.flash'
   | 'view.toggleExplorer'
   | 'view.toggleConsole'
   | 'view.reset'

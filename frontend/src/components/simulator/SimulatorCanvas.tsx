@@ -85,8 +85,7 @@ import { BOARD_KIND_FQBN, boardDisplayName } from '../../types/board';
 import { blockedByBoardGate } from '../../lib/proBoardGate';
 import { FlashModal } from './FlashModal';
 import { isTauri as isTauriRuntimeFn } from '../../desktop/tauriBridge';
-import { webFlashAvailable, webFlashMpyAvailable } from '../../lib/proWebFlash';
-import { boardKindHasUf2 } from '../../utils/uf2Download';
+import { flashOffer } from '../../utils/boardFlash';
 import { isEsp32Family } from '../../types/boardOptions';
 import { BoardOptionsModal } from './BoardOptionsModal';
 import { useOscilloscopeStore } from '../../store/useOscilloscopeStore';
@@ -2420,6 +2419,13 @@ export const SimulatorCanvas = ({ headerSlot }: SimulatorCanvasProps = {}) => {
       registerEditorCommand('view.fit', handleFitView),
       registerEditorCommand('view.zoomIn', () => viewCommandsRef.current.zoom(-100)),
       registerEditorCommand('view.zoomOut', () => viewCommandsRef.current.zoom(100)),
+      // The toolbar's upload button: the Flash dialog for the active board.
+      registerEditorCommand('board.flash', () => {
+        // The board the toolbar calls active: the selected one, else the first.
+        const { boards: all, activeBoardId: activeId } = useSimulatorStore.getState();
+        const id = (all.find((b) => b.id === activeId) ?? all[0])?.id;
+        if (id) setFlashModalFor(id);
+      }),
     ];
     return () => offs.forEach((off) => off());
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -3852,38 +3858,14 @@ export const SimulatorCanvas = ({ headerSlot }: SimulatorCanvasProps = {}) => {
               },
             });
           }
-          // Flashing needs USB serial: the desktop shell always has it;
-          // on the web the pro overlay may install a Web Serial flasher
-          // for this board kind (no-op in pure OSS builds). RP2040 / RP2350
-          // boards also program from a .uf2 dropped on their BOOTSEL drive,
-          // which needs no flasher at all, so their entry is always there:
-          // without a flasher the dialog offers the download.
-          const isMpy = board.languageMode === 'micropython';
-          const webFlashOk = webFlashAvailable(board.boardKind);
-          const uf2Only = !isTauriRuntime && !webFlashOk && !isMpy && boardKindHasUf2(board.boardKind);
-          if (isTauriRuntime || webFlashOk || uf2Only) {
-            // MicroPython boards don't compile to a flash image — the store
-            // keeps the 'micropython-loaded' sentinel. They flash only when
-            // the overlay implements the MicroPython path (firmware install
-            // + raw-REPL file upload); no compile step is required there,
-            // the workspace files are always available.
-            const mpyWebOk =
-              isMpy && !isTauriRuntime && webFlashMpyAvailable(board.boardKind);
-            // Arduino/ESP-IDF boards are always flashable: the Flash dialog
-            // compiles first when there is no build (or a stale one).
+          // Same offer as the toolbar's upload button (utils/boardFlash.ts).
+          const flash = flashOffer(board, isTauriRuntime);
+          if (flash) {
             actions.push({
               id: 'flash',
               label: t('editor.canvas.flashToBoard'),
-              disabled: isMpy ? !mpyWebOk : false,
-              title: isMpy
-                ? mpyWebOk
-                  ? t('editor.canvas.flashHint.mpy')
-                  : t('editor.canvas.flashHint.mpyUnavailable')
-                : uf2Only
-                  ? t('editor.canvas.flashHint.uf2Download')
-                  : board.compiledProgram
-                    ? t('editor.canvas.flashHint.ready')
-                    : t('editor.canvas.flashHint.willCompile'),
+              disabled: !flash.enabled,
+              title: t(`editor.canvas.flashHint.${flash.hint}`),
               onSelect: () => {
                 setFlashModalFor(boardContextMenu.boardId);
                 setBoardContextMenu(null);

@@ -127,6 +127,12 @@
   color: var(--wb-12);
 }
 
+/* Upload to a real board */
+.tb-btn-flash:hover:not(:disabled) {
+  background: var(--wb-4);
+  color: var(--wb-12);
+}
+
 /* Libraries button (always visible, with label) */
 .tb-btn-libraries {
   display: flex;

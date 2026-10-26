@@ -36,6 +36,7 @@ import {
 import { SaveProjectDialog } from '../components/editor/SaveProjectDialog';
 import { SensorCatalogModal } from '../components/sensors/SensorCatalogModal';
 import { useAutoSaveProject } from '../hooks/useAutoSaveProject';
+import { useHoverTips } from '../hooks/useHoverTips';
 import { registerEditorCommand } from '../lib/editorCommands';
 import { whenNewsClear } from '../lib/newsGate';
 import { EditorMenuBar } from '../components/editor/EditorMenuBar';
@@ -106,6 +107,10 @@ export const EditorPage: React.FC = () => {
   const toggleExplorer = useEditorStore((s) => s.toggleExplorer);
   const containerRef = useRef<HTMLDivElement>(null);
   const resizingRef = useRef(false);
+  // The top row of icons (view modes, compile/run, canvas controls) shows its
+  // titles as quick tooltips.
+  const [unifiedToolbarEl, setUnifiedToolbarEl] = useState<HTMLDivElement | null>(null);
+  useHoverTips(unifiedToolbarEl);
   const serialMonitorOpen = useSimulatorStore((s) => s.serialMonitorOpen);
   const activeBoardId = useSimulatorStore((s) => s.activeBoardId);
   const oscilloscopeOpen = useOscilloscopeStore((s) => s.open);
@@ -490,7 +495,7 @@ export const EditorPage: React.FC = () => {
   ) : undefined;
 
   const unifiedToolbar = !isMobile ? (
-        <div className="unified-toolbar">
+        <div className="unified-toolbar" ref={setUnifiedToolbarEl}>
           {/* View-mode toggle: explorer | Code / Both / Circuit — one
               segmented group so the four pane switches read as one control.
               Hidden on mobile — there's already a code/circuit toggle in

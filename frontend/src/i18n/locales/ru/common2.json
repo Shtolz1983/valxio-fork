@@ -40,13 +40,24 @@
       "exportScreenshotEmpty": "Добавьте на холст хотя бы одну деталь, чтобы сохранить картинку.",
       "exportScreenshotFailed": "Не удалось сохранить картинку схемы.",
       "exportedFile": "Сохранено: {{file}}",
-      "bom": { "qty": "Кол-во", "part": "Деталь", "value": "Номинал", "libraries": "Библиотеки Arduino", "ids": "На холсте", "wires": "Провода-перемычки" },
+      "bom": {
+        "qty": "Кол-во",
+        "part": "Деталь",
+        "value": "Номинал",
+        "libraries": "Библиотеки Arduino",
+        "ids": "На холсте",
+        "wires": "Провода-перемычки"
+      },
       "shareLabel": "Поделиться / Встроить",
       "githubSyncLabel": "Синхронизировать с GitHub",
       "uploadFirmwareLabel": "Загрузить прошивку",
       "recordLabel": "Записать симуляцию",
-      "themeToLight": "Switch to light theme",
-      "themeToDark": "Switch to dark theme"
+      "themeToLight": "Светлая тема",
+      "themeToDark": "Тёмная тема",
+      "flash": {
+        "addBoard": "Добавьте плату, чтобы залить на неё скетч",
+        "unavailable": "Эту плату нельзя прошить из этого браузера: для заливки нужен Chrome или Edge и плата Arduino Uno / Nano, ESP32 или Raspberry Pi Pico"
+      }
     },
     "fileExplorer": {
       "workspace": "РАБОЧАЯ ОБЛАСТЬ",
