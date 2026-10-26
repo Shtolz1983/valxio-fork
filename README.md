@@ -7,6 +7,10 @@ This repository is a fork of [Velxio](https://github.com/davidmonterocrespo24/ve
 builds the circuit, writes the sketch, compiles it and checks it in the
 simulator. The original Velxio README follows [below](#velxio-arduino--embedded-board-emulator).
 
+> **Unofficial fork.** It is not made or endorsed by the authors of Velxio;
+> "Velxio" here names the project this fork is based on. Report problems
+> with the fork's features in this repository, not to Velxio.
+
 What the fork adds:
 
 - **AI assistant** panel (AI tab on the right edge), driven by the local
@@ -114,9 +118,32 @@ password: do not open it to the internet.
   The bridge sends no password to the server, so installing libraries and
   adding sensor cards from the AI need the server reachable without one.
 
-**Do not publish the Docker image you built**: it contains the ESP32
-emulator downloaded with your personal license key. Share the code; others
-build with their own key.
+**Sharing the Docker image you built.** It contains the ESP32 emulator
+(QEMU, GPL-2.0) downloaded with your license key. GPL-2.0 lets you pass it
+on together with the QEMU source (Velxio publishes it next to the binaries,
+see [docs/BUILD-QEMU.md](docs/BUILD-QEMU.md)) and the source of this fork.
+The terms of the free key itself are not published, so the simpler way is
+to share the code and let others build with their own key.
+
+## License of this fork
+
+- The fork is under **AGPL-3.0**, as Velxio is ([LICENSE](LICENSE)). You may
+  use, change and share it, commercially too, as long as the source,
+  including your changes, stays open under the same license, and people who
+  use it over a network (a server you run for others) can get that source.
+- Keeping the code closed (a proprietary product or service) needs Velxio's
+  commercial license from its author ([COMMERCIAL_LICENSE.md](COMMERCIAL_LICENSE.md)).
+- Libraries the fork added: `modern-screenshot` (MIT), `@anthropic-ai/sdk`
+  and `openai` (Apache-2.0), `@modelcontextprotocol/sdk`, `ws`, `zod`
+  (MIT) — all compatible with AGPL-3.0.
+- The ESP32 emulator (QEMU, GPL-2.0) is not in the repository; it is
+  downloaded at build time.
+- Test firmware (`frontend/src/__tests__/fixtures/catalog-*/*.hex`) is
+  compiled from the sketch next to it with third-party Arduino libraries;
+  their versions and licenses are in
+  [frontend/src/__tests__/fixtures/LICENSES.md](frontend/src/__tests__/fixtures/LICENSES.md).
+- Sensor cards (`parts-catalog/`) name Arduino libraries but contain none of
+  their code.
 
 ---
 
@@ -128,6 +155,10 @@ build with their own key.
 (AGPL-3.0). Всё, что умеет Velxio, осталось, и добавлен ИИ-ассистент: он
 собирает схему, пишет скетч, компилирует его и проверяет в симуляторе.
 Оригинальный README Velxio — [ниже](#velxio-arduino--embedded-board-emulator).
+
+> **Неофициальный форк.** Авторы Velxio его не делали и не одобряли;
+> «Velxio» здесь — название проекта, на котором основан форк. О проблемах с
+> возможностями форка пишите в этот репозиторий, а не в Velxio.
 
 Что добавлено:
 
@@ -240,9 +271,34 @@ git merge upstream/master
   Мост не передаёт серверу пароль, поэтому установка библиотек и добавление
   карточек датчиков от ИИ работают, только если сервер доступен без пароля.
 
-**Не публикуй собранный Docker-образ**: в нём эмулятор ESP32, скачанный по
-твоему личному ключу лицензии. Делись кодом — другие собирают со своим
-ключом.
+**Если хочешь поделиться собранным Docker-образом.** В нём эмулятор ESP32
+(QEMU, GPL-2.0), скачанный по твоему ключу. GPL-2.0 разрешает передавать его
+вместе с исходниками QEMU (Velxio выкладывает их рядом с бинарниками, см.
+[docs/BUILD-QEMU.md](docs/BUILD-QEMU.md)) и исходниками этого форка.
+Условия самого бесплатного ключа не опубликованы, поэтому проще делиться
+кодом, а образ пусть каждый собирает со своим ключом.
+
+## Лицензия форка
+
+- Форк распространяется под **AGPL-3.0**, как и Velxio ([LICENSE](LICENSE)).
+  Его можно использовать, менять и распространять, в том числе за деньги,
+  если исходники вместе с твоими изменениями остаются открытыми под той же
+  лицензией, а тем, кто работает с ним через сеть (на твоём сервере), они
+  доступны.
+- Чтобы держать код закрытым (закрытый продукт или сервис), нужна
+  коммерческая лицензия Velxio у его автора
+  ([COMMERCIAL_LICENSE.md](COMMERCIAL_LICENSE.md)).
+- Библиотеки, которые добавил форк: `modern-screenshot` (MIT),
+  `@anthropic-ai/sdk` и `openai` (Apache-2.0), `@modelcontextprotocol/sdk`,
+  `ws`, `zod` (MIT) — все совместимы с AGPL-3.0.
+- Эмулятора ESP32 (QEMU, GPL-2.0) в репозитории нет, он скачивается при
+  сборке.
+- Тестовые прошивки (`frontend/src/__tests__/fixtures/catalog-*/*.hex`)
+  собраны из скетча рядом со сторонними Arduino-библиотеками; их версии и
+  лицензии — в
+  [frontend/src/__tests__/fixtures/LICENSES.md](frontend/src/__tests__/fixtures/LICENSES.md).
+- Карточки датчиков (`parts-catalog/`) называют Arduino-библиотеки, но их
+  кода не содержат.
 
 ---
 
