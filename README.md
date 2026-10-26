@@ -1,3 +1,251 @@
+# Velxio with an AI assistant (fork)
+
+**English** · [Русский](#velxio-с-ии-ассистентом-форк)
+
+This repository is a fork of [Velxio](https://github.com/davidmonterocrespo24/velxio)
+(AGPL-3.0). It keeps everything Velxio does and adds an AI assistant that
+builds the circuit, writes the sketch, compiles it and checks it in the
+simulator. The original Velxio README follows [below](#velxio-arduino--embedded-board-emulator).
+
+What the fork adds:
+
+- **AI assistant** panel (AI tab on the right edge), driven by the local
+  `ai-bridge`: places boards and parts, wires them, writes and edits code,
+  compiles, runs the simulation and reads Serial. Who answers is chosen in
+  **AI connections**: Claude Code accounts, Anthropic, OpenAI, OpenRouter, any
+  OpenAI-compatible server, local Ollama. The chat is kept per project.
+- **Sensor catalogue** (`parts-catalog/`): ready modules with pinout,
+  libraries and an example; most of them give simulated values on
+  Uno / Nano and ESP32. **+ Add sensor** lets the AI write a new card,
+  also from a photo of the module; the card is checked by compiling it.
+- **Wires** are routed automatically; the **Connections** tab lists the
+  circuit as text.
+- **Save project** into a folder (`.vlx` + sketch files per board), local
+  autosave, installing missing libraries.
+- **File menu**: bill of materials (CSV) and schematic image (PNG), made in
+  the browser.
+
+## Versioning
+
+- Fork releases are git tags `vMAJOR.MINOR.PATCH` on `main`
+  ([Semantic Versioning](https://semver.org/)):
+  - **MAJOR** — an old project (`.vlx`), sensor card or AI connection list no
+    longer opens without conversion;
+  - **MINOR** — new features;
+  - **PATCH** — fixes only.
+- Velxio's own version (`frontend/package.json`, `CHANGELOG.md`) is left as
+  upstream has it, so upstream updates merge without conflicts. The AI bridge
+  has its own version in `ai-bridge/package.json`.
+- Every release names the upstream commit it is based on (table below).
+- Which version you run: `git describe --tags`.
+- To make a release: add a row to the table, commit, then
+  `git tag -a vX.Y.Z -m "vX.Y.Z"` and `git push origin main --tags`.
+
+| Version | Date | Velxio upstream base | Changes |
+| --- | --- | --- | --- |
+| v0.1.0 | 2026-10-26 | [`b9fd8eb8`](https://github.com/davidmonterocrespo24/velxio/commit/b9fd8eb837ebec22e817dfd8ebd01c9f51aa16b6) | First release: everything listed above |
+
+## Setup
+
+You need: Git, Docker Desktop (or Docker Engine with Compose v2),
+Node.js 20+ for the AI assistant, and Chrome or Edge (saving into a folder
+needs them). For the AI: Claude Code installed and signed in (`claude` works
+in the terminal), or an API key (Anthropic, OpenAI, OpenRouter), or Ollama.
+
+1. **Get the code**
+   ```bash
+   git clone https://github.com/Shtolz1983/valxio-fork.git velxio
+   cd velxio
+   ```
+2. **Get a license key for ESP32 emulation.** The ESP32 emulator (QEMU) is
+   downloaded during the build with a free personal key:
+   1. Sign up at <https://velxio.dev/license/signup> and copy the key
+      (`vlx_personal_...`).
+   2. Create a file `.env` in the repository root with one line:
+      `VELXIO_LICENSE_KEY=vlx_personal_...`
+   3. `.env` is in `.gitignore`: never commit it.
+
+   Alternative without a key: build QEMU yourself
+   ([docs/BUILD-QEMU.md](docs/BUILD-QEMU.md)) and put the files into
+   `prebuilt/qemu/`.
+3. **Build and start**
+   ```bash
+   set -a && . ./.env && set +a
+   docker compose build --build-arg VELXIO_LICENSE_KEY="$VELXIO_LICENSE_KEY"
+   docker compose up -d
+   ```
+   The first build takes 10–15 minutes. Open <http://localhost:3080>;
+   `curl -f http://localhost:3080/health` answers when it is up.
+4. **Start the AI assistant** (in a second terminal, on the computer where
+   the browser runs):
+   ```bash
+   cd ai-bridge
+   npm install
+   npm start
+   ```
+   In the IDE open the **AI** tab on the right edge: the dot in its header
+   turns green. The gear next to "Answers:" opens **AI connections**, where
+   you add an account or an API key and pick the model. API keys are kept
+   in the macOS Keychain (on other systems in `~/.velxio-ai/api-keys.json`,
+   readable only by you) and never reach the browser or the server.
+5. **Update**: `git pull`, then step 3 again; restart the AI bridge.
+
+Get updates from Velxio itself:
+
+```bash
+git remote add upstream https://github.com/davidmonterocrespo24/velxio.git   # once
+git fetch upstream
+git merge upstream/master
+```
+
+### On a server
+
+Steps 1–3 are the same on the server. Port 3080 is plain HTTP with no
+password: do not open it to the internet.
+
+- **Just for you** (simplest): keep the port closed and open an SSH tunnel
+  from your computer, `ssh -N -L 3080:localhost:3080 user@server`, then use
+  <http://localhost:3080> and run the AI bridge locally as in step 4.
+  Everything works as on your own computer.
+- **For other people**: put a reverse proxy with HTTPS and a password in
+  front (nginx, Caddy). Each person runs the AI bridge on their own
+  computer, allowing your address:
+  `AI_BRIDGE_ORIGINS=https://your-server VELXIO_URL=https://your-server npm start`.
+  The bridge sends no password to the server, so installing libraries and
+  adding sensor cards from the AI need the server reachable without one.
+
+**Do not publish the Docker image you built**: it contains the ESP32
+emulator downloaded with your personal license key. Share the code; others
+build with their own key.
+
+---
+
+# Velxio с ИИ-ассистентом (форк)
+
+[English](#velxio-with-an-ai-assistant-fork) · **Русский**
+
+Этот репозиторий — форк [Velxio](https://github.com/davidmonterocrespo24/velxio)
+(AGPL-3.0). Всё, что умеет Velxio, осталось, и добавлен ИИ-ассистент: он
+собирает схему, пишет скетч, компилирует его и проверяет в симуляторе.
+Оригинальный README Velxio — [ниже](#velxio-arduino--embedded-board-emulator).
+
+Что добавлено:
+
+- **ИИ-ассистент** (вкладка AI у правого края) через локальный мост
+  `ai-bridge`: ставит платы и детали, соединяет провода, пишет и правит код,
+  компилирует, запускает симуляцию и читает Serial. Кто отвечает, выбирается
+  в окне **«Подключения ИИ»**: аккаунты Claude Code, Anthropic, OpenAI,
+  OpenRouter, любой OpenAI-совместимый сервер, локальная Ollama. Переписка
+  хранится отдельно для каждого проекта.
+- **Каталог датчиков** (`parts-catalog/`): готовые модули с распиновкой,
+  библиотеками и примером; у большинства есть значения в симуляции на
+  Uno / Nano и ESP32. **«+ Добавить датчик»** — ИИ составляет новую карточку,
+  в том числе по фото модуля; карточка проверяется компиляцией.
+- **Провода** прокладываются автоматически; вкладка **«Подключения»**
+  показывает схему текстом.
+- **Сохранение проекта** в папку (`.vlx` + скетч каждой платы обычными
+  файлами), автосохранение, установка недостающих библиотек.
+- **Меню «Файл»**: список деталей (CSV) и картинка схемы (PNG) прямо в
+  браузере.
+
+## Версии
+
+- Версии форка — git-теги `vMAJOR.MINOR.PATCH` на ветке `main`
+  ([семантическое версионирование](https://semver.org/lang/ru/)):
+  - **MAJOR** — старый проект (`.vlx`), карточка датчика или список
+    подключений ИИ без переделки больше не открываются;
+  - **MINOR** — новые возможности;
+  - **PATCH** — только исправления.
+- Собственную версию Velxio (`frontend/package.json`, `CHANGELOG.md`) не
+  трогаем, чтобы обновления из Velxio вливались без конфликтов. У моста ИИ
+  своя версия в `ai-bridge/package.json`.
+- У каждой версии указан коммит Velxio, на котором она основана (таблица
+  ниже).
+- Какая версия у тебя: `git describe --tags`.
+- Как выпустить версию: добавить строку в таблицу, сделать коммит, затем
+  `git tag -a vX.Y.Z -m "vX.Y.Z"` и `git push origin main --tags`.
+
+| Версия | Дата | Основа Velxio | Изменения |
+| --- | --- | --- | --- |
+| v0.1.0 | 2026-10-26 | [`b9fd8eb8`](https://github.com/davidmonterocrespo24/velxio/commit/b9fd8eb837ebec22e817dfd8ebd01c9f51aa16b6) | Первая версия: всё, что перечислено выше |
+
+## Установка
+
+Нужно: Git, Docker Desktop (или Docker Engine с Compose v2), Node.js 20+
+для ИИ-ассистента, Chrome или Edge (сохранение в папку работает только в
+них). Для ИИ: установленный Claude Code с выполненным входом (команда
+`claude` работает в терминале), или API-ключ (Anthropic, OpenAI,
+OpenRouter), или Ollama.
+
+1. **Скачать код**
+   ```bash
+   git clone https://github.com/Shtolz1983/valxio-fork.git velxio
+   cd velxio
+   ```
+2. **Получить ключ лицензии для эмуляции ESP32.** Эмулятор ESP32 (QEMU)
+   скачивается при сборке по бесплатному личному ключу:
+   1. Зарегистрируйся на <https://velxio.dev/license/signup> и скопируй ключ
+      (`vlx_personal_...`).
+   2. Создай в корне репозитория файл `.env` с одной строкой:
+      `VELXIO_LICENSE_KEY=vlx_personal_...`
+   3. `.env` есть в `.gitignore`: никогда не коммить его.
+
+   Без ключа: собрать QEMU самому
+   ([docs/BUILD-QEMU.md](docs/BUILD-QEMU.md)) и положить файлы в
+   `prebuilt/qemu/`.
+3. **Собрать и запустить**
+   ```bash
+   set -a && . ./.env && set +a
+   docker compose build --build-arg VELXIO_LICENSE_KEY="$VELXIO_LICENSE_KEY"
+   docker compose up -d
+   ```
+   Первая сборка идёт 10–15 минут. Открой <http://localhost:3080>; когда
+   всё поднялось, `curl -f http://localhost:3080/health` отвечает.
+4. **Запустить ИИ-ассистента** (во втором терминале, на том компьютере, где
+   открыт браузер):
+   ```bash
+   cd ai-bridge
+   npm install
+   npm start
+   ```
+   В IDE открой вкладку **AI** у правого края: точка в её заголовке станет
+   зелёной. Шестерёнка рядом с «Отвечает:» открывает **«Подключения ИИ»** —
+   там добавляется аккаунт или API-ключ и выбирается модель. API-ключи
+   хранятся в Связке ключей macOS (на других системах — в
+   `~/.velxio-ai/api-keys.json`, доступном только тебе) и не попадают ни в
+   браузер, ни на сервер.
+5. **Обновить**: `git pull`, затем снова шаг 3; перезапустить мост ИИ.
+
+Взять обновления из самого Velxio:
+
+```bash
+git remote add upstream https://github.com/davidmonterocrespo24/velxio.git   # один раз
+git fetch upstream
+git merge upstream/master
+```
+
+### На сервере
+
+Шаги 1–3 на сервере те же. Порт 3080 — обычный HTTP без пароля: не
+открывай его в интернет.
+
+- **Только для себя** (проще всего): порт закрыт, с твоего компьютера
+  открыт SSH-туннель `ssh -N -L 3080:localhost:3080 user@server`, работаешь
+  на <http://localhost:3080>, мост ИИ запущен у себя, как в шаге 4. Всё
+  работает так же, как на своём компьютере.
+- **Для других людей**: перед сервером ставится обратный прокси с HTTPS и
+  паролем (nginx, Caddy). Каждый запускает мост ИИ на своём компьютере и
+  разрешает твой адрес:
+  `AI_BRIDGE_ORIGINS=https://your-server VELXIO_URL=https://your-server npm start`.
+  Мост не передаёт серверу пароль, поэтому установка библиотек и добавление
+  карточек датчиков от ИИ работают, только если сервер доступен без пароля.
+
+**Не публикуй собранный Docker-образ**: в нём эмулятор ESP32, скачанный по
+твоему личному ключу лицензии. Делись кодом — другие собирают со своим
+ключом.
+
+---
+
 # Velxio: Arduino & Embedded Board Emulator
 
 **Live at [velxio.dev](https://velxio.dev)**
