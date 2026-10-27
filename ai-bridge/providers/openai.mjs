@@ -145,7 +145,13 @@ export function userItems(text, images = []) {
 
 export function toolResultItems(results) {
   // The Responses API has no error flag on a tool result; runTool's error outputs say so in words.
-  return results.map((r) => ({ type: 'function_call_output', call_id: r.id, output: r.output }));
+  return results.map((r) => ({
+    type: 'function_call_output',
+    call_id: r.id,
+    output: r.images?.length
+      ? [{ type: 'input_text', text: r.output }, ...r.images.map((img) => ({ type: 'input_image', image_url: dataUrl(img), detail: 'auto' }))]
+      : r.output,
+  }));
 }
 
 /** Items as sent with store:false: without the ids of items the server did not keep. */

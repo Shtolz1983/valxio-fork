@@ -38,7 +38,8 @@ import { ConnectionStore, KINDS, connectionBaseUrl, connectionEnv } from './conn
 import { accountStatus, startLogin } from './claudeAccounts.mjs';
 import { KeyStore } from './keyStore.mjs';
 import { ApiSessions } from './apiSessions.mjs';
-import { runApiAgent, toolSet } from './apiAgent.mjs';
+import { TOOL_IMAGES, runApiAgent, toolSet } from './apiAgent.mjs';
+import { buildEnclosure, listEnclosureBoards } from './enclosure.mjs';
 import { z } from 'zod';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -116,6 +117,8 @@ const BRIDGE_TOOLS = {
     if (!res.ok || !body.success) throw new Error(body.error || body.detail || `HTTP ${res.status}`);
     return { installed: name, log: String(body.stdout ?? '').slice(-1500) };
   },
+  list_enclosure_boards: () => listEnclosureBoards(VELXIO_URL),
+  build_enclosure: (spec) => buildEnclosure(VELXIO_URL, spec),
 };
 
 // ── API connections (apiAgent.mjs) ──────────────────────────────────────────
@@ -214,7 +217,8 @@ function buildMcpServer(tabId) {
           tool.where === 'bridge'
             ? await BRIDGE_TOOLS[tool.name](args ?? {})
             : await callBrowser(tabId, tool.name, args ?? {}, tool.timeoutMs ?? DEFAULT_TIMEOUT_MS);
-        return { content: [{ type: 'text', text: JSON.stringify(result ?? { ok: true }, null, 2) }] };
+        const images = (result?.[TOOL_IMAGES] ?? []).map((i) => ({ type: 'image', data: i.data, mimeType: i.mediaType }));
+        return { content: [{ type: 'text', text: JSON.stringify(result ?? { ok: true }, null, 2) }, ...images] };
       } catch (err) {
         return { content: [{ type: 'text', text: `Error: ${err.message}` }], isError: true };
       }

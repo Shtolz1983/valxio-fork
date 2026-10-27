@@ -13,7 +13,8 @@
 // message format ("items" below), which the session store keeps as is:
 //
 //   userItems(text, images)  -> items      images: [{ mediaType, data (base64) }]
-//   toolResultItems(results) -> items      results: [{ id, name, output (string), isError }]
+//   toolResultItems(results) -> items      results: [{ id, name, output (string), isError, images }]
+//                                           images: [{ mediaType, data }], usually empty
 //   async turn({ conn, apiKey, model, system, items, tools, webSearch, onText, signal })
 //     -> { append: items, text, toolCalls: [{ id, name, input }], stop }
 //        tools: [{ name, description, schema (JSON Schema) }]
@@ -26,6 +27,12 @@ import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 
 const MAX_TURNS = 40;
+
+/**
+ * A tool's result may carry pictures for the model under this key (a symbol,
+ * so JSON.stringify leaves them out of the text): [{ mediaType, data (base64) }].
+ */
+export const TOOL_IMAGES = Symbol('tool images');
 const PREVIEW_CHARS = 400;
 
 function preview(text) {
@@ -132,7 +139,7 @@ export function runApiAgent({ provider, conn, apiKey, system, sessions, sessionI
 }
 
 async function runTool(tool, call, signal) {
-  const fail = (output) => ({ id: call.id, name: call.name, output, isError: true });
+  const fail = (output) => ({ id: call.id, name: call.name, output, isError: true, images: [] });
   if (signal.aborted) return fail('Stopped by the user.');
   if (!tool) return fail(`There is no tool "${call.name}".`);
   // An adapter passes arguments it could not parse as the raw string.
@@ -143,7 +150,8 @@ async function runTool(tool, call, signal) {
   }
   try {
     const value = await tool.execute(parsed.data);
-    return { id: call.id, name: call.name, output: typeof value === 'string' ? value : JSON.stringify(value ?? { ok: true }, null, 2), isError: false };
+    const output = typeof value === 'string' ? value : JSON.stringify(value ?? { ok: true }, null, 2);
+    return { id: call.id, name: call.name, output, isError: false, images: value?.[TOOL_IMAGES] ?? [] };
   } catch (err) {
     return fail(`Error: ${err.message}`);
   }

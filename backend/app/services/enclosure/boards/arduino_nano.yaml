@@ -1,5 +1,6 @@
 id: arduino_nano
 name: Arduino Nano (V3, Mini-USB)
+canvas_kinds: [arduino-nano]
 source: Nominal outline 1.7 x 0.7 inch; Mini-USB centered on the short edge.
 verified: false
 notes: >-

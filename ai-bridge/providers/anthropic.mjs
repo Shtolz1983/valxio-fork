@@ -41,7 +41,14 @@ export function toolResultItems(results) {
   return [
     {
       role: 'user',
-      content: results.map((r) => ({ type: 'tool_result', tool_use_id: r.id, content: r.output, ...(r.isError ? { is_error: true } : {}) })),
+      content: results.map((r) => ({
+        type: 'tool_result',
+        tool_use_id: r.id,
+        content: r.images?.length
+          ? [{ type: 'text', text: r.output }, ...r.images.map((i) => ({ type: 'image', source: { type: 'base64', media_type: i.mediaType, data: i.data } }))]
+          : r.output,
+        ...(r.isError ? { is_error: true } : {}),
+      })),
     },
   ];
 }

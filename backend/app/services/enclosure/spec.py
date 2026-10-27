@@ -39,6 +39,7 @@ class Holes(BaseModel):
 class Board(BaseModel):
     id: str
     name: str
+    canvas_kinds: list[str] = Field([], description="Velxio canvas board kinds this enclosure board fits")
     source: str = ""
     verified: bool = Field(False, description="True once dimensions were checked against a real board")
     notes: str = ""

@@ -17,6 +17,11 @@ IDE tab ──ws://127.0.0.1:8787/ws──▶ ai-bridge ──spawn──▶ cla
 - `tools.mjs` — the MCP tool catalogue. Browser tools are implemented in
   `frontend/src/ai/tools.ts` under the same names; keep the two in sync.
 - `system-prompt.md` — the assistant's instructions (workflow + electrical rules).
+- `enclosure.mjs` — the bridge tools `list_enclosure_boards` and `build_enclosure`: a 3D-printable
+  case for the board on the canvas, built and checked by the backend (`/api/enclosure`). The build
+  answer carries its 8-view render as an image (`TOOL_IMAGES` in `apiAgent.mjs`), so the model looks
+  at the case: an MCP image block for `claude -p`, an image in the tool result for the Anthropic and
+  OpenAI APIs, a user message after the tool results for Chat Completions servers.
 - `partCards.mjs`, `card-author-prompt.md` — "+ Add sensor" in the editor's Sensors catalogue: a
   separate `claude -p` run with WebSearch/WebFetch and one MCP tool, `submit_part_card`
   (`/mcp-cards/<job>`), which checks the card (schema, library installs, example compiles for Uno and

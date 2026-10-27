@@ -1,6 +1,7 @@
 import asyncio
 import base64
 import io
+import re
 import struct
 import tempfile
 import zipfile
@@ -19,6 +20,7 @@ from app.services.enclosure.render import render_png
 from app.services.enclosure.spec import EnclosureSpec
 
 BOARDS = sorted(load_boards())
+REPO = Path(__file__).resolve().parents[3]
 
 
 def errors(enc):
@@ -97,6 +99,16 @@ def test_bed_too_small():
 def test_unknown_skip_connector_rejected():
     with pytest.raises(ValueError, match="unknown names"):
         build(EnclosureSpec(board="arduino_uno", skip_connectors=["hdmi"]))
+
+
+def test_canvas_kinds_are_real_board_kinds():
+    """The AI picks the enclosure board by the canvas board's kind; a typo would leave a board without one."""
+    src = (REPO / "frontend/src/types/board.ts").read_text()
+    union = src[src.index("export type BoardKind"):src.index(";", src.index("export type BoardKind"))]
+    kinds = set(re.findall(r"'([a-z0-9-]+)'", union))
+    claimed = [k for b in load_boards().values() for k in b.canvas_kinds]
+    assert claimed and set(claimed) <= kinds
+    assert len(claimed) == len(set(claimed)), "a canvas kind maps to two enclosure boards"
 
 
 def test_render_png():

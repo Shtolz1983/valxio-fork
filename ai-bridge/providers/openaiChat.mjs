@@ -58,7 +58,14 @@ export function userItems(text, images = []) {
 
 export function toolResultItems(results) {
   // No error flag in this API; runTool's error outputs say so in words.
-  return results.map((r) => ({ role: 'tool', tool_call_id: r.id, content: r.output }));
+  const items = results.map((r) => ({ role: 'tool', tool_call_id: r.id, content: r.output }));
+  // A tool message takes text only: pictures follow in a user message.
+  const withImages = results.filter((r) => r.images?.length);
+  if (withImages.length) {
+    const names = withImages.map((r) => r.name).join(', ');
+    items.push(...userItems(`Images returned by ${names}.`, withImages.flatMap((r) => r.images)));
+  }
+  return items;
 }
 
 function functionTool(t) {

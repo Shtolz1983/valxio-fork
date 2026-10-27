@@ -187,6 +187,52 @@ export const TOOLS = [
     input: { name: z.string(), version: z.string().optional() },
     timeoutMs: 3 * 60_000,
   },
+  {
+    name: 'list_enclosure_boards',
+    where: 'bridge',
+    description:
+      'Boards a 3D-printable enclosure can be made for: id, the canvas board kinds each fits (canvasKinds), PCB size, mounting and connectors (side and position). Pick the board whose canvasKinds holds the kind of the board on the canvas.',
+    input: {},
+  },
+  {
+    name: 'build_enclosure',
+    where: 'bridge',
+    description:
+      'Build a 3D-printable case (base + lid) for a board and check it: collisions with the board, connector windows, wall thickness, supports, bed size, overhangs. Returns ok, the violations (fix every error and build again), the outer size and the plastic weight, plus a render with 8 views to look at. Millimetres, board coordinates (see the Enclosures section).',
+    input: {
+      board: z.string().describe('Enclosure board id from list_enclosure_boards, e.g. "arduino_uno".'),
+      lid: z.enum(['screw', 'snap']).optional().describe('screw (default): M3 posts in the corners; snap: the lid clicks in.'),
+      wall: z.number().optional().describe('Side wall thickness, default 2.'),
+      floor: z.number().optional().describe('Floor thickness, default 2.'),
+      lid_thickness: z.number().optional().describe('Default 2.'),
+      clearance: z.number().optional().describe('Gap between the PCB edge and the inner wall, default 1.'),
+      bottom_clearance: z.number().optional().describe('Space under the PCB; default from the board data.'),
+      top_clearance: z.number().optional().describe('Gap between the tallest component and the lid, default 2.5. Raise it for parts plugged into headers.'),
+      corner_radius: z.number().optional().describe('Default 3.'),
+      connector_tolerance: z.number().optional().describe('Extra gap around each connector window, default 0.5.'),
+      skip_connectors: z.array(z.string()).optional().describe('Connector names that get no window, e.g. ["power"] when the board is powered over USB.'),
+      extras: z
+        .array(
+          z.object({
+            name: z.string().optional().describe('Label on the render, e.g. "led" or "vents".'),
+            face: z.enum(['left', 'right', 'front', 'back', 'top', 'bottom']),
+            shape: z.enum(['circle', 'rect', 'slots']).optional().describe('Default circle. slots: a row of vent slots.'),
+            center_x: z.number().optional().describe('top/bottom: centre X in board coordinates.'),
+            center_y: z.number().optional().describe('top/bottom: centre Y in board coordinates.'),
+            along: z.number().optional().describe('Side faces: centre along the side (Y for left/right, X for front/back).'),
+            z: z.number().optional().describe('Side faces: centre height above the PCB top.'),
+            diameter: z.number().optional().describe('circle'),
+            width: z.number().optional().describe('rect/slots: along X (top/bottom) or along the side; one slot for slots.'),
+            height: z.number().optional().describe('rect/slots: along Y (top/bottom) or Z (sides); one slot for slots.'),
+            slot_count: z.number().int().optional().describe('slots: default 5.'),
+            slot_pitch: z.number().optional().describe('slots: distance between slot centres, default 4.'),
+          }),
+        )
+        .optional()
+        .describe('Openings the user asked for: an LED or button hole, a cable port, vents.'),
+      bed: z.array(z.number()).length(3).optional().describe('Printer build volume X, Y, Z in mm, default [220, 220, 250].'),
+    },
+  },
 ];
 
 export const DEFAULT_TIMEOUT_MS = 30_000;

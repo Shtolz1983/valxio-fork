@@ -1,5 +1,6 @@
 id: arduino_uno
 name: Arduino Uno R3
+canvas_kinds: [arduino-uno]
 source: >-
   Board outline and holes from the Arduino Uno R3 Eagle layout (0.1 inch grid);
   connector positions as used by community enclosure libraries (OpenSCAD Arduino Mounting Library).

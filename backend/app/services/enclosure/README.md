@@ -41,6 +41,8 @@ are not thread-safe).
 
 `arduino_uno` (4 x M3 standoffs), `arduino_nano` and `esp32_devkitc` (supports under both short ends).
 All have `verified: false`: nominal dimensions, not yet measured on a real board.
+`canvas_kinds` names the Velxio canvas boards (`BoardKind` in `frontend/src/types/board.ts`) a board fits; the
+AI assistant picks the enclosure board by it.
 
 ## Rules
 
