@@ -1,0 +1,19 @@
+id: esp32_devkitc
+name: ESP32-DevKitC V4 (WROOM-32)
+source: Espressif ESP32-DevKitC V4 getting started guide, board dimensions drawing.
+verified: false
+notes: >-
+  No mounting holes: the board rests on supports under both short ends.
+  Assumes male headers pointing down (~9 mm under the PCB). EN/BOOT buttons sit next to the USB port.
+size: [54.4, 27.9]
+pcb_thickness: 1.6
+top_height: 4.0
+bottom_clearance: 9.0
+mount: end_supports
+support_depth: 2.0
+connectors:
+  - name: usb
+    type: micro_usb
+    side: left
+    center: 13.95
+    overhang: 1.0

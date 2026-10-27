@@ -26,3 +26,9 @@ wasmtime>=20.0
 # SD image ships as a .zst on the velxio.dev licence endpoint to save
 # ~75% of network transfer.
 zstandard>=0.22.0
+# Enclosure generator (app/services/enclosure): build123d on OpenCascade (OCP
+# wheels need CPython <= 3.12), matplotlib for the headless PNG render — the
+# OCP wheel ships without VTK — and pyyaml for the board data files.
+build123d>=0.13
+matplotlib>=3.9
+pyyaml>=6.0

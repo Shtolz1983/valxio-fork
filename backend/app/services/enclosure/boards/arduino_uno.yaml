@@ -1,0 +1,30 @@
+id: arduino_uno
+name: Arduino Uno R3
+source: >-
+  Board outline and holes from the Arduino Uno R3 Eagle layout (0.1 inch grid);
+  connector positions as used by community enclosure libraries (OpenSCAD Arduino Mounting Library).
+verified: false
+notes: USB-B and DC jack on the left edge; four M3 holes.
+size: [68.58, 53.34]
+pcb_thickness: 1.6
+top_height: 11.0
+bottom_clearance: 3.0
+mount: standoffs
+holes:
+  diameter: 3.2
+  positions: [[13.97, 2.54], [15.24, 50.8], [66.04, 7.62], [66.04, 35.56]]
+connectors:
+  - name: usb
+    type: usb_b
+    side: left
+    center: 37.96
+    width: 12.08
+    height: 10.9
+    overhang: 6.2
+  - name: power
+    type: dc_jack
+    side: left
+    center: 8.14
+    width: 9.0
+    height: 10.9
+    overhang: 1.8

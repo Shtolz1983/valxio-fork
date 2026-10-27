@@ -2,11 +2,13 @@ FROM python:3.12-slim
 
 # Install system dependencies, arduino-cli, and wasi-sdk (for custom-chip
 # compilation). WASI-SDK bundles clang + wasi-libc and is Apache-2.0 licensed.
+# libgl1: OpenCascade (build123d, the enclosure generator) links libGL.so.1.
 ARG WASI_SDK_VERSION=22
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     xz-utils \
     ca-certificates \
+    libgl1 \
     && curl -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh | sh \
     && mv bin/arduino-cli /usr/local/bin/ \
     && rm -rf bin \

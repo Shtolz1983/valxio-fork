@@ -199,6 +199,10 @@ FROM python:3.12-slim
 # emulator, which IS free and open-source) and used to arrive transitively
 # with qemu-system-arm. Dropping that package without keeping them listed
 # here would break every ESP32 simulation.
+#
+# libgl1: OpenCascade (the OCP wheel behind build123d, the enclosure
+# generator) links libGL.so.1 even when nothing is drawn; without it the
+# backend fails to import.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     ca-certificates \
@@ -208,6 +212,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libslirp0 \
     libpixman-1-0 \
     libfdt1 \
+    libgl1 \
     cmake \
     ninja-build \
     libusb-1.0-0 \

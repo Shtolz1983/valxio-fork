@@ -1,0 +1,19 @@
+id: arduino_nano
+name: Arduino Nano (V3, Mini-USB)
+source: Nominal outline 1.7 x 0.7 inch; Mini-USB centered on the short edge.
+verified: false
+notes: >-
+  Assumes male headers soldered pointing down (needs ~9 mm under the PCB).
+  The tiny corner holes are not used: the board rests on supports under both short ends.
+size: [43.18, 17.78]
+pcb_thickness: 1.6
+top_height: 4.5
+bottom_clearance: 9.0
+mount: end_supports
+support_depth: 1.5
+connectors:
+  - name: usb
+    type: usb_mini
+    side: left
+    center: 8.89
+    overhang: 1.5

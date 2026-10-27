@@ -14,7 +14,7 @@ from fastapi.responses import JSONResponse
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import compile, compile_chip, compile_rom, flash, intellisense, libraries, micropython_libs, parts_catalog
+from app.api.routes import compile, compile_chip, compile_rom, enclosure, flash, intellisense, libraries, micropython_libs, parts_catalog
 from app.core.config import settings
 from app.core.hooks import run_lifespan_startup
 from app.core.hooks import health_detail, health_probe
@@ -109,6 +109,9 @@ app.include_router(intellisense.router, prefix="/api/intellisense", tags=["intel
 # but the route lives in OSS so self-hosters with a sidecar reach
 # get it too.
 app.include_router(flash.router, prefix="/api/flash", tags=["flash"])
+# 3D-printable enclosures: the AI picks the parameters, build123d builds and
+# checks the geometry.
+app.include_router(enclosure.router, prefix="/api/enclosure", tags=["enclosure"])
 
 # Auth / projects / admin / metrics routers used to be wired up here, gated
 # on the auth/DB stack being importable. Phase 2 of the OSS split moved
