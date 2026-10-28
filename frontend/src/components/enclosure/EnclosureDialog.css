@@ -52,6 +52,41 @@
   display: flex;
 }
 
+.enc-body-column {
+  flex-direction: column;
+}
+
+.enc-chat-toggle.is-on {
+  border-color: var(--color-action-primary);
+  color: var(--color-action-primary);
+}
+
+/* The AI assistant's chat under the 3D view (EnclosureChat.tsx): message styles come from AiPanel.css. */
+.enc-chat {
+  display: flex;
+  flex-direction: column;
+  height: 240px;
+  flex-shrink: 0;
+  border-top: 1px solid var(--wb-6);
+  background: var(--wb-2);
+}
+.enc-chat-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.enc-chat-composer {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+  padding: 8px 12px;
+  border-top: 1px solid var(--wb-6);
+}
+
 .enc-stage {
   flex: 1;
   min-width: 0;

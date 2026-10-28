@@ -12,6 +12,7 @@ export type EnclosureSpec = {
   skip_connectors?: string[];
   battery?: string | null;
   battery_side?: 'left' | 'right';
+  battery_hatch?: boolean;
   top_height?: number | null;
   modules?: EnclosureModuleSpec[];
   lid_modules?: EnclosureLidModuleSpec[];
@@ -127,6 +128,7 @@ export interface EnclosureBuild {
     skip_connectors: string[];
     battery: string | null;
     battery_side: 'left' | 'right';
+    battery_hatch: boolean;
     top_height: number | null;
     modules: EnclosureModuleSpec[];
     lid_modules: EnclosureLidModuleSpec[];
@@ -140,6 +142,8 @@ export interface EnclosureBuild {
   modules_stl: string | null;
   /** Displays under the lid, in assembly position: they move with the lid. */
   lid_modules_stl: string | null;
+  /** The battery hatch in the floor, fitted. */
+  hatch_stl: string | null;
 }
 
 /** FastAPI's detail: a sentence, pydantic's list, or the export's { message, errors }. */

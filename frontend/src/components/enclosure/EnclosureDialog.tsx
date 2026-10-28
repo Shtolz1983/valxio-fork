@@ -4,12 +4,13 @@
  * download of the print files. The assistant's build_enclosure call opens
  * it by itself (useAiStore → useEnclosureStore.showSpec). Without a spec it
  * offers the default case for the active board, so the feature works without
- * the assistant too.
+ * the assistant too. The assistant's chat can be shown under the 3D view
+ * (EnclosureChat), to ask for changes without leaving it.
  */
 import { Suspense, lazy, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle, Box, CheckCircle2, Download, Loader2, X, XCircle } from 'lucide-react';
+import { AlertTriangle, Bot, Box, CheckCircle2, Download, Loader2, X, XCircle } from 'lucide-react';
 import { registerEditorCommand } from '../../lib/editorCommands';
 import {
   exportEnclosure,
@@ -20,12 +21,22 @@ import {
 } from '../../services/enclosureService';
 import { useEnclosureStore } from '../../store/useEnclosureStore';
 import { useSimulatorStore } from '../../store/useSimulatorStore';
+import { EnclosureChat } from './EnclosureChat';
 import { EnclosureEditor } from './EnclosureEditor';
 import './EnclosureDialog.css';
 
 const EnclosureViewer = lazy(() => import('./EnclosureViewer'));
 
 const MAX_LIFT = 40;
+const CHAT_KEY = 'velxio.enclosure.chat';
+
+function readChatOpen(): boolean {
+  try {
+    return localStorage.getItem(CHAT_KEY) !== '0';
+  } catch {
+    return true;
+  }
+}
 
 function downloadBlob(blob: Blob, name: string) {
   const url = URL.createObjectURL(blob);
@@ -49,6 +60,17 @@ export function EnclosureDialog() {
   const [lift, setLift] = useState(15);
   const [showBoard, setShowBoard] = useState(true);
   const [exporting, setExporting] = useState(false);
+  const [chatOpen, setChatOpen] = useState(readChatOpen);
+  const toggleChat = () => {
+    setChatOpen((v) => {
+      try {
+        localStorage.setItem(CHAT_KEY, v ? '0' : '1');
+      } catch {
+        /* storage unavailable: the choice lasts this session */
+      }
+      return !v;
+    });
+  };
   // Kept with the spec it was for: a new spec from the assistant drops it.
   const [exportFailure, setExportFailure] = useState<{ spec: EnclosureSpec; message: string } | null>(null);
   const exportError = exportFailure?.spec === spec ? exportFailure.message : null;
@@ -122,12 +144,22 @@ export function EnclosureDialog() {
             {build && <span className="enc-subtitle"> — {build.board.name}</span>}
           </h3>
           {loading && <Loader2 size={16} className="enc-spin" />}
+          <button
+            className={`enc-btn enc-chat-toggle${chatOpen ? ' is-on' : ''}`}
+            onClick={toggleChat}
+            title={t('enclosure.chatToggleHint', 'The AI assistant’s chat under the 3D view')}
+          >
+            <Bot size={14} /> {t('enclosure.chatToggle', 'AI chat')}
+          </button>
           <button className="enc-icon" onClick={close} title={t('enclosure.close', 'Close')}>
             <X size={16} />
           </button>
         </div>
         {!spec ? (
-          empty()
+          <div className="enc-body enc-body-column">
+            {empty()}
+            {chatOpen && <EnclosureChat />}
+          </div>
         ) : (
           <div className="enc-body">
             <div className="enc-stage">
@@ -141,6 +173,7 @@ export function EnclosureDialog() {
                 </div>
               )}
               <div className="enc-hint">{t('enclosure.hint', 'Drag to rotate · wheel to zoom · right-drag to pan')}</div>
+              {chatOpen && <EnclosureChat />}
             </div>
             <aside className="enc-side">
               {error && build && <p className="enc-error">{error}</p>}
@@ -162,6 +195,7 @@ export function EnclosureDialog() {
                         <dd>
                           {build.spec.battery} ·{' '}
                           {build.spec.battery_side === 'left' ? t('enclosure.sideLeft', 'left end') : t('enclosure.sideRight', 'right end')}
+                          {build.spec.battery_hatch && ` · ${t('enclosure.hatch', 'hatch in the bottom')}`}
                         </dd>
                       </>
                     )}

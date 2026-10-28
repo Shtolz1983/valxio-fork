@@ -722,6 +722,14 @@
     "windowSize": "window {{w}} × {{h}} mm",
     "noLidModules": "No displays.",
     "addLidModule": "Hang under the lid",
-    "chooseDisplay": "a display of the project…"
+    "chooseDisplay": "a display of the project…",
+    "batteryHatch": "Hatch in the bottom to change it",
+    "hatch": "hatch in the bottom",
+    "chatToggle": "AI chat",
+    "chatToggleHint": "The AI assistant’s chat under the 3D view",
+    "chatConnecting": "Connecting to the AI assistant…",
+    "chatOff": "The AI assistant is not connected: see the AI panel on the right.",
+    "chatHint": "Ask for a change and watch the case update, e.g. \"a 6 mm cable hole in the middle of the left wall\".",
+    "chatPlaceholder": "What should change in the case?"
   }
 }

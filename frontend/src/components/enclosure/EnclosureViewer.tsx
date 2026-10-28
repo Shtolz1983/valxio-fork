@@ -25,6 +25,7 @@ interface Props {
 
 interface Scene {
   lid: THREE.Group;
+  hatch: THREE.Mesh | null;
   board: THREE.Group;
   render: () => void;
 }
@@ -67,7 +68,9 @@ export default function EnclosureViewer({ build, lift, showBoard }: Props) {
     if (build.connectors_stl) board.add(mesh(build.connectors_stl, COLORS.connector));
     if (build.battery_stl) board.add(mesh(build.battery_stl, COLORS.battery));
     if (build.modules_stl) board.add(mesh(build.modules_stl, COLORS.module));
-    scene.add(mesh(build.base_stl, COLORS.base), lid, board);
+    // the battery hatch drops out of the floor as the lid lifts, to show it is a part of its own
+    const hatch = build.hatch_stl ? mesh(build.hatch_stl, COLORS.lid) : null;
+    scene.add(mesh(build.base_stl, COLORS.base), lid, board, ...(hatch ? [hatch] : []));
 
     // Frame the closed box from the front-left, as the PNG's ISO view does.
     const { x0, y0, x1, y1, z0, z1 } = build.outer;
@@ -91,7 +94,7 @@ export default function EnclosureViewer({ build, lift, showBoard }: Props) {
     const observer = new ResizeObserver(resize);
     observer.observe(host);
     resize();
-    sceneRef.current = { lid, board, render };
+    sceneRef.current = { lid, hatch, board, render };
 
     return () => {
       sceneRef.current = null;
@@ -112,6 +115,7 @@ export default function EnclosureViewer({ build, lift, showBoard }: Props) {
     const s = sceneRef.current;
     if (!s) return;
     s.lid.position.z = lift;
+    if (s.hatch) s.hatch.position.z = -lift / 2;
     s.board.visible = showBoard;
     s.render();
   }, [build, lift, showBoard]);

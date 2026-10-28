@@ -47,7 +47,7 @@ function sizesValid(e: EnclosureExtra): boolean {
 /** The part of the spec this editor changes. */
 type Draft = Pick<
   EnclosureBuild['spec'],
-  'board' | 'top_height' | 'battery' | 'battery_side' | 'modules' | 'lid_modules' | 'extras' | 'skip_connectors'
+  'board' | 'top_height' | 'battery' | 'battery_side' | 'battery_hatch' | 'modules' | 'lid_modules' | 'extras' | 'skip_connectors'
 >;
 
 const draftOf = (spec: EnclosureBuild['spec']): Draft => ({
@@ -55,6 +55,7 @@ const draftOf = (spec: EnclosureBuild['spec']): Draft => ({
   top_height: spec.top_height,
   battery: spec.battery,
   battery_side: spec.battery_side,
+  battery_hatch: spec.battery_hatch,
   modules: spec.modules,
   lid_modules: spec.lid_modules,
   extras: spec.extras,
@@ -166,7 +167,11 @@ export function EnclosureEditor({ build, catalog, busy, onApply }: Props) {
           </label>
           <label className="enc-field">
             <span>{t('enclosure.battery', 'Battery')}</span>
-            <select value={draft.battery ?? ''} onChange={(e) => change({ battery: e.target.value || null })}>
+            <select
+              value={draft.battery ?? ''}
+              // no battery, no hatch for it
+              onChange={(e) => change(e.target.value ? { battery: e.target.value } : { battery: null, battery_hatch: false })}
+            >
               <option value="">{t('enclosure.noBattery', 'none (USB or external supply)')}</option>
               {catalog.batteries.map((b) => (
                 <option key={b.id} value={b.id}>
@@ -182,6 +187,12 @@ export function EnclosureEditor({ build, catalog, busy, onApply }: Props) {
                 <option value="right">{t('enclosure.sideRight', 'right end')}</option>
                 <option value="left">{t('enclosure.sideLeft', 'left end')}</option>
               </select>
+            </label>
+          )}
+          {draft.battery && (
+            <label className="enc-control enc-control-row">
+              <input type="checkbox" checked={draft.battery_hatch} onChange={(e) => change({ battery_hatch: e.target.checked })} />
+              <span>{t('enclosure.batteryHatch', 'Hatch in the bottom to change it')}</span>
             </label>
           )}
         </>

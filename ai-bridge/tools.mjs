@@ -240,6 +240,7 @@ export const TOOLS = [
       top_height: z.number().optional().describe('Tallest part above the PCB; default from the board data. Set it for a prototype board.'),
       battery: z.string().optional().describe('Battery compartment beside the board: a battery id from list_enclosure_boards, e.g. "2xAA" or "1x18650".'),
       battery_side: z.enum(['left', 'right']).optional().describe('End of the case the battery goes to, default right; never the side with connector windows.'),
+      battery_hatch: z.boolean().optional().describe('A hatch in the floor, held by two M3 screws, to change the battery without opening the case.'),
       modules: z
         .array(
           z.object({

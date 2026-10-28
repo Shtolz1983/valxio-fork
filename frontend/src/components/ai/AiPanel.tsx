@@ -88,7 +88,7 @@ function readInputHeight(): number {
   }
 }
 
-const ChatItem: React.FC<{ item: AiChatItem }> = ({ item }) => {
+export const ChatItem: React.FC<{ item: AiChatItem }> = ({ item }) => {
   const { t } = useTranslation();
   switch (item.kind) {
     case 'user':

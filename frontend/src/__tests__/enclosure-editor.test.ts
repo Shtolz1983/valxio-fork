@@ -34,6 +34,7 @@ const BUILD = {
     skip_connectors: [],
     battery: null,
     battery_side: 'right',
+    battery_hatch: false,
     top_height: null,
     modules: [],
     lid_modules: [],
@@ -132,8 +133,15 @@ describe('enclosure openings', () => {
     act(() => root.render(createElement(EnclosureEditor, { build: BUILD, catalog: CATALOG, busy: false, onApply })));
     act(() => choose(field('Battery'), '2xAA'));
     act(() => choose(field('Battery at the'), 'left'));
+    const hatch = () => [...host.querySelectorAll<HTMLLabelElement>('label')].find((l) => l.textContent === 'Hatch in the bottom to change it');
+    act(() => hatch()!.querySelector('input')!.click());
     act(() => button('Rebuild')!.click());
-    expect(onApply.mock.calls[0][0]).toMatchObject({ battery: '2xAA', battery_side: 'left', board: 'arduino_uno' });
+    expect(onApply.mock.calls[0][0]).toMatchObject({ battery: '2xAA', battery_side: 'left', battery_hatch: true, board: 'arduino_uno' });
+    // no battery, no hatch
+    act(() => choose(field('Battery'), ''));
+    expect(hatch()).toBeUndefined();
+    act(() => choose(field('Battery'), '2xAA'));
+    expect(hatch()!.querySelector('input')!.checked).toBe(false);
 
     act(() => choose(field('Board'), 'perfboard_50x70'));
     expect(field('Parts above the board').placeholder).toBe('12');

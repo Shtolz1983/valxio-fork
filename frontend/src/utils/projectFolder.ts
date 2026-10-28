@@ -10,7 +10,8 @@
  *     esp32/ …
  *     enclosure/               the 3D-printable case, when the project has one:
  *       base.stl, lid.stl      ready to slice (the lid flipped onto the bed)
- *       base.step, lid.step    for a CAD program
+ *       hatch.stl              the battery hatch, when the case has one
+ *       base.step, lid.step …  for a CAD program
  *
  * Each board folder is an Arduino sketch folder (the main .ino is named after
  * its folder), so it opens in the Arduino IDE as is. Nothing is written before
@@ -76,7 +77,7 @@ export async function planEnclosureFiles(spec: EnclosureSpec | null): Promise<{ 
   try {
     const zip = await JSZip.loadAsync(await (await exportEnclosure(spec)).arrayBuffer());
     const files: PlannedFile[] = [];
-    for (const name of ['base.stl', 'lid.stl', 'base.step', 'lid.step']) {
+    for (const name of ['base.stl', 'lid.stl', 'hatch.stl', 'base.step', 'lid.step', 'hatch.step']) {
       const entry = zip.file(name);
       if (entry) files.push({ path: ['enclosure', name], content: new Uint8Array(await entry.async('arraybuffer')) });
     }
