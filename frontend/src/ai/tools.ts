@@ -20,6 +20,7 @@ import { readPinInfo } from '../utils/readPinInfo';
 import { compileBoardForFlash, isCompiledProgramStale } from '../utils/boardCompile';
 import { ensureLibraries } from '../utils/loadExample';
 import { runEditorCommand } from '../lib/editorCommands';
+import { useEnclosureStore } from '../store/useEnclosureStore';
 import { boardKnowledge, partKnowledge } from '../validation/partsKnowledge';
 import { verifyCircuitFromStore } from '../simulation/verify/verifyFromStore';
 import { withLibraryDependencies } from '../utils/sketchPlan';
@@ -547,6 +548,30 @@ export const AI_TOOLS: Record<string, AiToolHandler> = {
     }
     const canvas = findCanvas(el.shadowRoot ?? el) ?? (el instanceof HTMLCanvasElement ? el : null);
     return { id: pid, state, display: canvas ? canvasAscii(canvas) : undefined };
+  },
+
+  async get_enclosure() {
+    const { spec, build, error, loading } = useEnclosureStore.getState();
+    if (!spec) return { exists: false, hint: 'No enclosure in this project yet: make one with build_enclosure.' };
+    return {
+      exists: true,
+      // The latest spec: what the assistant built or what the user applied in the enclosure dialog.
+      spec,
+      ...(error ? { lastBuildError: error } : {}),
+      ...(build
+        ? {
+            // From the last successful build, which is this spec unless `builtFromThisSpec` is false.
+            builtFromThisSpec: !error && !loading,
+            ok: build.ok,
+            violations: build.violations,
+            outerSizeMm: [build.outer.x1 - build.outer.x0, build.outer.y1 - build.outer.y0, build.outer.z1 - build.outer.z0].map(
+              (v) => Math.round(v * 10) / 10,
+            ),
+            connectors: build.connectors,
+            faces: build.faces,
+          }
+        : {}),
+    };
   },
 
   async read_serial({ boardId, waitMs, maxChars }) {

@@ -54,9 +54,11 @@ const BUILT = {
 };
 
 test('boards come back with what the model needs to place openings', async () => {
-  const backend = await fakeBackend(() => [200, { boards: [BOARD] }]);
+  const battery = { id: '2xAA', length: 58, width: 32, height: 16, description: '2 x AA holder' };
+  const backend = await fakeBackend(() => [200, { boards: [BOARD], batteries: [battery] }]);
   try {
-    const [b] = await listEnclosureBoards(backend.url);
+    const { boards: [b], batteries } = await listEnclosureBoards(backend.url);
+    assert.deepEqual(batteries, [battery]);
     assert.equal(backend.seen[0].url, '/api/enclosure/boards');
     assert.deepEqual(b.canvasKinds, ['arduino-uno']);
     assert.deepEqual(b.connectors, [{ name: 'usb', type: 'usb_b', side: 'left', center: 37.96, z: 0 }]);

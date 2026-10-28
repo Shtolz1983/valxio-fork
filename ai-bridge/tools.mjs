@@ -191,14 +191,21 @@ export const TOOLS = [
     name: 'list_enclosure_boards',
     where: 'bridge',
     description:
-      'Boards a 3D-printable enclosure can be made for: id, the canvas board kinds each fits (canvasKinds), PCB size, mounting and connectors (side and position). Pick the board whose canvasKinds holds the kind of the board on the canvas.',
+      'Boards a 3D-printable enclosure can be made for — id, the canvas board kinds each fits (canvasKinds), PCB size, mounting and connectors (side and position) — and the battery packs a compartment can hold (id, size in mm). Pick the board whose canvasKinds holds the kind of the board on the canvas; prototype boards (perfboard_*) are for circuits the user solders by hand.',
+    input: {},
+  },
+  {
+    name: 'get_enclosure',
+    where: 'browser',
+    description:
+      'The enclosure of this project as it is now: the full spec (with the user\'s own edits from the enclosure dialog), its check results, the outer size, the connector windows and `faces` — where an opening can go on each wall (along, z) and on the lid and bottom (x, y). Call it before changing an existing case.',
     input: {},
   },
   {
     name: 'build_enclosure',
     where: 'bridge',
     description:
-      'Build a 3D-printable case (base + lid) for a board and check it: collisions with the board, connector windows, wall thickness, supports, bed size, overhangs. Returns ok, the violations (fix every error and build again), the outer size and the plastic weight, plus a render with 8 views to look at. Millimetres, board coordinates (see the Enclosures section).',
+      'Build a 3D-printable case (base + lid) for a board and check it: collisions with the board, connector windows, wall thickness, supports, bed size, overhangs. Returns ok, the violations (fix every error and build again), the outer size, the plastic weight and `faces` (where openings can go), plus a render with 8 views to look at. The spec replaces the whole case: to change one thing, send the spec from get_enclosure with that one change. Millimetres, board coordinates (see the Enclosures section).',
     input: {
       board: z.string().describe('Enclosure board id from list_enclosure_boards, e.g. "arduino_uno".'),
       lid: z.enum(['screw', 'snap']).optional().describe('screw (default): M3 posts in the corners; snap: the lid clicks in.'),
@@ -229,7 +236,10 @@ export const TOOLS = [
           }),
         )
         .optional()
-        .describe('Openings the user asked for: an LED or button hole, a cable port, vents.'),
+        .describe('Openings for the parts of the project (see the Enclosures section) and the ones the user asked for: LED and button holes, display windows, cable slots, vents.'),
+      top_height: z.number().optional().describe('Tallest part above the PCB; default from the board data. Set it for a prototype board.'),
+      battery: z.string().optional().describe('Battery compartment beside the board: a battery id from list_enclosure_boards, e.g. "2xAA" or "1x18650".'),
+      battery_side: z.enum(['left', 'right']).optional().describe('End of the case the battery goes to, default right; never the side with connector windows.'),
       bed: z.array(z.number()).length(3).optional().describe('Printer build volume X, Y, Z in mm, default [220, 220, 250].'),
     },
   },

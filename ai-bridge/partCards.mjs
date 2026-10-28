@@ -322,11 +322,11 @@ export function catalogSection(cards) {
           ? ''
           : '; no simulated readings';
       const draft = c.status === 'draft' ? ' [AI draft, not yet confirmed by the user]' : '';
-      return `- ${type} — ${c.name}: ${c.title} (${c.interface}${sim})${draft}`;
+      return `- ${type} — ${c.name}: ${c.title} (${c.group}; ${c.interface}${sim})${draft}`;
     });
   return (
     '\n\n## Sensors in the parts catalogue now\n\n' +
-    'These modules are in the catalogue (part type — name: what it is). Place them with `add_component` ' +
+    'These modules are in the catalogue (part type — name: what it is (group; interface)). Place them with `add_component` ' +
     'using the part type, and call `get_pins` for their pins, supply, libraries and notes. When the user ' +
     'asks for one of these, use it; when they ask for a sensor that is not here, say so, propose the closest ' +
     'one from this list, and mention that "Sensors → Add sensor" can add it.\n\n' +

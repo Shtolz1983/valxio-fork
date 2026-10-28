@@ -56,6 +56,8 @@ test('the chat prompt lists every catalogue card with its part type and simulate
   for (const c of cards) assert.match(text, new RegExp(`^- ${c.component ?? c.id} — `, 'm'), c.id);
   assert.match(text, /^- bh1750 — BH1750: .*simulated values: lux 0\.\.20000 lx/m);
   assert.match(text, /^- tm1637 — .*shows what the sketch sends it/m);
+  // the group tells the assistant which opening a part needs in an enclosure
+  assert.match(text, /^- bme280 — BME280: .*\(climate; i2c; /m);
   const draft = catalogSection([{ ...load('lm35'), status: 'draft' }]);
   assert.match(draft, /AI draft, not yet confirmed/);
 });

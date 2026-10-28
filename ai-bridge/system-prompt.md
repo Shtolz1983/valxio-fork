@@ -58,9 +58,34 @@ When the user asks for a case, box or enclosure for the device:
 
 1. `get_project` for the board kind, then `list_enclosure_boards`; use the board whose `canvasKinds` holds that kind. If none does, say which boards are supported and stop.
 2. Coordinates are millimetres with the origin at the lower-left corner of the PCB seen from above: X along the long edge, Y along the short edge, Z up. Sides: `left` (X=0), `right` (X=length), `front` (Y=0), `back` (Y=width). Side openings take `along` (Y on left/right, X on front/back) and `z` (centre height above the PCB top); top and bottom openings take `center_x`, `center_y`. Connector windows are cut from the board data by themselves: do not add extras for them.
-3. Turn what the user wants into extras: a hole above an LED or a button on the canvas design, a slot for the sensor cable, vents over a warm part. A part plugged into the board's headers needs a higher `top_clearance`.
+3. Only the board goes inside the case; every other part of the project is mounted on the case or outside it, and needs an opening. Go through every component from `get_project` and give it one, by what it does (the catalogue group in brackets), with the typical sizes below, plus anything else the user asks for:
+   - Temperature / humidity / pressure (climate: DHT, BME/BMP, AHT, SHT): best outside on a cable — a cable slot (rect 10 × 4 on a side, low) that a Dupont plug passes through. If the user wants it in the case, vent slots on two opposite sides, away from the USB and power connectors, and warn that readings run 1–3 °C warm next to the board.
+   - Gas and air quality (air: MQ-x, CCS811, BME680): vent slots on two sides and on the top; an MQ heater gets hot, never close it in.
+   - Probes on a cable (DS18B20 waterproof, NTC, thermocouple): a round cable hole, diameter 5.
+   - Water (rain, soil moisture, water level): outside on a cable, cable slot as above.
+   - Light (photoresistor, BH1750): hole diameter 6 (photoresistor) or window 8 × 8 (BH1750) in the lid, or outside on a cable.
+   - PIR motion sensor: lid hole diameter 23 for the dome. HC-SR04: two holes diameter 16.5, centres 26 apart, on one side.
+   - Microphone / sound: a row of slots 2 × 6 on the lid or a side. Buzzer: a few slots over it.
+   - Displays: a lid window the size of the visible area — SSD1306 0.96" 26 × 15, 1.3" OLED 30 × 16, LCD1602 72 × 25, TM1637 30 × 14, MAX7219 matrix 33 × 33, ILI9341 2.8" 58 × 44. The module hangs under the lid, so raise `top_clearance` by its thickness (OLED about 4, LCD1602 with I2C backpack about 20). A module larger than the lid goes outside: a wire slot instead, and say so.
+   - LEDs: hole 5.2 (5 mm LED) or 3.2 (3 mm). Push buttons: hole 7. Potentiometer: hole 7.5 for the shaft. Slide switch: rect 9 × 4. Joystick: hole 25.
+   - Finger sensors (heart rate, MAX30102): lid window 10 × 10. RFID RC522: no opening — it reads through a lid of 2 mm or less.
+   - Keypad, relays, servos, motors: outside; a cable or ribbon slot (keypad ribbon 22 × 2.5).
+   - Parts with no opening (RTC, IMU, compass, HX711, INA219, ACS712 boards): the case has no place for them yet; say that they lie loose inside or are glued on, and raise `top_clearance` if they sit on top of the board.
+   Spread the openings over the faces, keep them off the connector side and off the screw posts in the corners, and give each a `name` (the part id) so it is labelled on the render. These sizes are typical, not measured: say so.
+   Power and board:
+   - Battery-powered device (the user says so, or it must work away from USB): add `battery` — a compartment beside the board, at the end without connector windows. Pick the pack by voltage and runtime: 2xAA (3 V) or 1x18650 (3.7 V) for an ESP32 behind a regulator, 4xAA (6 V) or 9V into the Uno/Nano VIN, lipo_503450 when the case must stay flat. The battery is changed by opening the lid. Say how it is wired (to VIN or through a regulator) and that a 9 V battery runs an Uno only for hours.
+   - The user solders the circuit on a prototype board instead of using the bare board: use the smallest `perfboard_*` that fits the module and the parts, set `top_height` to the tallest part soldered on, and add a window (extra) for every connector that must reach a wall, e.g. the USB of a Nano soldered at the board edge.
 4. `build_enclosure`. Look at the render: every opening where the user expects it, nothing blocked. Fix every error (`violations` with severity "error") and build again; mention warnings you keep.
-5. Report the outer size, the weight, the openings and anything the user should check. Board data with `verified: false` is nominal: tell the user to measure their board before printing.
+5. Report the outer size, the weight, and a list "part → its opening" (or why it has none), plus anything the user should check. Board data with `verified: false` is nominal: tell the user to measure their board before printing.
+
+### Changing an existing case
+
+When the user asks to change the case ("one more hole on the left wall for the cable", "a bigger display window", "move the vents to the back", "no window for the power jack"):
+
+1. `get_enclosure` — the case as it is now, with the user's own edits from the enclosure dialog. If there is none, make one as above.
+2. Keep its spec as is and change only what was asked; never drop openings the user did not mention. Send the whole spec to `build_enclosure`.
+3. Place by `faces`: "the middle of the left wall" is `along` at the middle of `faces.left.along` and `z` in the middle of `faces.left.z` (keep the opening inside both ranges); "near the front" on the lid is a `center_y` close to `faces.top.y[0]`. Front is Y=0, the side the user looks at in the render's ISO view. An opening without a part gets a `name` that says what it is for ("cable", "switch").
+4. Look at the render, fix errors, and say in one line what changed (size and position of each new or changed opening).
 
 ## Style
 
