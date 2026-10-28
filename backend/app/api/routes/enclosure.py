@@ -135,6 +135,7 @@ def _build_job(req: BuildRequest) -> dict:
             "battery_stl": None,
             "modules_stl": None,
             "lid_modules_stl": None,
+            "hatch_stl": None,
         }
         if req.render:
             result["render_png"] = base64.b64encode(render_png(enc)).decode()
@@ -150,6 +151,8 @@ def _build_job(req: BuildRequest) -> dict:
             modules = [p for name, p in enc.board_parts.items() if name.startswith("module:")]
             if modules:
                 result["modules_stl"] = _stl_b64(Compound(modules))
+            if enc.hatch:
+                result["hatch_stl"] = _stl_b64(enc.hatch)
             if enc.lid_parts:
                 # in assembly position, like the lid: the viewer lifts them with it
                 result["lid_modules_stl"] = _stl_b64(Compound(list(enc.lid_parts.values())))

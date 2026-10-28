@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from build123d import Box, Cylinder, Part, Pos, RectangleRounded, Rot, extrude
+from build123d import Box, Cylinder, Part, Pos, Rectangle, RectangleRounded, Rot, extrude
 
 from .batteries import CATALOG as BATTERIES
 from .connectors import ResolvedConnector, resolved_connectors
@@ -31,6 +31,13 @@ KEEPOUT_GAP = 0.5  # clearance kept around board and connectors when placing pos
 BATTERY_FIT = 0.5  # air around a battery in its pocket
 BATTERY_RIB = 1.6  # pocket wall thickness
 BATTERY_RIB_MAX = 10.0  # pocket walls rise at most this high above the floor
+# Battery hatch: the floor under the battery opens (tapered 45 degrees, so it prints without supports and the
+# hatch cannot fall in); two M3 screws hold the hatch by its ears in bosses at both ends of the pocket.
+HATCH_BOSS_ZONE = 8.0  # the pocket grows by this at both ends to stand the bosses
+HATCH_BOSS_D = 7.0
+HATCH_EAR_W = 10.0
+HATCH_EAR_T = 1.2  # the ears sit in a recess this deep in the floor's underside
+HATCH_FIT = 0.2
 MODULE_GAP = 2.0  # air around a module inside the case: to the board, other modules, walls
 GENERIC_MODULE_HEIGHT = 10.0  # a module given only by its size
 LID_MODULE_INSET = LID_FIT + LIP_WIDTH + 0.5  # a display under the lid stays inside the lid's lip
@@ -114,6 +121,17 @@ class Layout:
         w = self.spec.wall
         return self.x0 - w, self.y0 - w, self.x1 + w, self.y1 + w
 
+    def battery_rect(self) -> tuple[float, float, float, float]:
+        """The battery's footprint inside its pocket (the pocket less the fit and, with a hatch, the boss zones)."""
+        px0, py0, px1, py1 = self.battery
+        f, z = BATTERY_FIT, HATCH_BOSS_ZONE if self.spec.battery_hatch else 0.0
+        return px0 + f + z, py0 + f, px1 - f - z, py1 - f
+
+    def hatch_bosses(self) -> list[tuple[float, float]]:
+        px0, py0, px1, py1 = self.battery
+        cy = (py0 + py1) / 2
+        return [(px0 + HATCH_BOSS_ZONE / 2, cy), (px1 - HATCH_BOSS_ZONE / 2, cy)]
+
     def board_x_range(self) -> tuple[float, float]:
         """Cavity extent along X on the board's side of the battery divider."""
         x0, x1 = self.x0, self.x1
@@ -137,10 +155,16 @@ class Enclosure:
     keepouts: dict[str, Part]
     board_parts: dict[str, Part]
     lid_parts: dict[str, Part] = field(default_factory=dict)  # what hangs under the lid, moves with it
+    hatch: Part | None = None  # the battery hatch, a third printed part
 
     @property
     def weight_g(self) -> float:
-        return (self.base.volume + self.lid.volume) / 1000 * PLA_DENSITY
+        hatch = self.hatch.volume if self.hatch else 0.0
+        return (self.base.volume + self.lid.volume + hatch) / 1000 * PLA_DENSITY
+
+    def printed_parts(self) -> list[tuple[str, Part]]:
+        """Every part that gets printed, in assembly position."""
+        return [("base", self.base), ("lid", self.lid)] + ([("hatch", self.hatch)] if self.hatch else [])
 
 
 def box(x0: float, y0: float, z0: float, x1: float, y1: float, z1: float) -> Part:
@@ -213,7 +237,7 @@ def make_layout(spec: EnclosureSpec, board: Board | None = None) -> Layout:
         z_top = max(z_top, floor_top + BATTERIES[spec.battery].height + max(spec.top_clearance, LIP_HEIGHT + BATTERY_FIT))
     modules: list[PlacedModule] = []
     if spec.modules:
-        modules, x0, x1, y1 = _place_modules(spec, board, windowed, bx0, bx1, x0, x1, y1, floor_top)
+        modules, x0, x1, y1 = _place_modules(spec, board, windowed, battery, bx0, bx1, x0, x1, y1, floor_top)
         z_top = max(z_top, max(m.top for m in modules) + spec.top_clearance)
     lid_modules: list[PlacedModule] = []
     if spec.lid_modules:
@@ -270,13 +294,15 @@ def _resolve_module(m: InsideModule) -> Board:
 
 
 def _place_modules(
-    spec: EnclosureSpec, board: Board, windowed: list[ResolvedConnector],
+    spec: EnclosureSpec, board: Board, windowed: list[ResolvedConnector], battery: tuple[float, float, float, float] | None,
     bx0: float, bx1: float, x0: float, x1: float, y1: float, floor_top: float,
 ) -> tuple[list[PlacedModule], float, float, float]:
-    """Modules in rows behind the board, inside the board's compartment along X; returns them and the grown cavity.
+    """Modules in rows behind the board; returns them and the grown cavity.
 
-    A module longer than the compartment is turned 90 degrees; if it is still too long the case grows towards
-    an end with neither connector windows nor the battery. A module with a `position` stays where it is put.
+    A row stays inside the board's compartment along X, unless it lies behind the battery pocket too: then it
+    runs the whole length of the case. A module longer than its row is turned 90 degrees; if it is still too long
+    the case grows towards an end with neither connector windows nor the battery. A module with a `position`
+    stays where it is put.
     """
     def free_end() -> str | None:
         for side in ("right", "left"):
@@ -284,8 +310,14 @@ def _place_modules(
                 return side
         return None
 
+    def span(y: float) -> tuple[float, float]:
+        clear_of_battery = battery is None or y >= battery[3] + BATTERY_RIB + MODULE_GAP
+        return (x0, x1) if battery and clear_of_battery else (bx0, bx1)
+
     placed: list[PlacedModule] = []
-    row_y, row_depth, cursor, in_row = board.width + MODULE_GAP, 0.0, bx0 + MODULE_GAP, 0
+    row_y, row_depth, in_row = board.width + MODULE_GAP, 0.0, 0
+    lo, hi = span(row_y)
+    cursor = lo + MODULE_GAP
     grown_y1 = y1
     for m in spec.modules:
         module = _resolve_module(m)
@@ -294,7 +326,7 @@ def _place_modules(
         if m.position:
             px, py = m.position
         else:
-            room = bx1 - bx0 - 2 * MODULE_GAP
+            room = hi - lo - 2 * MODULE_GAP
             if length > room and width <= room:
                 length, width, rotated = width, length, True
             if length > room:
@@ -309,10 +341,13 @@ def _place_modules(
                     bx1, x1 = bx1 + grow, x1 + grow
                 else:
                     bx0, x0 = bx0 - grow, x0 - grow
-                    if not in_row:
-                        cursor = bx0 + MODULE_GAP
-            if in_row and cursor + length > bx1 - MODULE_GAP:
-                row_y, row_depth, cursor, in_row = row_y + row_depth + MODULE_GAP, 0.0, bx0 + MODULE_GAP, 0
+                lo, hi = span(row_y)
+                if not in_row:
+                    cursor = lo + MODULE_GAP
+            if in_row and cursor + length > hi - MODULE_GAP:
+                row_y, row_depth, in_row = row_y + row_depth + MODULE_GAP, 0.0, 0
+                lo, hi = span(row_y)
+                cursor = lo + MODULE_GAP
             px, py = cursor, row_y
             cursor, row_depth, in_row = cursor + length + MODULE_GAP, max(row_depth, width), in_row + 1
             grown_y1 = max(grown_y1, py + width + MODULE_GAP)
@@ -380,20 +415,25 @@ def _place_battery(
         other = "left" if side == "right" else "right"
         raise ValueError(f"a battery on the {side} would cover the {', '.join(blocked)} window; use battery_side={other}")
 
+    ends = 2 * HATCH_BOSS_ZONE if spec.battery_hatch else 0.0  # room for the hatch's screw bosses along X
+    # the hatch opening leans out by the floor's thickness at the bottom: keep it off the front and back walls
+    side_gap = spec.floor if spec.battery_hatch else 0.0
+
     def footprint(length: float, width: float) -> float:
-        return (x1 - x0 + BATTERY_RIB + length + 2 * BATTERY_FIT) * (max(y1, y0 + width + 2 * BATTERY_FIT) - y0)
+        return (x1 - x0 + BATTERY_RIB + length + 2 * BATTERY_FIT + ends) * (max(y1, y0 + width + 2 * BATTERY_FIT + 2 * side_gap) - y0)
 
     # long edge along X or along Y, whichever keeps the case smaller
     length, width = min((bat.length, bat.width), (bat.width, bat.length), key=lambda lw: footprint(*lw))
-    pl, pw = length + 2 * BATTERY_FIT, width + 2 * BATTERY_FIT
-    grown_y1 = max(y1, y0 + pw)
+    pl, pw = length + 2 * BATTERY_FIT + ends, width + 2 * BATTERY_FIT
+    grown_y1 = max(y1, y0 + pw + 2 * side_gap)
+    py0 = y0 + side_gap
     if grown_y1 > y1 and any(c.side == "back" for c in windowed):
         raise ValueError(f"battery {spec.battery} makes the case deeper than the board: the back connector windows would not reach the wall")
     if side == "right":
         px0 = x1 + BATTERY_RIB
-        return (px0, y0, px0 + pl, y0 + pw), x0, px0 + pl, grown_y1
+        return (px0, py0, px0 + pl, py0 + pw), x0, px0 + pl, grown_y1
     px1 = x0 - BATTERY_RIB
-    return (px1 - pl, y0, px1, y0 + pw), px1 - pl, x1, grown_y1
+    return (px1 - pl, py0, px1, py0 + pw), px1 - pl, x1, grown_y1
 
 
 def _place_posts(layout: Layout) -> None:
@@ -544,6 +584,9 @@ def build_base(layout: Layout) -> Part:
 
     if layout.battery:
         base += _battery_ribs(layout)
+        if spec.battery_hatch:
+            base += _hatch_bosses(layout)
+            base -= _hatch_cuts(layout)
     for m in layout.modules:
         base += _module_supports(layout, m)
 
@@ -610,9 +653,55 @@ def _battery_ribs(layout: Layout) -> Part:
 
 
 def battery_body(layout: Layout) -> Part:
-    px0, py0, px1, py1 = layout.battery
-    f = BATTERY_FIT
-    return box(px0 + f, py0 + f, layout.floor_top, px1 - f, py1 - f, layout.floor_top + BATTERIES[layout.spec.battery].height)
+    bx0, by0, bx1, by1 = layout.battery_rect()
+    return box(bx0, by0, layout.floor_top, bx1, by1, layout.floor_top + BATTERIES[layout.spec.battery].height)
+
+
+def _frustum(x0: float, y0: float, x1: float, y1: float, z0: float, height: float) -> Part:
+    """A block whose sides lean in at 45 degrees: (x0, y0, x1, y1) at z0, `height` smaller on every side at the top."""
+    return extrude(Pos((x0 + x1) / 2, (y0 + y1) / 2, z0) * Rectangle(x1 - x0, y1 - y0), amount=height, taper=45)
+
+
+def _hatch_ears(layout: Layout, grow: float) -> list[tuple[float, float, float, float]]:
+    """The ears' footprints, from the pocket's ends (not under its walls) to the opening, grown by `grow`."""
+    px0, _, px1, _ = layout.battery
+    ox0, _, ox1, _ = layout.battery_rect()
+    cy = (layout.battery[1] + layout.battery[3]) / 2
+    h = HATCH_EAR_W / 2 + grow
+    inset = 0.5 - grow
+    return [(px0 + inset, cy - h, ox0, cy + h), (ox1, cy - h, px1 - inset, cy + h)]
+
+
+def _hatch_cuts(layout: Layout) -> Part:
+    """The floor's opening under the battery, the recesses for the hatch's ears, the bosses' pilot holes."""
+    f = layout.floor_top
+    ox0, oy0, ox1, oy1 = layout.battery_rect()
+    cut = _frustum(ox0 - f - 1, oy0 - f - 1, ox1 + f + 1, oy1 + f + 1, -1, f + 1.01)
+    for x0, y0, x1, y1 in _hatch_ears(layout, 0.0):
+        cut += box(x0, y0, -1, x1, y1, HATCH_EAR_T)
+    top = f + min(BATTERY_RIB_MAX, BATTERIES[layout.spec.battery].height * 0.6)
+    for bx, by in layout.hatch_bosses():
+        cut += cylinder_z(bx, by, HATCH_EAR_T - 0.1, top - 1.0, POST_PILOT_D)
+    return cut
+
+
+def _hatch_bosses(layout: Layout) -> Part:
+    top = layout.floor_top + min(BATTERY_RIB_MAX, BATTERIES[layout.spec.battery].height * 0.6)
+    (lx, ly), (rx, ry) = layout.hatch_bosses()
+    return cylinder_z(lx, ly, layout.floor_top - 0.5, top, HATCH_BOSS_D) + cylinder_z(rx, ry, layout.floor_top - 0.5, top, HATCH_BOSS_D)
+
+
+def build_hatch(layout: Layout) -> Part:
+    """The battery hatch, as printed and as fitted: flush with the floor's underside, ears screwed into the bosses."""
+    f = layout.floor_top
+    ox0, oy0, ox1, oy1 = layout.battery_rect()
+    g = HATCH_FIT
+    hatch = _frustum(ox0 - f + g, oy0 - f + g, ox1 + f - g, oy1 + f - g, 0, f)
+    for x0, y0, x1, y1 in _hatch_ears(layout, -g):
+        hatch += box(x0, y0, 0, x1, y1, HATCH_EAR_T)
+    for bx, by in layout.hatch_bosses():
+        hatch -= cylinder_z(bx, by, -1, HATCH_EAR_T + 1, LID_HOLE_D)
+    return hatch
 
 
 def build_lid(layout: Layout) -> Part:
@@ -709,4 +798,5 @@ def build(spec: EnclosureSpec, board: Board | None = None) -> Enclosure:
         keepouts={**build_keepouts(layout, board_parts), **lid_parts},
         board_parts=board_parts,
         lid_parts=lid_parts,
+        hatch=build_hatch(layout) if spec.battery_hatch else None,
     )

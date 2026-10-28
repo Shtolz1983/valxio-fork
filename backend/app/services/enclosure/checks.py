@@ -46,7 +46,7 @@ def check_thickness(enc: Enclosure) -> list[Violation]:
 
 def check_collisions(enc: Enclosure) -> list[Violation]:
     out = []
-    for part_name, part in (("base", enc.base), ("lid", enc.lid)):
+    for part_name, part in enc.printed_parts():
         for ko_name, ko in enc.keepouts.items():
             v = _volume(part.intersect(ko))
             if v > COLLISION_VOLUME:
@@ -175,7 +175,7 @@ def check_bed(enc: Enclosure) -> list[Violation]:
     spec = enc.layout.spec
     bx, by, bz = spec.bed
     out = []
-    for name, part in (("base", enc.base), ("lid", enc.lid)):
+    for name, part in enc.printed_parts():
         size = part.bounding_box().size
         xy = sorted([size.X, size.Y])
         if xy[0] > min(bx, by) or xy[1] > max(bx, by) or size.Z > bz:
@@ -208,12 +208,28 @@ def _face_overhang(face, min_z: float) -> str | None:
 
 def check_overhangs(enc: Enclosure) -> list[Violation]:
     out = []
-    for name, part in (("base", enc.base), ("lid", flip_for_print(enc.lid))):
+    parts = [(name, flip_for_print(p) if name == "lid" else p) for name, p in enc.printed_parts()]
+    for name, part in parts:
         min_z = part.bounding_box().min.Z
         for face in part.faces():
             reason = _face_overhang(face, min_z)
             if reason:
                 out.append(Violation("warning", "overhang", f"{name}: {reason} needs supports"))
+    return out
+
+
+def check_hatch(enc: Enclosure) -> list[Violation]:
+    """The battery hatch fills its opening without overlapping the base, and the bosses for its screws are there."""
+    if not enc.hatch:
+        return []
+    out = []
+    v = _volume(enc.hatch.intersect(enc.base))
+    if v > COLLISION_VOLUME:
+        out.append(Violation("error", "hatch", f"the battery hatch overlaps the base by {v:.1f} mm3"))
+    lay = enc.layout
+    for bx, by in lay.hatch_bosses():
+        if not enc.base.is_inside(Vector(bx + 2.0, by, lay.floor_top + 0.5)):
+            out.append(Violation("error", "hatch", f"no screw boss for the battery hatch near ({bx:.1f}, {by:.1f})"))
     return out
 
 
@@ -245,7 +261,7 @@ def check_lid_modules(enc: Enclosure) -> list[Violation]:
 
 ALL_CHECKS = (
     check_thickness, check_collisions, check_openings, check_top_extras, check_supports, check_modules, check_lid_modules,
-    check_bed, check_overhangs,
+    check_hatch, check_bed, check_overhangs,
 )
 
 

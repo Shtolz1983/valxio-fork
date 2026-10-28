@@ -1,0 +1,21 @@
+id: esp32_devkit_v1
+name: ESP32 DevKit V1 (DOIT, 30-pin)
+canvas_kinds: [esp32]
+source: Common DOIT ESP32 DEVKIT V1 30-pin board as sold, nominal outline (not measured).
+verified: false
+notes: >-
+  The 30-pin DOIT layout; 36/38-pin clones are a few millimetres longer. No mounting holes: the board rests on
+  supports under both short ends. Assumes male headers pointing down (~9 mm under the PCB). EN/BOOT buttons sit
+  on both sides of the USB port.
+size: [51.5, 28.5]
+pcb_thickness: 1.6
+top_height: 4.5
+bottom_clearance: 9.0
+mount: end_supports
+support_depth: 2.0
+connectors:
+  - name: usb
+    type: micro_usb
+    side: left
+    center: 14.25
+    overhang: 1.0

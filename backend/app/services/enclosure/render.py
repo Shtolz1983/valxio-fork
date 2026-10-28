@@ -66,6 +66,9 @@ def _parts_for(enc: Enclosure, view_key: str) -> list[tuple[str, np.ndarray, np.
         return [("lid", v, t)]
     base_v, base_t = _mesh(enc.base)
     meshes.append(("base", base_v, base_t))
+    if enc.hatch:
+        v, t = _mesh(enc.hatch)
+        meshes.append(("base", v, t))
     for name, part in enc.board_parts.items():
         v, t = _mesh(part, 0.3)
         kind = name if name in ("pcb", "battery") else "module" if name.startswith("module:") else "connector"
@@ -208,7 +211,8 @@ def _summary_panel(ax, enc: Enclosure) -> None:
         f"floor top Z {lay.floor_top:.1f}, PCB {lay.board_bottom:.1f}..{lay.pcb_top:.1f}",
         f"lid seat Z {lay.z_top:.1f}",
         f"plastic ~{enc.weight_g:.0f} g PLA",
-        f"battery: {lay.spec.battery} ({lay.spec.battery_side} end)" if lay.battery else "battery: none",
+        (f"battery: {lay.spec.battery} ({lay.spec.battery_side} end"
+         + (", hatch in the floor)" if lay.spec.battery_hatch else ")")) if lay.battery else "battery: none",
         "",
         f"modules inside: {', '.join(m.name for m in lay.modules)}" if lay.modules else "modules inside: none",
         f"under the lid: {', '.join(m.name for m in lay.lid_modules)}" if lay.lid_modules else "under the lid: none",

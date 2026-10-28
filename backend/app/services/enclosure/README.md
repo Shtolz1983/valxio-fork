@@ -24,7 +24,7 @@ above the PCB top. Top/bottom extras: `center_x`, `center_y` in board coordinate
 | `enclosure.py` | geometry: layout, base, lid, board ghost, keep-out volumes |
 | `checks.py` | collisions, connector windows, wall thickness, supports, bed size, overhangs |
 | `render.py` | 8-panel PNG with its own orthographic projection (matplotlib, no VTK) |
-| `export.py` | STL (lid flipped for printing), STEP, spec.json |
+| `export.py` | STL (lid flipped for printing; base, lid and the battery hatch), STEP, spec.json |
 
 ## HTTP API
 
@@ -41,7 +41,7 @@ are not thread-safe).
 
 ## Boards
 
-`arduino_uno` (4 x M3 standoffs), `arduino_nano` and `esp32_devkitc` (supports under both short ends).
+`arduino_uno` (4 x M3 standoffs), `arduino_nano`, `esp32_devkitc` and `esp32_devkit_v1` (supports under both short ends).
 All have `verified: false`: nominal dimensions, not yet measured on a real board.
 `perfboard_40x60` ... `perfboard_70x90`: hand-soldered prototype boards (M2 corner holes, no connectors); set
 `top_height` in the spec to the tallest part soldered on.
@@ -53,7 +53,10 @@ AI assistant picks the enclosure board by it.
 `battery` puts a pocket for the pack at one end of the case (`battery_side`, never the side with connector windows):
 the pack lies on the floor, low ribs hold it, a divider separates it from the board. The pack's long edge runs along
 X or Y, whichever keeps the case smaller; the case grows deeper when the pack is wider than the board. It is changed
-by opening the lid.
+by opening the lid, or with `battery_hatch` through the floor: the floor under the pack opens (tapered 45 degrees, so
+it prints without supports and the hatch cannot fall in) and a third printed part, `hatch`, fills it flush, held by
+two M3 screws through its ears into bosses at both ends of the pocket (the pocket grows 8 mm at each end for them and
+keeps the floor's thickness off the long walls). `check_hatch` checks the fit and the bosses.
 
 ## Modules inside
 

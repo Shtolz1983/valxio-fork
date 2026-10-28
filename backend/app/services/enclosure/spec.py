@@ -159,10 +159,17 @@ class EnclosureSpec(BaseModel):
     extras: list[ExtraCutout] = []
     battery: str | None = Field(None, description="Battery compartment beside the board: a key of batteries.CATALOG")
     battery_side: Literal["left", "right"] = Field("right", description="End of the case the compartment sits at")
+    battery_hatch: bool = Field(False, description="Change the battery from below: an opening in the floor and a screwed-on hatch")
     modules: list[InsideModule] = Field([], description="Modules inside the case, placed beside the board")
     lid_modules: list[LidModule] = Field([], description="Displays hung under the lid behind a window")
     min_wall: float = Field(1.2, description="Thinnest printable wall (3 perimeters of a 0.4 nozzle)")
     bed: tuple[float, float, float] = Field((220.0, 220.0, 250.0), description="Printer build volume X, Y, Z")
+
+    @model_validator(mode="after")
+    def _hatch_needs_battery(self) -> EnclosureSpec:
+        if self.battery_hatch and not self.battery:
+            raise ValueError("battery_hatch needs a battery")
+        return self
 
     @field_validator("battery")
     @classmethod

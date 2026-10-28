@@ -127,6 +127,29 @@ def test_battery_compartment_passes_all_checks(battery):
     assert "battery" in enc.keepouts and "battery" in enc.board_parts
 
 
+@pytest.mark.parametrize("battery", sorted(BATTERIES))
+def test_battery_hatch_opens_the_floor_and_fits_it(battery):
+    enc = build(EnclosureSpec(board="arduino_uno", battery=battery, battery_hatch=True))
+    assert run_checks(enc) == []
+    lay = enc.layout
+    bb = enc.hatch.bounding_box()
+    assert bb.min.Z == pytest.approx(0) and bb.max.Z == pytest.approx(lay.floor_top)  # flush with the floor
+    x0, y0, x1, y1 = lay.battery_rect()
+    under_battery = Vector((x0 + x1) / 2, (y0 + y1) / 2, lay.floor_top / 2)
+    assert not enc.base.is_inside(under_battery) and enc.hatch.is_inside(under_battery)
+    # the opening is the battery's whole footprint at the top of the floor: cells come out through it
+    assert not enc.base.is_inside(Vector(x0 + 0.3, (y0 + y1) / 2, lay.floor_top - 0.05))
+
+
+def test_battery_hatch_is_a_printed_part():
+    enc = build(EnclosureSpec(board="arduino_nano", battery="1x18650", battery_hatch=True))
+    assert [name for name, _ in enc.printed_parts()] == ["base", "lid", "hatch"]
+    without = build(EnclosureSpec(board="arduino_nano", battery="1x18650"))
+    assert enc.weight_g > without.weight_g - 1  # the hatch counts; the floor it replaces does not
+    with pytest.raises(ValueError, match="needs a battery"):
+        EnclosureSpec(board="arduino_uno", battery_hatch=True)
+
+
 def test_battery_on_the_left_end_with_end_supports():
     enc = build(EnclosureSpec(board="esp32_devkitc", battery="1x18650", battery_side="right"))
     assert run_checks(enc) == []
@@ -250,6 +273,17 @@ def test_bad_modules_are_refused_or_reported():
     assert any("rtc overlaps the board" in v.message for v in errors(enc))
 
 
+def test_modules_use_the_room_behind_a_shallow_battery():
+    """A 2x18650 pack lies along the case at the front: the row of modules behind the board runs on behind it."""
+    mods = [{"name": "relay1", "type": "relay"}, {"name": "rtc1", "type": "ds3231"}, {"name": "sd", "type": "microsd"}]
+    with_battery = build(EnclosureSpec(board="arduino_uno", battery="2x18650", modules=mods))
+    assert run_checks(with_battery) == []
+    lay = with_battery.layout
+    assert lay.battery[3] < get_board("arduino_uno").width  # the pocket is shallower than the board
+    assert max(m.x1 for m in lay.modules) > lay.battery[0]  # a module sits behind the pocket
+    assert len({m.y0 for m in lay.modules}) == 1  # one row, where the board's compartment alone needs two
+
+
 def test_modules_and_battery_together():
     enc = build(EnclosureSpec(board="arduino_uno", battery="1x18650", modules=[{"name": "rtc", "type": "ds3231"}, {"name": "bme", "type": "bme280"}]))
     assert run_checks(enc) == []
@@ -260,6 +294,12 @@ def test_modules_and_battery_together():
 def test_render_png():
     png = render_png(build(EnclosureSpec(board="arduino_nano", lid="snap")))
     assert png[:8] == b"\x89PNG\r\n\x1a\n" and len(png) > 20_000
+
+
+def test_export_includes_the_hatch(tmp_path):
+    enc = build(EnclosureSpec(board="arduino_uno", battery="2xAA", battery_hatch=True))
+    names = {p.name for p in export_mod.export(enc, tmp_path / "h", ["stl", "step"])}
+    assert {"hatch.stl", "hatch.step"} <= names
 
 
 def test_export_lid_is_flipped_onto_bed(tmp_path):
@@ -313,6 +353,9 @@ def test_route_build_returns_checks_render_and_meshes():
     [lcd] = with_display["lid_modules"]
     assert lcd["type"] == "lcd1602" and len(lcd["window"]) == 4
     assert stl_triangles(base64.b64decode(with_display["lid_modules_stl"])) == 24  # PCB block + display block
+    with_hatch = asyncio.run(route.build_enclosure(route.BuildRequest(
+        spec=EnclosureSpec(board="arduino_uno", battery="2xAA", battery_hatch=True), render=False)))
+    assert with_hatch["ok"] and stl_triangles(base64.b64decode(with_hatch["hatch_stl"])) > 12
     with_battery = asyncio.run(route.build_enclosure(route.BuildRequest(spec=EnclosureSpec(board="arduino_nano", battery="9V"), render=False)))
     assert with_battery["ok"] and stl_triangles(base64.b64decode(with_battery["battery_stl"])) == 12
     # meshes are in assembly position: the lid's top is the top of the outer box

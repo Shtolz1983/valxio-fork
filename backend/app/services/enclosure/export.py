@@ -19,12 +19,13 @@ def export(enc: Enclosure, out: Path, formats: list[str], png: bytes | None = No
     out.mkdir(parents=True, exist_ok=True)
     written = []
     if "stl" in formats:
-        for part_name, part in (("base", enc.base), ("lid", flip_for_print(enc.lid))):
+        for part_name, part in enc.printed_parts():
+            part = flip_for_print(part) if part_name == "lid" else part  # the hatch prints as fitted, outside down
             path = out / f"{part_name}.stl"
             export_stl(part, str(path), tolerance=0.01, angular_tolerance=0.1)
             written.append(path)
     if "step" in formats:
-        for part_name, part in (("base", enc.base), ("lid", enc.lid)):
+        for part_name, part in enc.printed_parts():
             path = out / f"{part_name}.step"
             export_step(part, str(path))
             written.append(path)
