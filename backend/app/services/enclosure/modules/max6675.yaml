@@ -1,0 +1,12 @@
+id: max6675
+name: MAX6675 thermocouple module
+part_types: [max6675]
+source: Typical breakout board as sold, nominal size (not measured).
+verified: false
+notes: "Thermocouple on a screw terminal. Assumes pins pointing up with Dupont plugs on them."
+size: [25.0, 15.0]
+pcb_thickness: 1.6
+top_height: 15.0
+bottom_clearance: 3.0
+mount: end_supports
+support_depth: 2.0

@@ -1,7 +1,8 @@
 /**
  * The enclosure spec as the user can edit it in the dialog: the board (a
  * catalogue board or a prototype board) with the height of what is on it, the
- * battery compartment, the board's connector windows (on / off) and every
+ * battery compartment, the modules inside the case (parts of the project that
+ * have a module table entry), the board's connector windows (on / off) and every
  * extra opening — the part it is for (its `name` is the part id the assistant
  * gave it), the face, the shape and the sizes. Edits stay a draft until
  * "Rebuild" sends the changed spec.
@@ -13,7 +14,14 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Trash2 } from 'lucide-react';
 import registry from '../../services/ComponentRegistry';
-import type { EnclosureBuild, EnclosureCatalog, EnclosureExtra, EnclosureFace, EnclosureSpec } from '../../services/enclosureService';
+import type {
+  EnclosureBuild,
+  EnclosureCatalog,
+  EnclosureExtra,
+  EnclosureFace,
+  EnclosureModuleSpec,
+  EnclosureSpec,
+} from '../../services/enclosureService';
 import { useSimulatorStore } from '../../store/useSimulatorStore';
 
 type SizeKey = 'diameter' | 'width' | 'height' | 'slot_count' | 'slot_pitch';
@@ -34,13 +42,14 @@ function sizesValid(e: EnclosureExtra): boolean {
 }
 
 /** The part of the spec this editor changes. */
-type Draft = Pick<EnclosureBuild['spec'], 'board' | 'top_height' | 'battery' | 'battery_side' | 'extras' | 'skip_connectors'>;
+type Draft = Pick<EnclosureBuild['spec'], 'board' | 'top_height' | 'battery' | 'battery_side' | 'modules' | 'extras' | 'skip_connectors'>;
 
 const draftOf = (spec: EnclosureBuild['spec']): Draft => ({
   board: spec.board,
   top_height: spec.top_height,
   battery: spec.battery,
   battery_side: spec.battery_side,
+  modules: spec.modules,
   extras: spec.extras,
   skip_connectors: [...spec.skip_connectors].sort(),
 });
@@ -60,6 +69,7 @@ export function EnclosureEditor({ build, catalog, busy, onApply }: Props) {
   const { extras, skip_connectors: skip } = draft;
   const change = (patch: Partial<Draft>) => setDraft((d) => ({ ...d, ...patch }));
   const setExtras = (update: (list: EnclosureExtra[]) => EnclosureExtra[]) => setDraft((d) => ({ ...d, extras: update(d.extras) }));
+  const setModules = (update: (list: EnclosureModuleSpec[]) => EnclosureModuleSpec[]) => setDraft((d) => ({ ...d, modules: update(d.modules) }));
   const setSkip = (update: (names: string[]) => string[]) => setDraft((d) => ({ ...d, skip_connectors: update(d.skip_connectors).sort() }));
   // Connector windows belong to the built board; another board brings its own after a rebuild.
   const sameBoard = draft.board === build.spec.board;
@@ -83,13 +93,22 @@ export function EnclosureEditor({ build, catalog, busy, onApply }: Props) {
     slot_pitch: t('enclosure.dim.pitch', 'pitch'),
   };
 
-  /** "bme1 · BME280" when the opening is named after a part on the canvas. */
-  const partLabel = (e: EnclosureExtra) => {
-    if (!e.name) return t('enclosure.unnamed', 'opening');
-    const comp = components.find((c) => c.id === e.name);
+  /** "bme1 · BME280" when the opening or module is named after a part on the canvas. */
+  const partLabel = (name: string | undefined) => {
+    if (!name) return t('enclosure.unnamed', 'opening');
+    const comp = components.find((c) => c.id === name);
     const type = comp && registry.getById(comp.metadataId)?.name;
-    return type ? `${e.name} · ${type}` : e.name;
+    return type ? `${name} · ${type}` : name;
   };
+
+  // Parts of the project that can go inside: a module table entry exists for their type, not yet added.
+  const addable = catalog
+    ? components.flatMap((c) => {
+        const module = catalog.modules.find((m) => m.part_types.includes(c.metadataId));
+        return module && !draft.modules.some((m) => m.name === c.id) ? [{ part: c.id, module }] : [];
+      })
+    : [];
+  const placedOf = (name: string) => (draft.board === build.spec.board ? build.modules.find((m) => m.name === name) : undefined);
 
   const position = (e: EnclosureExtra) =>
     e.face === 'top' || e.face === 'bottom'
@@ -154,6 +173,53 @@ export function EnclosureEditor({ build, catalog, busy, onApply }: Props) {
         </>
       )}
 
+      <div className="enc-section">{t('enclosure.inside', 'Inside the case')}</div>
+      {draft.modules.map((m) => {
+        const table = catalog?.modules.find((x) => x.id === m.type);
+        const [l, w] = m.size ?? table?.size ?? [0, 0];
+        const placed = placedOf(m.name);
+        return (
+          <div key={m.name} className="enc-opening">
+            <span className="enc-opening-head">
+              <strong>{partLabel(m.name)}</strong>
+              <button
+                className="enc-icon enc-opening-remove"
+                onClick={() => setModules((list) => list.filter((x) => x.name !== m.name))}
+                title={t('enclosure.removeModule', 'Take it out of the case')}
+              >
+                <Trash2 size={13} />
+              </button>
+            </span>
+            <span className="enc-opening-sub">
+              {table?.name ?? t('enclosure.ownSize', 'own size')} · {fmt(l)} × {fmt(w)} × {fmt(m.height ?? table?.top_height)} {t('enclosure.mm', 'mm')} ·{' '}
+              {placed
+                ? `X ${fmt(placed.x0)}, Y ${fmt(placed.y0)}${m.position ? '' : ` (${t('enclosure.auto', 'placed by the generator')})`}`
+                : t('enclosure.placedAfterRebuild', 'placed after a rebuild')}
+            </span>
+          </div>
+        );
+      })}
+      {draft.modules.length === 0 && <p className="enc-muted">{t('enclosure.noModules', 'Only the board.')}</p>}
+      {addable.length > 0 && (
+        <label className="enc-field">
+          <span>{t('enclosure.addModule', 'Put inside')}</span>
+          <select
+            value=""
+            onChange={(e) => {
+              const pick = addable.find((a) => a.part === e.target.value);
+              if (pick) setModules((list) => [...list, { name: pick.part, type: pick.module.id }]);
+            }}
+          >
+            <option value="">{t('enclosure.choosePart', 'a part of the project…')}</option>
+            {addable.map((a) => (
+              <option key={a.part} value={a.part}>
+                {partLabel(a.part)}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+
       <div className="enc-section">{t('enclosure.openings', 'Openings')}</div>
       {!sameBoard && <p className="enc-muted">{t('enclosure.connectorsAfterRebuild', 'The windows for the new board’s connectors appear after a rebuild.')}</p>}
       {sameBoard && build.connectors.map((c) => {
@@ -183,7 +249,7 @@ export function EnclosureEditor({ build, catalog, busy, onApply }: Props) {
       {extras.map((e, i) => (
         <div key={i} className="enc-opening">
           <span className="enc-opening-head">
-            <strong>{partLabel(e)}</strong>
+            <strong>{partLabel(e.name)}</strong>
             <button
               className="enc-icon enc-opening-remove"
               onClick={() => setExtras((list) => list.filter((_, j) => j !== i))}

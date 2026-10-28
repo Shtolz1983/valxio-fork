@@ -1,0 +1,12 @@
+id: bme280
+name: GY-BME280 breakout
+part_types: [bme280]
+source: Typical breakout board as sold, nominal size (not measured).
+verified: false
+notes: "4-pin I2C breakout. Assumes pins pointing up with Dupont plugs on them."
+size: [13.0, 10.5]
+pcb_thickness: 1.6
+top_height: 15.0
+bottom_clearance: 3.0
+mount: end_supports
+support_depth: 2.0

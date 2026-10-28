@@ -33,13 +33,14 @@ from app.services.enclosure.batteries import CATALOG as BATTERIES
 from app.services.enclosure.checks import run_checks
 from app.services.enclosure.enclosure import LIP_HEIGHT, Enclosure, build
 from app.services.enclosure.export import export
-from app.services.enclosure.registry import get_board, load_boards
+from app.services.enclosure.registry import get_board, load_boards, load_modules
 from app.services.enclosure.render import render_png
 from app.services.enclosure.spec import EnclosureSpec
 
 router = APIRouter()
 
 MAX_EXTRAS = 64  # each extra is a boolean cut; keeps one request from tying up the lock
+MAX_MODULES = 16
 _lock = threading.Lock()
 
 
@@ -58,6 +59,8 @@ def _build(spec: EnclosureSpec) -> Enclosure:
     """Blocking; call under _lock. Bad input becomes an HTTP error the model can act on."""
     if len(spec.extras) > MAX_EXTRAS:
         raise HTTPException(status_code=422, detail=f"at most {MAX_EXTRAS} extras")
+    if len(spec.modules) > MAX_MODULES:
+        raise HTTPException(status_code=422, detail=f"at most {MAX_MODULES} modules")
     try:
         board = get_board(spec.board)
     except KeyError as e:
@@ -112,6 +115,12 @@ def _build_job(req: BuildRequest) -> dict:
             "weight_g": round(enc.weight_g, 1),
             "connectors": _connectors(enc),
             "faces": _faces(enc),
+            # where each module went: the viewer lists them, the assistant reports them
+            "modules": [
+                {"name": m.name, "type": m.module.id, "x0": round(m.x0, 2), "y0": round(m.y0, 2), "x1": round(m.x1, 2),
+                 "y1": round(m.y1, 2), "height": round(m.top - m.bottom, 2), "rotated": m.rotated}
+                for m in lay.modules
+            ],
             "spec": req.spec.model_dump(),
             "render_png": None,
             "base_stl": None,
@@ -119,6 +128,7 @@ def _build_job(req: BuildRequest) -> dict:
             "pcb_stl": None,
             "connectors_stl": None,
             "battery_stl": None,
+            "modules_stl": None,
         }
         if req.render:
             result["render_png"] = base64.b64encode(render_png(enc)).decode()
@@ -131,6 +141,9 @@ def _build_job(req: BuildRequest) -> dict:
                 result["connectors_stl"] = _stl_b64(Compound(connectors))
             if "battery" in enc.board_parts:
                 result["battery_stl"] = _stl_b64(enc.board_parts["battery"])
+            modules = [p for name, p in enc.board_parts.items() if name.startswith("module:")]
+            if modules:
+                result["modules_stl"] = _stl_b64(Compound(modules))
         return result
 
 
@@ -153,9 +166,11 @@ def _export_job(req: ExportRequest) -> bytes:
 @router.get("/boards")
 async def list_boards():
     boards = await asyncio.to_thread(load_boards)
+    modules = await asyncio.to_thread(load_modules)
     return {
         "boards": [b.model_dump() for b in sorted(boards.values(), key=lambda b: b.id)],
         "batteries": [{"id": k, **asdict(v)} for k, v in BATTERIES.items()],
+        "modules": [m.model_dump() for m in sorted(modules.values(), key=lambda m: m.id)],
     }
 
 

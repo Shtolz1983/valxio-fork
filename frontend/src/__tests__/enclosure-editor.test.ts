@@ -26,6 +26,7 @@ import { useSimulatorStore } from '../store/useSimulatorStore';
 
 const BUILD = {
   connectors: [{ name: 'usb', type: 'usb_b', side: 'left', window: { width: 13.08, height: 11.9 } }],
+  modules: [],
   spec: {
     board: 'arduino_uno',
     lid: 'screw',
@@ -33,6 +34,7 @@ const BUILD = {
     battery: null,
     battery_side: 'right',
     top_height: null,
+    modules: [],
     extras: [
       { name: 'bme1', face: 'front', shape: 'rect', width: 10, height: 4, along: 20, z: 3 },
       { name: 'vents', face: 'top', shape: 'slots', width: 2, height: 6, slot_count: 5, slot_pitch: 4, center_x: 30, center_y: 20 },
@@ -46,13 +48,19 @@ const CATALOG: EnclosureCatalog = {
     { id: 'perfboard_50x70', name: 'Prototype board 50 x 70 mm', canvas_kinds: [], verified: false, top_height: 12 },
   ],
   batteries: [{ id: '2xAA', length: 58, width: 32, height: 16, description: '2 x AA holder' }],
+  modules: [{ id: 'ds3231', name: 'ZS-042 DS3231 RTC module', part_types: ['ds3231'], size: [38, 22], top_height: 15 }],
 };
 
 let host: HTMLDivElement;
 let root: Root;
 
 beforeEach(() => {
-  useSimulatorStore.setState({ components: [{ id: 'bme1', metadataId: 'bme280', x: 0, y: 0, properties: {} }] as never });
+  useSimulatorStore.setState({
+    components: [
+      { id: 'bme1', metadataId: 'bme280', x: 0, y: 0, properties: {} },
+      { id: 'rtc1', metadataId: 'ds3231', x: 0, y: 0, properties: {} },
+    ] as never,
+  });
   host = document.createElement('div');
   document.body.appendChild(host);
   root = createRoot(host);
@@ -129,5 +137,23 @@ describe('enclosure openings', () => {
     expect(host.textContent).toContain('appear after a rebuild');
     act(() => button('Rebuild')!.click());
     expect(onApply.mock.calls[1][0]).toMatchObject({ board: 'perfboard_50x70', top_height: 17, skip_connectors: [] });
+  });
+
+  it('a part of the project with a module entry can be put inside the case and taken out again', () => {
+    const onApply = vi.fn();
+    act(() => root.render(createElement(EnclosureEditor, { build: BUILD, catalog: CATALOG, busy: false, onApply })));
+    expect(host.textContent).toContain('Only the board.');
+    // bme1 has no module entry here, rtc1 has one
+    expect([...field('Put inside').options].map((o) => o.value)).toEqual(['', 'rtc1']);
+    act(() => choose(field('Put inside'), 'rtc1'));
+    const rtc = rows().find((r) => r.textContent?.startsWith('rtc1'))!;
+    expect(rtc.textContent).toContain('ZS-042 DS3231 RTC module · 38 × 22 × 15 mm');
+    expect(rtc.textContent).toContain('placed after a rebuild');
+    expect(host.querySelectorAll('.enc-field select').length).toBeGreaterThan(0);
+    act(() => button('Rebuild')!.click());
+    expect(onApply.mock.calls[0][0].modules).toEqual([{ name: 'rtc1', type: 'ds3231' }]);
+
+    act(() => rtc.querySelector<HTMLButtonElement>('.enc-opening-remove')!.click());
+    expect(host.textContent).toContain('Only the board.');
   });
 });

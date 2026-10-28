@@ -19,6 +19,7 @@ above the PCB top. Top/bottom extras: `center_x`, `center_y` in board coordinate
 | `spec.py` | pydantic models: `Board`, `Connector`, `ExtraCutout`, `EnclosureSpec` |
 | `registry.py` | loads `boards/*.yaml`; user boards from `$ENCLOSURE_BOARDS_DIR` (opt-in) |
 | `connectors.py` | connector body sizes by type (usb_b, usb_c, micro_usb, dc_jack, ...) |
+| `modules/*.yaml` | the module table: breakouts that can go inside a case (board format plus `part_types`) |
 | `batteries.py` | battery pack sizes for the compartment (2xAA, 4xAA, 1x18650, 2x18650, 9V, lipo_503450) |
 | `enclosure.py` | geometry: layout, base, lid, board ghost, keep-out volumes |
 | `checks.py` | collisions, connector windows, wall thickness, supports, bed size, overhangs |
@@ -31,8 +32,8 @@ above the PCB top. Top/bottom extras: `center_x`, `center_y` in board coordinate
 
 | route | returns |
 |-------|---------|
-| `GET /boards` | every board with size, mount and connectors; the battery packs |
-| `POST /build` `{spec, render?, meshes?}` | `ok`, `violations`, `outer` box, `weight_g`, `connectors` (window size or null), base64 `render_png` and binary `base_stl` / `lid_stl` / `pcb_stl` / `connectors_stl` / `battery_stl` in assembly position |
+| `GET /boards` | every board with size, mount and connectors; the battery packs; the module table |
+| `POST /build` `{spec, render?, meshes?}` | `ok`, `violations`, `outer` box, `weight_g`, `connectors` (window size or null), base64 `render_png` and binary `base_stl` / `lid_stl` / `pcb_stl` / `connectors_stl` / `battery_stl` / `modules_stl` in assembly position, `modules` (where each went) |
 | `POST /export` `{spec, step?}` | zip with print files (lid flipped onto the bed); 422 with the errors if a check fails |
 
 Unknown board: 404. Bad spec or unknown `skip_connectors`: 422. Jobs run one at a time (OpenCascade and pyplot
@@ -53,6 +54,15 @@ AI assistant picks the enclosure board by it.
 the pack lies on the floor, low ribs hold it, a divider separates it from the board. The pack's long edge runs along
 X or Y, whichever keeps the case smaller; the case grows deeper when the pack is wider than the board. It is changed
 by opening the lid.
+
+## Modules inside
+
+`modules` lists parts that go inside: a module table entry (`type`) or a bare `size` (+ `height`) for a part without one.
+They go in rows behind the board, inside the board's compartment along X, on standoffs (modules with holes) or blocks
+under both ends; a module too long for the compartment is turned 90 degrees, and if it still does not fit the case
+grows towards an end with neither connector windows nor the battery. `position` pins a module by hand;
+`check_modules` then reports overlaps with the board, its connectors, the battery or other modules. Module sizes are
+nominal and assume header pins up with Dupont plugs on them.
 
 ## Rules
 

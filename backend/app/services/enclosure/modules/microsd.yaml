@@ -1,0 +1,14 @@
+id: microsd
+name: microSD card module (SPI)
+part_types: [microsd-card]
+source: Typical breakout board as sold, nominal size (not measured).
+verified: false
+notes: "The card slot faces one short end. Assumes pins pointing up with Dupont plugs on them."
+size: [42.0, 24.0]
+pcb_thickness: 1.6
+top_height: 9.0
+bottom_clearance: 3.0
+mount: standoffs
+holes:
+  diameter: 3.0
+  positions: [[2.5, 2.5], [39.5, 2.5], [2.5, 21.5], [39.5, 21.5]]

@@ -24,9 +24,9 @@ async function call(velxioUrl, route, init = {}) {
   return body;
 }
 
-/** The boards with what the model needs to place openings (size, mount, connectors), and the battery packs. */
+/** The boards with what the model needs to place openings (size, mount, connectors), the battery packs and the module table. */
 export async function listEnclosureBoards(velxioUrl) {
-  const { boards, batteries } = await call(velxioUrl, '/boards');
+  const { boards, batteries, modules = [] } = await call(velxioUrl, '/boards');
   const boardList = boards.map((b) => ({
     id: b.id,
     name: b.name,
@@ -38,7 +38,8 @@ export async function listEnclosureBoards(velxioUrl) {
     mount: b.mount,
     connectors: b.connectors.map(({ name, type, side, center, z }) => ({ name, type, side, center, z })),
   }));
-  return { boards: boardList, batteries };
+  const moduleList = modules.map((m) => ({ id: m.id, name: m.name, partTypes: m.part_types, size: m.size, height: m.top_height }));
+  return { boards: boardList, batteries, modules: moduleList };
 }
 
 export async function buildEnclosure(velxioUrl, spec) {
@@ -56,6 +57,7 @@ export async function buildEnclosure(velxioUrl, spec) {
     outerSizeMm: [x1 - x0, y1 - y0, z1 - z0].map((v) => Math.round(v * 10) / 10),
     weightG: r.weight_g,
     faces: r.faces,
+    modules: r.modules,
     [TOOL_IMAGES]: r.render_png ? [{ mediaType: 'image/png', data: r.render_png }] : [],
   };
 }

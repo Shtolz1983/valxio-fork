@@ -568,6 +568,7 @@ export const AI_TOOLS: Record<string, AiToolHandler> = {
               (v) => Math.round(v * 10) / 10,
             ),
             connectors: build.connectors,
+            modules: build.modules,
             faces: build.faces,
           }
         : {}),

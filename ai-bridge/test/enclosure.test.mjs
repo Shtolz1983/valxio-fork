@@ -55,10 +55,12 @@ const BUILT = {
 
 test('boards come back with what the model needs to place openings', async () => {
   const battery = { id: '2xAA', length: 58, width: 32, height: 16, description: '2 x AA holder' };
-  const backend = await fakeBackend(() => [200, { boards: [BOARD], batteries: [battery] }]);
+  const module = { id: 'ds3231', name: 'ZS-042 DS3231 RTC module', part_types: ['ds3231'], size: [38, 22], top_height: 15, holes: null };
+  const backend = await fakeBackend(() => [200, { boards: [BOARD], batteries: [battery], modules: [module] }]);
   try {
-    const { boards: [b], batteries } = await listEnclosureBoards(backend.url);
+    const { boards: [b], batteries, modules } = await listEnclosureBoards(backend.url);
     assert.deepEqual(batteries, [battery]);
+    assert.deepEqual(modules, [{ id: 'ds3231', name: 'ZS-042 DS3231 RTC module', partTypes: ['ds3231'], size: [38, 22], height: 15 }]);
     assert.equal(backend.seen[0].url, '/api/enclosure/boards');
     assert.deepEqual(b.canvasKinds, ['arduino-uno']);
     assert.deepEqual(b.connectors, [{ name: 'usb', type: 'usb_b', side: 'left', center: 37.96, z: 0 }]);
@@ -114,6 +116,7 @@ test('the build_enclosure schema takes a full spec and refuses a bad face', () =
       { name: 'led', face: 'top', shape: 'circle', diameter: 5, center_x: 30, center_y: 20 },
       { face: 'front', shape: 'slots', width: 2, height: 8, along: 34, z: 6, slot_count: 4 },
     ],
+    modules: [{ name: 'rtc1', type: 'ds3231' }, { name: 'mp3', size: [21, 21], height: 8, position: [5, 60] }],
     bed: [220, 220, 250],
   };
   assert.ok(tool.check(spec).success);

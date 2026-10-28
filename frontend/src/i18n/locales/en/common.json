@@ -709,6 +709,14 @@
     "batterySide": "Battery at the",
     "sideRight": "right end",
     "sideLeft": "left end",
-    "connectorsAfterRebuild": "The windows for the new board’s connectors appear after a rebuild."
+    "connectorsAfterRebuild": "The windows for the new board’s connectors appear after a rebuild.",
+    "inside": "Inside the case",
+    "removeModule": "Take it out of the case",
+    "ownSize": "own size",
+    "auto": "placed by the generator",
+    "placedAfterRebuild": "placed after a rebuild",
+    "noModules": "Only the board.",
+    "addModule": "Put inside",
+    "choosePart": "a part of the project…"
   }
 }

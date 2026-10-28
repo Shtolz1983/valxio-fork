@@ -1,0 +1,12 @@
+id: mpu6050
+name: GY-521 MPU-6050 breakout
+part_types: [mpu6050]
+source: Typical breakout board as sold, nominal size (not measured).
+verified: false
+notes: "8-pin header. Assumes pins pointing up with Dupont plugs on them."
+size: [20.3, 15.6]
+pcb_thickness: 1.6
+top_height: 15.0
+bottom_clearance: 3.0
+mount: end_supports
+support_depth: 2.0

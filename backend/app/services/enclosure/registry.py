@@ -11,6 +11,7 @@ from .spec import Board
 
 
 BUILTIN_DIR = Path(__file__).parent / "boards"
+MODULES_DIR = Path(__file__).parent / "modules"
 
 
 def user_boards_dir() -> Path | None:
@@ -52,3 +53,19 @@ def save_user_board(yaml_text: str) -> Board:
     d.mkdir(parents=True, exist_ok=True)
     (d / f"{board.id}.yaml").write_text(yaml_text)
     return board
+
+
+def load_modules() -> dict[str, Board]:
+    """The module table: breakout boards that can go inside a case, in the board format."""
+    modules = {}
+    for path in sorted(MODULES_DIR.glob("*.yaml")):
+        module = Board.model_validate(yaml.safe_load(path.read_text()))
+        modules[module.id] = module
+    return modules
+
+
+def get_module(module_id: str) -> Board:
+    modules = load_modules()
+    if module_id not in modules:
+        raise KeyError(f"unknown module {module_id!r}; available: {', '.join(sorted(modules))}")
+    return modules[module_id]

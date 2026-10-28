@@ -12,8 +12,8 @@ from build123d import Box, Cylinder, Part, Pos, RectangleRounded, Rot, extrude
 
 from .batteries import CATALOG as BATTERIES
 from .connectors import ResolvedConnector, resolved_connectors
-from .registry import get_board
-from .spec import Board, EnclosureSpec, ExtraCutout
+from .registry import get_board, get_module
+from .spec import Board, EnclosureSpec, ExtraCutout, InsideModule
 
 CONNECTOR_GAP = 0.5  # air between a connector face and the inner wall
 POST_D = 6.5  # lid screw post
@@ -31,6 +31,8 @@ KEEPOUT_GAP = 0.5  # clearance kept around board and connectors when placing pos
 BATTERY_FIT = 0.5  # air around a battery in its pocket
 BATTERY_RIB = 1.6  # pocket wall thickness
 BATTERY_RIB_MAX = 10.0  # pocket walls rise at most this high above the floor
+MODULE_GAP = 2.0  # air around a module inside the case: to the board, other modules, walls
+GENERIC_MODULE_HEIGHT = 10.0  # a module given only by its size
 PLA_DENSITY = 1.24  # g/cm3
 
 
@@ -44,6 +46,33 @@ class Opening:
     along1: float
     z0: float
     z1: float
+
+
+@dataclass
+class PlacedModule:
+    """A module inside the case: its PCB footprint (x0, y0, x1, y1) and heights, in world coordinates."""
+
+    name: str
+    module: Board
+    x0: float
+    y0: float
+    x1: float
+    y1: float
+    rotated: bool  # turned 90 degrees: its length runs along Y
+    bottom: float  # PCB underside
+    pcb_top: float
+    top: float  # tallest part
+
+    def holes(self) -> list[tuple[float, float]]:
+        if not self.module.holes:
+            return []
+        w = self.module.size[1]
+        if self.rotated:
+            return [(self.x0 + w - hy, self.y0 + hx) for hx, hy in self.module.holes.positions]
+        return [(self.x0 + hx, self.y0 + hy) for hx, hy in self.module.holes.positions]
+
+    def rect(self) -> tuple[float, float, float, float]:
+        return self.x0, self.y0, self.x1, self.y1
 
 
 @dataclass
@@ -64,6 +93,7 @@ class Layout:
     top_height: float
     # Battery pocket (x0, y0, x1, y1): the battery plus BATTERY_FIT on every side, on the floor at one end.
     battery: tuple[float, float, float, float] | None = None
+    modules: list[PlacedModule] = field(default_factory=list)
     posts: list[tuple[float, float]] = field(default_factory=list)
 
     def outer(self) -> tuple[float, float, float, float]:
@@ -156,11 +186,16 @@ def make_layout(spec: EnclosureSpec, board: Board | None = None) -> Layout:
     z_top = pcb_top + top_height + spec.top_clearance
     windowed = [c for c in conns if c.name not in skip]
     x0, y0, x1, y1 = -cl["left"], -cl["front"], L + cl["right"], W + cl["back"]
+    bx0, bx1 = x0, x1  # the board's compartment along X, before a battery pocket joins it
     battery = None
     if spec.battery:
         battery, x0, x1, y1 = _place_battery(spec, windowed, x0, y0, x1, y1)
         # the lid lip hangs LIP_HEIGHT into the cavity along the walls the pocket touches
         z_top = max(z_top, floor_top + BATTERIES[spec.battery].height + max(spec.top_clearance, LIP_HEIGHT + BATTERY_FIT))
+    modules: list[PlacedModule] = []
+    if spec.modules:
+        modules, x0, x1, y1 = _place_modules(spec, board, windowed, bx0, bx1, x0, x1, y1, floor_top)
+        z_top = max(z_top, max(m.top for m in modules) + spec.top_clearance)
 
     layout = Layout(
         board=board,
@@ -178,10 +213,80 @@ def make_layout(spec: EnclosureSpec, board: Board | None = None) -> Layout:
         lid_top=z_top + spec.lid_thickness,
         top_height=top_height,
         battery=battery,
+        modules=modules,
     )
     if spec.lid == "screw":
         _place_posts(layout)
     return layout
+
+
+def _resolve_module(m: InsideModule) -> Board:
+    if m.type:
+        try:
+            module = get_module(m.type)
+        except KeyError as e:
+            raise ValueError(str(e.args[0])) from None
+    else:
+        module = Board(
+            id=m.name, name=m.name, size=m.size, top_height=GENERIC_MODULE_HEIGHT, bottom_clearance=3.0,
+            mount="end_supports", support_depth=MODULE_GAP,
+        )
+    return module.model_copy(update={"top_height": m.height}) if m.height is not None else module
+
+
+def _place_modules(
+    spec: EnclosureSpec, board: Board, windowed: list[ResolvedConnector],
+    bx0: float, bx1: float, x0: float, x1: float, y1: float, floor_top: float,
+) -> tuple[list[PlacedModule], float, float, float]:
+    """Modules in rows behind the board, inside the board's compartment along X; returns them and the grown cavity.
+
+    A module longer than the compartment is turned 90 degrees; if it is still too long the case grows towards
+    an end with neither connector windows nor the battery. A module with a `position` stays where it is put.
+    """
+    def free_end() -> str | None:
+        for side in ("right", "left"):
+            if not (spec.battery and spec.battery_side == side) and not any(c.side == side for c in windowed):
+                return side
+        return None
+
+    placed: list[PlacedModule] = []
+    row_y, row_depth, cursor, in_row = board.width + MODULE_GAP, 0.0, bx0 + MODULE_GAP, 0
+    grown_y1 = y1
+    for m in spec.modules:
+        module = _resolve_module(m)
+        length, width = module.size
+        rotated = False
+        if m.position:
+            px, py = m.position
+        else:
+            room = bx1 - bx0 - 2 * MODULE_GAP
+            if length > room and width <= room:
+                length, width, rotated = width, length, True
+            if length > room:
+                end = free_end()
+                if end is None:
+                    raise ValueError(
+                        f"module {m.name} ({length:.0f} mm) is longer than the board's compartment ({room:.0f} mm) and both "
+                        "ends of the case are taken by connector windows or the battery"
+                    )
+                grow = length - room
+                if end == "right":
+                    bx1, x1 = bx1 + grow, x1 + grow
+                else:
+                    bx0, x0 = bx0 - grow, x0 - grow
+                    if not in_row:
+                        cursor = bx0 + MODULE_GAP
+            if in_row and cursor + length > bx1 - MODULE_GAP:
+                row_y, row_depth, cursor, in_row = row_y + row_depth + MODULE_GAP, 0.0, bx0 + MODULE_GAP, 0
+            px, py = cursor, row_y
+            cursor, row_depth, in_row = cursor + length + MODULE_GAP, max(row_depth, width), in_row + 1
+            grown_y1 = max(grown_y1, py + width + MODULE_GAP)
+        bottom = floor_top + module.bottom_clearance
+        pcb_top = bottom + module.pcb_thickness
+        placed.append(PlacedModule(m.name, module, px, py, px + length, py + width, rotated, bottom, pcb_top, pcb_top + module.top_height))
+    if grown_y1 > y1 and any(c.side == "back" for c in windowed):
+        raise ValueError("the modules make the case deeper than the board: the back connector windows would not reach the wall")
+    return placed, x0, x1, grown_y1
 
 
 def _place_battery(
@@ -218,6 +323,8 @@ def _place_posts(layout: Layout) -> None:
     keepouts = [(-KEEPOUT_GAP, -KEEPOUT_GAP, L + KEEPOUT_GAP, W + KEEPOUT_GAP)]
     if layout.battery:
         keepouts.append(layout.battery)
+    for m in layout.modules:
+        keepouts.append((m.x0 - KEEPOUT_GAP, m.y0 - KEEPOUT_GAP, m.x1 + KEEPOUT_GAP, m.y1 + KEEPOUT_GAP))
     for c in layout.connectors:
         x0, y0, x1, y1 = _connector_rect(c, board)
         keepouts.append((x0 - KEEPOUT_GAP, y0 - KEEPOUT_GAP, x1 + KEEPOUT_GAP, y1 + KEEPOUT_GAP))
@@ -357,6 +464,8 @@ def build_base(layout: Layout) -> Part:
 
     if layout.battery:
         base += _battery_ribs(layout)
+    for m in layout.modules:
+        base += _module_supports(layout, m)
 
     # lid screw posts
     for px, py in layout.posts:
@@ -374,6 +483,28 @@ def build_base(layout: Layout) -> Part:
         elif e.face != "top":
             base -= _side_extra_cutter(layout, e)
     return base
+
+
+def _module_supports(layout: Layout, m: PlacedModule) -> Part:
+    """Standoffs under a module's holes, or blocks under both ends of its length when it has none."""
+    z0 = layout.floor_top - 0.5
+    if m.module.mount == "standoffs":
+        pilot_d = m.module.holes.diameter * STANDOFF_PILOT_RATIO
+        pilot_bottom = max(layout.spec.min_wall, m.bottom - 6.0)
+        supports = None
+        for hx, hy in m.holes():
+            post = cylinder_z(hx, hy, z0, m.bottom, STANDOFF_D) - cylinder_z(hx, hy, pilot_bottom, m.bottom + 0.1, pilot_d)
+            supports = post if supports is None else supports + post
+        return supports
+    d = m.module.support_depth
+    if m.rotated:
+        return box(m.x0, m.y0, z0, m.x1, m.y0 + d, m.bottom) + box(m.x0, m.y1 - d, z0, m.x1, m.y1, m.bottom)
+    return box(m.x0, m.y0, z0, m.x0 + d, m.y1, m.bottom) + box(m.x1 - d, m.y0, z0, m.x1, m.y1, m.bottom)
+
+
+def module_body(m: PlacedModule) -> Part:
+    """A module's envelope: its PCB and everything on it."""
+    return box(m.x0, m.y0, m.bottom, m.x1, m.y1, m.top)
 
 
 def _battery_ribs(layout: Layout) -> Part:
@@ -446,6 +577,8 @@ def build_board_parts(layout: Layout) -> dict[str, Part]:
         parts[f"connector:{c.name}"] = box(x0, y0, layout.pcb_top + c.z, x1, y1, layout.pcb_top + c.z + c.height)
     if layout.battery:
         parts["battery"] = battery_body(layout)
+    for m in layout.modules:
+        parts[f"module:{m.name}"] = module_body(m)
     return parts
 
 
@@ -454,7 +587,7 @@ def build_keepouts(layout: Layout, board_parts: dict[str, Part]) -> dict[str, Pa
     L, W = layout.board.size
     keepouts = {"pcb": box(0, 0, layout.board_bottom, L, W, layout.pcb_top)}
     keepouts["components above board"] = box(0, 0, layout.pcb_top, L, W, layout.pcb_top + layout.top_height)
-    keepouts.update({k: v for k, v in board_parts.items() if k.startswith("connector:") or k == "battery"})
+    keepouts.update({k: v for k, v in board_parts.items() if k.startswith(("connector:", "module:")) or k == "battery"})
     return keepouts
 
 

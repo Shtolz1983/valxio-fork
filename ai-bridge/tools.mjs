@@ -191,7 +191,7 @@ export const TOOLS = [
     name: 'list_enclosure_boards',
     where: 'bridge',
     description:
-      'Boards a 3D-printable enclosure can be made for — id, the canvas board kinds each fits (canvasKinds), PCB size, mounting and connectors (side and position) — and the battery packs a compartment can hold (id, size in mm). Pick the board whose canvasKinds holds the kind of the board on the canvas; prototype boards (perfboard_*) are for circuits the user solders by hand.',
+      'Boards a 3D-printable enclosure can be made for — id, the canvas board kinds each fits (canvasKinds), PCB size, mounting and connectors (side and position) — the battery packs a compartment can hold (id, size in mm), and the modules that can go inside the case (id, the canvas part types each is, size, height). Pick the board whose canvasKinds holds the kind of the board on the canvas; prototype boards (perfboard_*) are for circuits the user solders by hand.',
     input: {},
   },
   {
@@ -240,6 +240,18 @@ export const TOOLS = [
       top_height: z.number().optional().describe('Tallest part above the PCB; default from the board data. Set it for a prototype board.'),
       battery: z.string().optional().describe('Battery compartment beside the board: a battery id from list_enclosure_boards, e.g. "2xAA" or "1x18650".'),
       battery_side: z.enum(['left', 'right']).optional().describe('End of the case the battery goes to, default right; never the side with connector windows.'),
+      modules: z
+        .array(
+          z.object({
+            name: z.string().describe('The part id on the canvas, e.g. "rtc1".'),
+            type: z.string().optional().describe('Module id from list_enclosure_boards whose partTypes holds the part type.'),
+            size: z.array(z.number()).length(2).optional().describe('PCB length and width in mm, for a part with no module entry.'),
+            height: z.number().optional().describe('Tallest part above its PCB in mm; default from the module table, 10 for a module given by size.'),
+            position: z.array(z.number()).length(2).optional().describe('PCB lower-left corner in board coordinates; omit to let the generator place it.'),
+          }),
+        )
+        .optional()
+        .describe('Modules that go inside the case, placed beside the board on supports; the case grows to hold them.'),
       bed: z.array(z.number()).length(3).optional().describe('Printer build volume X, Y, Z in mm, default [220, 220, 250].'),
     },
   },

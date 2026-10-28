@@ -24,6 +24,7 @@ COLORS = {
     "pcb": (0.15, 0.55, 0.30, 1.0),
     "connector": (0.95, 0.55, 0.10, 1.0),
     "battery": (0.30, 0.36, 0.55, 1.0),
+    "module": (0.20, 0.62, 0.62, 1.0),
 }
 EXPLODE = 12.0  # mm the lid is lifted in the isometric view
 
@@ -67,7 +68,8 @@ def _parts_for(enc: Enclosure, view_key: str) -> list[tuple[str, np.ndarray, np.
     meshes.append(("base", base_v, base_t))
     for name, part in enc.board_parts.items():
         v, t = _mesh(part, 0.3)
-        meshes.append((name if name in ("pcb", "battery") else "connector", v, t))
+        kind = name if name in ("pcb", "battery") else "module" if name.startswith("module:") else "connector"
+        meshes.append((kind, v, t))
     if view_key == "iso":
         v, t = _mesh(enc.lid)
         meshes.append(("lid", v + np.array([0, 0, EXPLODE]), t))
@@ -160,6 +162,9 @@ def _label_openings(ax, enc: Enclosure, view_key: str) -> None:
 
 
 def _label_top(ax, enc: Enclosure, view_key: str) -> None:
+    if view_key == "top":
+        for m in enc.layout.modules:
+            ax.annotate(m.name, ((m.x0 + m.x1) / 2, (m.y0 + m.y1) / 2), ha="center", va="center", fontsize=7, color="white")
     for e in enc.layout.spec.extras:
         if e.face == "top" and view_key == "lid":
             ax.annotate(e.name or e.shape, (e.center_x, e.center_y), xytext=(0, 8), textcoords="offset points",
@@ -197,7 +202,8 @@ def _summary_panel(ax, enc: Enclosure) -> None:
         f"plastic ~{enc.weight_g:.0f} g PLA",
         f"battery: {lay.spec.battery} ({lay.spec.battery_side} end)" if lay.battery else "battery: none",
         "",
-        "orange = connectors, green = PCB, blue = battery",
+        f"modules inside: {', '.join(m.name for m in lay.modules)}" if lay.modules else "modules inside: none",
+        "orange = connectors, green = PCB, blue = battery, teal = modules",
         "origin = PCB lower-left corner",
     ]
     ax.text(0.02, 0.95, "\n".join(lines), va="top", family="monospace", fontsize=9, transform=ax.transAxes)

@@ -42,6 +42,7 @@ class Board(BaseModel):
     id: str
     name: str
     canvas_kinds: list[str] = Field([], description="Velxio canvas board kinds this enclosure board fits")
+    part_types: list[str] = Field([], description="Modules only: canvas part types this module is")
     source: str = ""
     verified: bool = Field(False, description="True once dimensions were checked against a real board")
     notes: str = ""
@@ -108,6 +109,22 @@ class ExtraCutout(BaseModel):
         return self
 
 
+class InsideModule(BaseModel):
+    """A module that goes inside the case next to the board: from the module table (`type`) or by its size."""
+
+    name: str = Field(description="The part id on the canvas; labels the render")
+    type: str | None = Field(None, description="Module table id, e.g. ds3231; omit to give size and height")
+    size: tuple[float, float] | None = Field(None, description="PCB length, width when there is no table entry")
+    height: float | None = Field(None, description="Tallest part above its PCB; overrides the table")
+    position: tuple[float, float] | None = Field(None, description="PCB lower-left corner in board coordinates; automatic when omitted")
+
+    @model_validator(mode="after")
+    def _check(self) -> InsideModule:
+        if self.type is None and self.size is None:
+            raise ValueError(f"module {self.name!r} needs a type from the module table or a size")
+        return self
+
+
 class EnclosureSpec(BaseModel):
     board: str = Field(description="Board id from list_boards")
     wall: float = Field(2.0, description="Side wall thickness")
@@ -124,6 +141,7 @@ class EnclosureSpec(BaseModel):
     extras: list[ExtraCutout] = []
     battery: str | None = Field(None, description="Battery compartment beside the board: a key of batteries.CATALOG")
     battery_side: Literal["left", "right"] = Field("right", description="End of the case the compartment sits at")
+    modules: list[InsideModule] = Field([], description="Modules inside the case, placed beside the board")
     min_wall: float = Field(1.2, description="Thinnest printable wall (3 perimeters of a 0.4 nozzle)")
     bed: tuple[float, float, float] = Field((220.0, 220.0, 250.0), description="Printer build volume X, Y, Z")
 

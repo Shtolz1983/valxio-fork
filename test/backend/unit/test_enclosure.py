@@ -1,6 +1,7 @@
 import asyncio
 import base64
 import io
+import json
 import re
 import struct
 import tempfile
@@ -16,11 +17,12 @@ from app.services.enclosure import export as export_mod
 from app.services.enclosure.batteries import CATALOG as BATTERIES
 from app.services.enclosure.checks import check_collisions, run_checks
 from app.services.enclosure.enclosure import build, build_board_parts, build_keepouts, make_layout
-from app.services.enclosure.registry import get_board, load_boards
+from app.services.enclosure.registry import get_board, load_boards, load_modules
 from app.services.enclosure.render import render_png
 from app.services.enclosure.spec import EnclosureSpec
 
 BOARDS = sorted(load_boards())
+MODULES = sorted(load_modules())
 REPO = Path(__file__).resolve().parents[3]
 
 
@@ -152,6 +154,68 @@ def test_top_height_override_raises_the_lid():
     assert run_checks(high) == []
 
 
+@pytest.mark.parametrize("module", MODULES)
+def test_each_module_fits_inside_behind_the_board(module):
+    enc = build(EnclosureSpec(board="arduino_uno", modules=[{"name": "m1", "type": module}]))
+    assert run_checks(enc) == []
+    [m] = enc.layout.modules
+    assert m.y0 > get_board("arduino_uno").width  # behind the board
+    assert enc.layout.z_top >= m.top
+
+
+def test_module_part_types_are_real_part_types():
+    """The assistant matches a canvas part to a module by its type; a typo would leave the part without one."""
+    meta = json.loads((REPO / "frontend/public/components-metadata.json").read_text())
+    types = {c["id"] for c in (meta["components"] if isinstance(meta, dict) else meta)}
+    types |= {p.stem for p in (REPO / "parts-catalog").glob("*.json")}
+    claimed = [t for m in load_modules().values() for t in m.part_types]
+    assert claimed and set(claimed) <= types
+
+
+def test_modules_fill_rows_and_a_long_one_turns():
+    spec = EnclosureSpec(board="arduino_nano", modules=[
+        {"name": "rtc", "type": "ds3231"}, {"name": "imu", "type": "mpu6050"}, {"name": "relay1", "type": "relay"},
+    ])
+    enc = build(spec)
+    assert run_checks(enc) == []
+    rtc, imu, relay = enc.layout.modules
+    assert imu.y0 > rtc.y0  # 38 + 20 mm do not fit the Nano's 46 mm in one row
+    assert relay.rotated and relay.x1 - relay.x0 == pytest.approx(26)  # 50 mm long, turned
+
+
+def test_a_module_longer_than_the_compartment_grows_the_free_end():
+    spec = EnclosureSpec(board="arduino_nano", modules=[{"name": "big", "size": (90, 60)}])
+    enc = build(spec)
+    assert run_checks(enc) == []
+    assert enc.layout.x1 > 90  # grew to the right, away from the USB on the left
+    with pytest.raises(ValueError, match="both ends of the case are taken"):
+        build(spec.model_copy(update={"battery": "2xAA"}))
+
+
+def test_module_given_by_size_and_height():
+    enc = build(EnclosureSpec(board="arduino_uno", modules=[{"name": "dfplayer", "size": (21, 21), "height": 8}]))
+    [m] = enc.layout.modules
+    assert m.top - m.pcb_top == 8 and m.module.mount == "end_supports"
+    assert run_checks(enc) == []
+
+
+def test_bad_modules_are_refused_or_reported():
+    with pytest.raises(ValueError, match="needs a type"):
+        EnclosureSpec(board="arduino_uno", modules=[{"name": "x"}])
+    with pytest.raises(ValueError, match="unknown module"):
+        build(EnclosureSpec(board="arduino_uno", modules=[{"name": "x", "type": "flux_capacitor"}]))
+    # a module put by hand on top of the board
+    enc = build(EnclosureSpec(board="arduino_uno", modules=[{"name": "rtc", "type": "ds3231", "position": (10, 10)}]))
+    assert any("rtc overlaps the board" in v.message for v in errors(enc))
+
+
+def test_modules_and_battery_together():
+    enc = build(EnclosureSpec(board="arduino_uno", battery="1x18650", modules=[{"name": "rtc", "type": "ds3231"}, {"name": "bme", "type": "bme280"}]))
+    assert run_checks(enc) == []
+    rtc = enc.layout.modules[0]
+    assert rtc.x1 < enc.layout.battery[0]  # stays in the board's compartment
+
+
 def test_render_png():
     png = render_png(build(EnclosureSpec(board="arduino_nano", lid="snap")))
     assert png[:8] == b"\x89PNG\r\n\x1a\n" and len(png) > 20_000
@@ -183,6 +247,7 @@ def test_route_lists_boards():
     boards = res["boards"]
     assert [b["id"] for b in boards] == BOARDS
     assert {b["id"] for b in res["batteries"]} == set(BATTERIES)
+    assert [m["id"] for m in res["modules"]] == MODULES
     assert next(b for b in res["batteries"] if b["id"] == "9V")["height"] == 18
     uno = next(b for b in boards if b["id"] == "arduino_uno")
     assert {c["name"] for c in uno["connectors"]} == {"usb", "power"}
@@ -197,7 +262,11 @@ def test_route_build_returns_checks_render_and_meshes():
     assert stl_triangles(base) > 100 and stl_triangles(lid) > 10
     assert stl_triangles(base64.b64decode(res["pcb_stl"])) >= 12
     assert stl_triangles(base64.b64decode(res["connectors_stl"])) >= 24  # usb + power boxes
-    assert res["battery_stl"] is None
+    assert res["battery_stl"] is None and res["modules"] == [] and res["modules_stl"] is None
+    with_module = asyncio.run(route.build_enclosure(route.BuildRequest(
+        spec=EnclosureSpec(board="arduino_uno", modules=[{"name": "rtc", "type": "ds3231"}]), render=False)))
+    assert with_module["modules"][0]["name"] == "rtc" and with_module["modules"][0]["type"] == "ds3231"
+    assert stl_triangles(base64.b64decode(with_module["modules_stl"])) == 12
     with_battery = asyncio.run(route.build_enclosure(route.BuildRequest(spec=EnclosureSpec(board="arduino_nano", battery="9V"), render=False)))
     assert with_battery["ok"] and stl_triangles(base64.b64decode(with_battery["battery_stl"])) == 12
     # meshes are in assembly position: the lid's top is the top of the outer box

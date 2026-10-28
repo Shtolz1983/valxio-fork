@@ -1,0 +1,12 @@
+id: bmp280
+name: GY-BMP280 breakout
+part_types: [bmp280]
+source: Typical breakout board as sold, nominal size (not measured).
+verified: false
+notes: "I2C/SPI breakout. Assumes pins pointing up with Dupont plugs on them."
+size: [15.0, 11.5]
+pcb_thickness: 1.6
+top_height: 15.0
+bottom_clearance: 3.0
+mount: end_supports
+support_depth: 2.0

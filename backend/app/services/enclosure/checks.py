@@ -7,7 +7,7 @@ from typing import Literal
 
 from build123d import Axis, GeomType, Part, Vector
 
-from .enclosure import LIP_HEIGHT, LIP_WIDTH, LID_FIT, Enclosure, Opening
+from .enclosure import KEEPOUT_GAP, LIP_HEIGHT, LIP_WIDTH, LID_FIT, Enclosure, Opening, _connector_rect
 
 COLLISION_VOLUME = 0.05  # mm3; below this a touching contact is not a collision
 MAX_BRIDGE = 25.0  # longest horizontal bridge considered printable
@@ -126,6 +126,41 @@ def check_supports(enc: Enclosure) -> list[Violation]:
     for x, y in points:
         if not enc.base.is_inside(Vector(x, y, z)):
             out.append(Violation("error", "supports", f"no support under the board near ({x:.1f}, {y:.1f})"))
+    for m in lay.modules:
+        z = m.bottom - 0.3
+        if m.module.mount == "standoffs":
+            mpoints = [(hx + 2.0, hy) for hx, hy in m.holes()]
+        else:
+            d = m.module.support_depth
+            cx, cy = (m.x0 + m.x1) / 2, (m.y0 + m.y1) / 2
+            mpoints = [(cx, m.y0 + d / 2), (cx, m.y1 - d / 2)] if m.rotated else [(m.x0 + d / 2, cy), (m.x1 - d / 2, cy)]
+        for x, y in mpoints:
+            if not enc.base.is_inside(Vector(x, y, z)):
+                out.append(Violation("error", "supports", f"no support under module {m.name} near ({x:.1f}, {y:.1f})"))
+    return out
+
+
+def _overlap(a: tuple[float, float, float, float], b: tuple[float, float, float, float]) -> bool:
+    return a[0] < b[2] and b[0] < a[2] and a[1] < b[3] and b[1] < a[3]
+
+
+def check_modules(enc: Enclosure) -> list[Violation]:
+    """Modules stay inside the cavity and clear of the board, its connectors, the battery and each other."""
+    lay = enc.layout
+    L, W = lay.board.size
+    g = KEEPOUT_GAP
+    taken = [("the board", (-g, -g, L + g, W + g))]
+    taken += [(f"connector {c.name}", _connector_rect(c, lay.board)) for c in lay.connectors]
+    if lay.battery:
+        taken.append(("the battery", lay.battery))
+    out = []
+    for m in lay.modules:
+        if m.x0 < lay.x0 or m.y0 < lay.y0 or m.x1 > lay.x1 or m.y1 > lay.y1:
+            out.append(Violation("error", "module", f"module {m.name} is outside the cavity (X {lay.x0:.1f}..{lay.x1:.1f}, Y {lay.y0:.1f}..{lay.y1:.1f})"))
+        for what, rect in taken:
+            if _overlap(m.rect(), rect):
+                out.append(Violation("error", "module", f"module {m.name} overlaps {what}"))
+        taken.append((f"module {m.name}", m.rect()))
     return out
 
 
@@ -181,7 +216,9 @@ def check_overhangs(enc: Enclosure) -> list[Violation]:
     return out
 
 
-ALL_CHECKS = (check_thickness, check_collisions, check_openings, check_top_extras, check_supports, check_bed, check_overhangs)
+ALL_CHECKS = (
+    check_thickness, check_collisions, check_openings, check_top_extras, check_supports, check_modules, check_bed, check_overhangs,
+)
 
 
 def run_checks(enc: Enclosure) -> list[Violation]:

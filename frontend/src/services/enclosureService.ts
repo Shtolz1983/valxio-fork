@@ -13,7 +13,29 @@ export type EnclosureSpec = {
   battery?: string | null;
   battery_side?: 'left' | 'right';
   top_height?: number | null;
+  modules?: EnclosureModuleSpec[];
 } & Record<string, unknown>;
+
+/** A module inside the case (backend InsideModule): from the module table by `type`, or by its size. */
+export interface EnclosureModuleSpec {
+  /** The part id on the canvas. */
+  name: string;
+  type?: string | null;
+  size?: [number, number] | null;
+  height?: number | null;
+  /** PCB lower-left corner in board coordinates; automatic when absent. */
+  position?: [number, number] | null;
+}
+
+/** A module table entry: a breakout board that can go inside a case. */
+export interface EnclosureModule {
+  id: string;
+  name: string;
+  /** Canvas part types this module is. */
+  part_types: string[];
+  size: [number, number];
+  top_height: number;
+}
 
 export type EnclosureFace = 'left' | 'right' | 'front' | 'back' | 'top' | 'bottom';
 
@@ -62,6 +84,7 @@ export interface EnclosureBattery {
 export interface EnclosureCatalog {
   boards: EnclosureBoard[];
   batteries: EnclosureBattery[];
+  modules: EnclosureModule[];
 }
 
 export interface EnclosureViolation {
@@ -78,6 +101,8 @@ export interface EnclosureBuild {
   outer: { x0: number; y0: number; x1: number; y1: number; z0: number; z1: number };
   weight_g: number;
   connectors: EnclosureConnector[];
+  /** Where each module went: PCB footprint in board coordinates and height. */
+  modules: Array<{ name: string; type: string; x0: number; y0: number; x1: number; y1: number; height: number; rotated: boolean }>;
   /** Where an opening can go: side walls by `along` and `z` (above the PCB top), lid and bottom by x / y. */
   faces: Record<'left' | 'right' | 'front' | 'back', { along: [number, number]; z: [number, number] }> &
     Record<'top' | 'bottom', { x: [number, number]; y: [number, number] }>;
@@ -89,6 +114,7 @@ export interface EnclosureBuild {
     battery: string | null;
     battery_side: 'left' | 'right';
     top_height: number | null;
+    modules: EnclosureModuleSpec[];
   };
   /** Binary STL, base64, assembly position. */
   base_stl: string;
@@ -96,6 +122,7 @@ export interface EnclosureBuild {
   pcb_stl: string;
   connectors_stl: string | null;
   battery_stl: string | null;
+  modules_stl: string | null;
 }
 
 /** FastAPI's detail: a sentence, pydantic's list, or the export's { message, errors }. */

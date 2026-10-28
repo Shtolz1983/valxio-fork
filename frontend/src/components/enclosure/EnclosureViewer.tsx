@@ -14,7 +14,7 @@ import { STLLoader } from 'three/addons/loaders/STLLoader.js';
 import type { EnclosureBuild } from '../../services/enclosureService';
 
 // Same palette as the backend's PNG render (render.py COLORS).
-const COLORS = { base: 0x8c9eb8, lid: 0xb8ad94, pcb: 0x268c4d, connector: 0xf28c1a, battery: 0x4d5c8c };
+const COLORS = { base: 0x8c9eb8, lid: 0xb8ad94, pcb: 0x268c4d, connector: 0xf28c1a, battery: 0x4d5c8c, module: 0x339e9e };
 
 interface Props {
   build: EnclosureBuild;
@@ -63,6 +63,7 @@ export default function EnclosureViewer({ build, lift, showBoard }: Props) {
     board.add(mesh(build.pcb_stl, COLORS.pcb));
     if (build.connectors_stl) board.add(mesh(build.connectors_stl, COLORS.connector));
     if (build.battery_stl) board.add(mesh(build.battery_stl, COLORS.battery));
+    if (build.modules_stl) board.add(mesh(build.modules_stl, COLORS.module));
     scene.add(mesh(build.base_stl, COLORS.base), lid, board);
 
     // Frame the closed box from the front-left, as the PNG's ISO view does.
