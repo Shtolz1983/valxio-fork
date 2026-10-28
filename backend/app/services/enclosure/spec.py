@@ -13,7 +13,9 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
+
+from .batteries import CATALOG as BATTERIES
 
 Side = Literal["left", "right", "front", "back"]
 Face = Literal["left", "right", "front", "back", "top", "bottom"]
@@ -114,10 +116,20 @@ class EnclosureSpec(BaseModel):
     clearance: float = Field(1.0, description="Gap between PCB edge and inner wall")
     bottom_clearance: float | None = Field(None, description="Override the board's space under the PCB")
     top_clearance: float = Field(2.5, description="Gap between the tallest component and the lid")
+    top_height: float | None = Field(None, description="Override the board's tallest component (perfboards: what is soldered on)")
     corner_radius: float = 3.0
     lid: Literal["screw", "snap"] = "screw"
     connector_tolerance: float = Field(0.5, description="Extra gap around each connector window")
     skip_connectors: list[str] = Field([], description="Connector names that get no window")
     extras: list[ExtraCutout] = []
+    battery: str | None = Field(None, description="Battery compartment beside the board: a key of batteries.CATALOG")
+    battery_side: Literal["left", "right"] = Field("right", description="End of the case the compartment sits at")
     min_wall: float = Field(1.2, description="Thinnest printable wall (3 perimeters of a 0.4 nozzle)")
     bed: tuple[float, float, float] = Field((220.0, 220.0, 250.0), description="Printer build volume X, Y, Z")
+
+    @field_validator("battery")
+    @classmethod
+    def _known_battery(cls, v: str | None) -> str | None:
+        if v is not None and v not in BATTERIES:
+            raise ValueError(f"unknown battery {v!r}; available: {', '.join(BATTERIES)}")
+        return v

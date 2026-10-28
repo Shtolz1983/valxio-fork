@@ -1,0 +1,19 @@
+id: perfboard_50x70
+name: Prototype board 50 x 70 mm
+canvas_kinds: []
+source: >-
+  Common double-sided FR-4 prototype board (2.54 mm grid) sold as 50 x 70 mm;
+  M2 holes about 2.5 mm in from each corner.
+verified: false
+notes: >-
+  For a circuit soldered by hand: nothing on it is known. Set top_height to the tallest part
+  soldered on (a Nano in female headers is about 17 mm), and add an extra window for every
+  connector that must reach a wall, e.g. the USB of a soldered Nano.
+size: [70, 50]
+pcb_thickness: 1.6
+top_height: 12.0
+bottom_clearance: 3.0
+mount: standoffs
+holes:
+  diameter: 2.0
+  positions: [[2.5, 2.5], [67.5, 2.5], [2.5, 47.5], [67.5, 47.5]]

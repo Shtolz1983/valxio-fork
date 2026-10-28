@@ -3,7 +3,9 @@
 The AI assistant picks an EnclosureSpec; this route builds the geometry, runs
 the printability checks and hands back what the editor and the model need:
 the violations, a PNG render the model can look at, and binary STL meshes in
-assembly position for the three.js viewer (base64, like compile's binaries).
+assembly position for the three.js viewer (base64, like compile's binaries),
+together with the board ghost (PCB and connector bodies) the case was built
+around.
 /export returns the print files: STL with the lid flipped onto the bed, STEP
 and the spec, zipped.
 
@@ -19,15 +21,17 @@ import io
 import tempfile
 import threading
 import zipfile
+from dataclasses import asdict
 from pathlib import Path
 
-from build123d import export_stl
+from build123d import Compound, export_stl
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import Response
 from pydantic import BaseModel
 
+from app.services.enclosure.batteries import CATALOG as BATTERIES
 from app.services.enclosure.checks import run_checks
-from app.services.enclosure.enclosure import Enclosure, build
+from app.services.enclosure.enclosure import LIP_HEIGHT, Enclosure, build
 from app.services.enclosure.export import export
 from app.services.enclosure.registry import get_board, load_boards
 from app.services.enclosure.render import render_png
@@ -42,7 +46,7 @@ _lock = threading.Lock()
 class BuildRequest(BaseModel):
     spec: EnclosureSpec
     render: bool = True  # PNG with eight views, for the model; ~2 s
-    meshes: bool = True  # base + lid STL for the viewer
+    meshes: bool = True  # base, lid and board ghost STL for the viewer
 
 
 class ExportRequest(BaseModel):
@@ -71,6 +75,28 @@ def _stl_b64(part) -> str:
         return base64.b64encode(path.read_bytes()).decode()
 
 
+def _connectors(enc: Enclosure) -> list[dict]:
+    """Board connectors with the size of their window (None when skip_connectors closes it),
+    so the viewer lists every opening, not only the extras."""
+    windows: dict[str, dict] = {}
+    # Connector windows come first in enc.openings; an extra may reuse a connector's name.
+    for o in enc.openings[: len(enc.layout.windowed)]:
+        windows[o.name] = {"width": round(o.along1 - o.along0, 2), "height": round(o.z1 - o.z0, 2)}
+    return [{"name": c.name, "type": c.type, "side": c.side, "window": windows.get(c.name)} for c in enc.layout.connectors]
+
+
+def _faces(enc: Enclosure) -> dict:
+    """Where an opening can go on each face, in the spec's own coordinates: side walls take `along` and `z`
+    (above the PCB top, from the floor to under the lid lip), lid and bottom take `center_x` / `center_y`.
+    Lets the assistant place "in the middle of the left wall" without knowing the layout."""
+    lay = enc.layout
+    r = lambda a, b: [round(a, 2), round(b, 2)]  # noqa: E731
+    z = r(lay.floor_top - lay.pcb_top, lay.z_top - LIP_HEIGHT - lay.pcb_top)
+    faces = {side: {"along": r(*lay.side_range(side)), "z": z} for side in ("left", "right", "front", "back")}
+    flat = {"x": r(lay.x0, lay.x1), "y": r(lay.y0, lay.y1)}
+    return {**faces, "top": flat, "bottom": flat}
+
+
 def _build_job(req: BuildRequest) -> dict:
     with _lock:
         enc = _build(req.spec)
@@ -84,16 +110,27 @@ def _build_job(req: BuildRequest) -> dict:
             # Outer box in board coordinates: the viewer centres on it, the model quotes it.
             "outer": {"x0": ox0, "y0": oy0, "x1": ox1, "y1": oy1, "z0": 0.0, "z1": lay.lid_top},
             "weight_g": round(enc.weight_g, 1),
+            "connectors": _connectors(enc),
+            "faces": _faces(enc),
             "spec": req.spec.model_dump(),
             "render_png": None,
             "base_stl": None,
             "lid_stl": None,
+            "pcb_stl": None,
+            "connectors_stl": None,
+            "battery_stl": None,
         }
         if req.render:
             result["render_png"] = base64.b64encode(render_png(enc)).decode()
         if req.meshes:
             result["base_stl"] = _stl_b64(enc.base)
             result["lid_stl"] = _stl_b64(enc.lid)
+            result["pcb_stl"] = _stl_b64(enc.board_parts["pcb"])
+            connectors = [p for name, p in enc.board_parts.items() if name.startswith("connector:")]
+            if connectors:
+                result["connectors_stl"] = _stl_b64(Compound(connectors))
+            if "battery" in enc.board_parts:
+                result["battery_stl"] = _stl_b64(enc.board_parts["battery"])
         return result
 
 
@@ -116,7 +153,10 @@ def _export_job(req: ExportRequest) -> bytes:
 @router.get("/boards")
 async def list_boards():
     boards = await asyncio.to_thread(load_boards)
-    return {"boards": [b.model_dump() for b in sorted(boards.values(), key=lambda b: b.id)]}
+    return {
+        "boards": [b.model_dump() for b in sorted(boards.values(), key=lambda b: b.id)],
+        "batteries": [{"id": k, **asdict(v)} for k, v in BATTERIES.items()],
+    }
 
 
 @router.post("/build")

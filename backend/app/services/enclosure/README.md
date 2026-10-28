@@ -19,6 +19,7 @@ above the PCB top. Top/bottom extras: `center_x`, `center_y` in board coordinate
 | `spec.py` | pydantic models: `Board`, `Connector`, `ExtraCutout`, `EnclosureSpec` |
 | `registry.py` | loads `boards/*.yaml`; user boards from `$ENCLOSURE_BOARDS_DIR` (opt-in) |
 | `connectors.py` | connector body sizes by type (usb_b, usb_c, micro_usb, dc_jack, ...) |
+| `batteries.py` | battery pack sizes for the compartment (2xAA, 4xAA, 1x18650, 2x18650, 9V, lipo_503450) |
 | `enclosure.py` | geometry: layout, base, lid, board ghost, keep-out volumes |
 | `checks.py` | collisions, connector windows, wall thickness, supports, bed size, overhangs |
 | `render.py` | 8-panel PNG with its own orthographic projection (matplotlib, no VTK) |
@@ -30,8 +31,8 @@ above the PCB top. Top/bottom extras: `center_x`, `center_y` in board coordinate
 
 | route | returns |
 |-------|---------|
-| `GET /boards` | every board with size, mount and connectors |
-| `POST /build` `{spec, render?, meshes?}` | `ok`, `violations`, `outer` box, `weight_g`, base64 `render_png` and binary `base_stl` / `lid_stl` in assembly position |
+| `GET /boards` | every board with size, mount and connectors; the battery packs |
+| `POST /build` `{spec, render?, meshes?}` | `ok`, `violations`, `outer` box, `weight_g`, `connectors` (window size or null), base64 `render_png` and binary `base_stl` / `lid_stl` / `pcb_stl` / `connectors_stl` / `battery_stl` in assembly position |
 | `POST /export` `{spec, step?}` | zip with print files (lid flipped onto the bed); 422 with the errors if a check fails |
 
 Unknown board: 404. Bad spec or unknown `skip_connectors`: 422. Jobs run one at a time (OpenCascade and pyplot
@@ -41,8 +42,17 @@ are not thread-safe).
 
 `arduino_uno` (4 x M3 standoffs), `arduino_nano` and `esp32_devkitc` (supports under both short ends).
 All have `verified: false`: nominal dimensions, not yet measured on a real board.
+`perfboard_40x60` ... `perfboard_70x90`: hand-soldered prototype boards (M2 corner holes, no connectors); set
+`top_height` in the spec to the tallest part soldered on.
 `canvas_kinds` names the Velxio canvas boards (`BoardKind` in `frontend/src/types/board.ts`) a board fits; the
 AI assistant picks the enclosure board by it.
+
+## Battery compartment
+
+`battery` puts a pocket for the pack at one end of the case (`battery_side`, never the side with connector windows):
+the pack lies on the floor, low ribs hold it, a divider separates it from the board. The pack's long edge runs along
+X or Y, whichever keeps the case smaller; the case grows deeper when the pack is wider than the board. It is changed
+by opening the lid.
 
 ## Rules
 

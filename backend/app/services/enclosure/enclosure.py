@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 
 from build123d import Box, Cylinder, Part, Pos, RectangleRounded, Rot, extrude
 
+from .batteries import CATALOG as BATTERIES
 from .connectors import ResolvedConnector, resolved_connectors
 from .registry import get_board
 from .spec import Board, EnclosureSpec, ExtraCutout
@@ -20,13 +21,16 @@ POST_PILOT_D = 2.5  # M3 self-tapping into plastic
 POST_EMBED = 0.5  # how far a post sinks into the walls
 LID_HOLE_D = 3.4  # M3 clearance
 STANDOFF_D = 6.0
-STANDOFF_PILOT_D = 2.5
+STANDOFF_PILOT_RATIO = 0.78  # self-tapping pilot / mounting hole: 2.5 for M3 (3.2 hole), 1.6 for M2
 LIP_HEIGHT = 2.0
 LIP_WIDTH = 1.6
 LID_FIT = 0.2  # gap between lid lip and inner wall
 SNAP_BUMP_R = 0.6
 SNAP_GROOVE_R = 0.8
 KEEPOUT_GAP = 0.5  # clearance kept around board and connectors when placing posts
+BATTERY_FIT = 0.5  # air around a battery in its pocket
+BATTERY_RIB = 1.6  # pocket wall thickness
+BATTERY_RIB_MAX = 10.0  # pocket walls rise at most this high above the floor
 PLA_DENSITY = 1.24  # g/cm3
 
 
@@ -57,11 +61,23 @@ class Layout:
     pcb_top: float
     z_top: float
     lid_top: float
+    top_height: float
+    # Battery pocket (x0, y0, x1, y1): the battery plus BATTERY_FIT on every side, on the floor at one end.
+    battery: tuple[float, float, float, float] | None = None
     posts: list[tuple[float, float]] = field(default_factory=list)
 
     def outer(self) -> tuple[float, float, float, float]:
         w = self.spec.wall
         return self.x0 - w, self.y0 - w, self.x1 + w, self.y1 + w
+
+    def board_x_range(self) -> tuple[float, float]:
+        """Cavity extent along X on the board's side of the battery divider."""
+        x0, x1 = self.x0, self.x1
+        if self.battery and self.spec.battery_side == "right":
+            x1 = self.battery[0] - BATTERY_RIB
+        elif self.battery:
+            x0 = self.battery[2] + BATTERY_RIB
+        return x0, x1
 
     def side_range(self, side: str) -> tuple[float, float]:
         """Cavity extent along a side's axis."""
@@ -136,26 +152,63 @@ def make_layout(spec: EnclosureSpec, board: Board | None = None) -> Layout:
     floor_top = spec.floor
     board_bottom = floor_top + bottom
     pcb_top = board_bottom + board.pcb_thickness
-    z_top = pcb_top + board.top_height + spec.top_clearance
+    top_height = spec.top_height if spec.top_height is not None else board.top_height
+    z_top = pcb_top + top_height + spec.top_clearance
+    windowed = [c for c in conns if c.name not in skip]
+    x0, y0, x1, y1 = -cl["left"], -cl["front"], L + cl["right"], W + cl["back"]
+    battery = None
+    if spec.battery:
+        battery, x0, x1, y1 = _place_battery(spec, windowed, x0, y0, x1, y1)
+        # the lid lip hangs LIP_HEIGHT into the cavity along the walls the pocket touches
+        z_top = max(z_top, floor_top + BATTERIES[spec.battery].height + max(spec.top_clearance, LIP_HEIGHT + BATTERY_FIT))
 
     layout = Layout(
         board=board,
         spec=spec,
         connectors=conns,
-        windowed=[c for c in conns if c.name not in skip],
-        x0=-cl["left"],
-        y0=-cl["front"],
-        x1=L + cl["right"],
-        y1=W + cl["back"],
+        windowed=windowed,
+        x0=x0,
+        y0=y0,
+        x1=x1,
+        y1=y1,
         floor_top=floor_top,
         board_bottom=board_bottom,
         pcb_top=pcb_top,
         z_top=z_top,
         lid_top=z_top + spec.lid_thickness,
+        top_height=top_height,
+        battery=battery,
     )
     if spec.lid == "screw":
         _place_posts(layout)
     return layout
+
+
+def _place_battery(
+    spec: EnclosureSpec, windowed: list[ResolvedConnector], x0: float, y0: float, x1: float, y1: float,
+) -> tuple[tuple[float, float, float, float], float, float, float]:
+    """Battery pocket at one end of the case, behind a divider rib; returns the pocket and the grown cavity."""
+    bat = BATTERIES[spec.battery]
+    side = spec.battery_side
+    blocked = [c.name for c in windowed if c.side == side]
+    if blocked:
+        other = "left" if side == "right" else "right"
+        raise ValueError(f"a battery on the {side} would cover the {', '.join(blocked)} window; use battery_side={other}")
+
+    def footprint(length: float, width: float) -> float:
+        return (x1 - x0 + BATTERY_RIB + length + 2 * BATTERY_FIT) * (max(y1, y0 + width + 2 * BATTERY_FIT) - y0)
+
+    # long edge along X or along Y, whichever keeps the case smaller
+    length, width = min((bat.length, bat.width), (bat.width, bat.length), key=lambda lw: footprint(*lw))
+    pl, pw = length + 2 * BATTERY_FIT, width + 2 * BATTERY_FIT
+    grown_y1 = max(y1, y0 + pw)
+    if grown_y1 > y1 and any(c.side == "back" for c in windowed):
+        raise ValueError(f"battery {spec.battery} makes the case deeper than the board: the back connector windows would not reach the wall")
+    if side == "right":
+        px0 = x1 + BATTERY_RIB
+        return (px0, y0, px0 + pl, y0 + pw), x0, px0 + pl, grown_y1
+    px1 = x0 - BATTERY_RIB
+    return (px1 - pl, y0, px1, y0 + pw), px1 - pl, x1, grown_y1
 
 
 def _place_posts(layout: Layout) -> None:
@@ -163,6 +216,8 @@ def _place_posts(layout: Layout) -> None:
     board = layout.board
     L, W = board.size
     keepouts = [(-KEEPOUT_GAP, -KEEPOUT_GAP, L + KEEPOUT_GAP, W + KEEPOUT_GAP)]
+    if layout.battery:
+        keepouts.append(layout.battery)
     for c in layout.connectors:
         x0, y0, x1, y1 = _connector_rect(c, board)
         keepouts.append((x0 - KEEPOUT_GAP, y0 - KEEPOUT_GAP, x1 + KEEPOUT_GAP, y1 + KEEPOUT_GAP))
@@ -289,14 +344,19 @@ def build_base(layout: Layout) -> Part:
     # board supports
     if board.mount == "standoffs":
         pilot_bottom = max(spec.min_wall, layout.board_bottom - 6.0)
+        pilot_d = board.holes.diameter * STANDOFF_PILOT_RATIO
         for hx, hy in board.holes.positions:
             base += cylinder_z(hx, hy, layout.floor_top - 0.5, layout.board_bottom, STANDOFF_D)
-            base -= cylinder_z(hx, hy, pilot_bottom, layout.board_bottom + 0.1, STANDOFF_PILOT_D)
+            base -= cylinder_z(hx, hy, pilot_bottom, layout.board_bottom + 0.1, pilot_d)
     else:
         L, W = board.size
         d = board.support_depth
-        base += box(layout.x0 - 0.1, 0, layout.floor_top - 0.5, d, W, layout.board_bottom)
-        base += box(L - d, 0, layout.floor_top - 0.5, layout.x1 + 0.1, W, layout.board_bottom)
+        bx0, bx1 = layout.board_x_range()
+        base += box(bx0 - 0.1, 0, layout.floor_top - 0.5, d, W, layout.board_bottom)
+        base += box(L - d, 0, layout.floor_top - 0.5, bx1 + 0.1, W, layout.board_bottom)
+
+    if layout.battery:
+        base += _battery_ribs(layout)
 
     # lid screw posts
     for px, py in layout.posts:
@@ -314,6 +374,34 @@ def build_base(layout: Layout) -> Part:
         elif e.face != "top":
             base -= _side_extra_cutter(layout, e)
     return base
+
+
+def _battery_ribs(layout: Layout) -> Part:
+    """Low walls around the battery pocket on every side that is not an outer wall."""
+    px0, py0, px1, py1 = layout.battery
+    t = BATTERY_RIB
+    top = layout.floor_top + min(BATTERY_RIB_MAX, BATTERIES[layout.spec.battery].height * 0.6)
+    ax0, ax1 = max(px0 - t, layout.x0 - 0.1), min(px1 + t, layout.x1 + 0.1)
+    rects = []
+    if px0 > layout.x0 + 0.01:
+        rects.append((px0 - t, py0, px0, py1))
+    if px1 < layout.x1 - 0.01:
+        rects.append((px1, py0, px1 + t, py1))
+    if py1 < layout.y1 - 0.01:
+        rects.append((ax0, py1, ax1, py1 + t))
+    if py0 > layout.y0 + 0.01:
+        rects.append((ax0, py0 - t, ax1, py0))
+    ribs = None
+    for x0, y0, x1, y1 in rects:
+        rib = box(x0, y0, layout.floor_top - 0.5, x1, y1, top)
+        ribs = rib if ribs is None else ribs + rib
+    return ribs
+
+
+def battery_body(layout: Layout) -> Part:
+    px0, py0, px1, py1 = layout.battery
+    f = BATTERY_FIT
+    return box(px0 + f, py0 + f, layout.floor_top, px1 - f, py1 - f, layout.floor_top + BATTERIES[layout.spec.battery].height)
 
 
 def build_lid(layout: Layout) -> Part:
@@ -356,15 +444,17 @@ def build_board_parts(layout: Layout) -> dict[str, Part]:
     for c in layout.connectors:
         x0, y0, x1, y1 = _connector_rect(c, board)
         parts[f"connector:{c.name}"] = box(x0, y0, layout.pcb_top + c.z, x1, y1, layout.pcb_top + c.z + c.height)
+    if layout.battery:
+        parts["battery"] = battery_body(layout)
     return parts
 
 
 def build_keepouts(layout: Layout, board_parts: dict[str, Part]) -> dict[str, Part]:
-    """Volumes the enclosure must not intrude into: PCB, connectors, component envelope above the board."""
+    """Volumes the enclosure must not intrude into: PCB, connectors, component envelope above the board, battery."""
     L, W = layout.board.size
     keepouts = {"pcb": box(0, 0, layout.board_bottom, L, W, layout.pcb_top)}
-    keepouts["components above board"] = box(0, 0, layout.pcb_top, L, W, layout.pcb_top + layout.board.top_height)
-    keepouts.update({k: v for k, v in board_parts.items() if k.startswith("connector:")})
+    keepouts["components above board"] = box(0, 0, layout.pcb_top, L, W, layout.pcb_top + layout.top_height)
+    keepouts.update({k: v for k, v in board_parts.items() if k.startswith("connector:") or k == "battery"})
     return keepouts
 
 

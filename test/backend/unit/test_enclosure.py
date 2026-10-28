@@ -13,6 +13,7 @@ from fastapi import HTTPException
 
 from app.api.routes import enclosure as route
 from app.services.enclosure import export as export_mod
+from app.services.enclosure.batteries import CATALOG as BATTERIES
 from app.services.enclosure.checks import check_collisions, run_checks
 from app.services.enclosure.enclosure import build, build_board_parts, build_keepouts, make_layout
 from app.services.enclosure.registry import get_board, load_boards
@@ -111,6 +112,46 @@ def test_canvas_kinds_are_real_board_kinds():
     assert len(claimed) == len(set(claimed)), "a canvas kind maps to two enclosure boards"
 
 
+@pytest.mark.parametrize("battery", sorted(BATTERIES))
+def test_battery_compartment_passes_all_checks(battery):
+    enc = build(EnclosureSpec(board="arduino_uno", battery=battery))
+    assert run_checks(enc) == []
+    lay, bat = enc.layout, BATTERIES[battery]
+    px0, py0, px1, py1 = lay.battery
+    # the pocket holds the battery either way round, on the side away from the USB and power jack
+    assert sorted([px1 - px0, py1 - py0]) == pytest.approx(sorted([bat.length + 1, bat.width + 1]))
+    assert px0 > get_board("arduino_uno").length and lay.board_x_range()[1] < px0
+    assert lay.z_top >= lay.floor_top + bat.height + 2.0
+    assert "battery" in enc.keepouts and "battery" in enc.board_parts
+
+
+def test_battery_on_the_left_end_with_end_supports():
+    enc = build(EnclosureSpec(board="esp32_devkitc", battery="1x18650", battery_side="right"))
+    assert run_checks(enc) == []
+    # supports stay under the board, the floor under the battery is free
+    assert enc.layout.board_x_range()[1] < enc.layout.battery[0]
+
+
+def test_battery_cannot_cover_a_connector_window():
+    with pytest.raises(ValueError, match="battery_side=right"):
+        build(EnclosureSpec(board="arduino_uno", battery="2xAA", battery_side="left"))
+    # closing both left windows frees that end
+    enc = build(EnclosureSpec(board="arduino_uno", battery="2xAA", battery_side="left", skip_connectors=["usb", "power"]))
+    assert enc.layout.battery[2] < 0 and errors(enc) == []
+
+
+def test_unknown_battery_rejected():
+    with pytest.raises(ValueError, match="unknown battery"):
+        EnclosureSpec(board="arduino_uno", battery="AAA")
+
+
+def test_top_height_override_raises_the_lid():
+    low = build(EnclosureSpec(board="perfboard_50x70"))
+    high = build(EnclosureSpec(board="perfboard_50x70", top_height=17))
+    assert high.layout.lid_top - low.layout.lid_top == pytest.approx(5)
+    assert run_checks(high) == []
+
+
 def test_render_png():
     png = render_png(build(EnclosureSpec(board="arduino_nano", lid="snap")))
     assert png[:8] == b"\x89PNG\r\n\x1a\n" and len(png) > 20_000
@@ -138,8 +179,11 @@ def stl_triangles(data: bytes) -> int:
 
 
 def test_route_lists_boards():
-    boards = asyncio.run(route.list_boards())["boards"]
+    res = asyncio.run(route.list_boards())
+    boards = res["boards"]
     assert [b["id"] for b in boards] == BOARDS
+    assert {b["id"] for b in res["batteries"]} == set(BATTERIES)
+    assert next(b for b in res["batteries"] if b["id"] == "9V")["height"] == 18
     uno = next(b for b in boards if b["id"] == "arduino_uno")
     assert {c["name"] for c in uno["connectors"]} == {"usb", "power"}
 
@@ -151,6 +195,11 @@ def test_route_build_returns_checks_render_and_meshes():
     assert base64.b64decode(res["render_png"])[:4] == b"\x89PNG"
     base, lid = base64.b64decode(res["base_stl"]), base64.b64decode(res["lid_stl"])
     assert stl_triangles(base) > 100 and stl_triangles(lid) > 10
+    assert stl_triangles(base64.b64decode(res["pcb_stl"])) >= 12
+    assert stl_triangles(base64.b64decode(res["connectors_stl"])) >= 24  # usb + power boxes
+    assert res["battery_stl"] is None
+    with_battery = asyncio.run(route.build_enclosure(route.BuildRequest(spec=EnclosureSpec(board="arduino_nano", battery="9V"), render=False)))
+    assert with_battery["ok"] and stl_triangles(base64.b64decode(with_battery["battery_stl"])) == 12
     # meshes are in assembly position: the lid's top is the top of the outer box
     with tempfile.TemporaryDirectory() as tmp:
         path = Path(tmp) / "lid.stl"
@@ -158,10 +207,33 @@ def test_route_build_returns_checks_render_and_meshes():
         assert import_stl(str(path)).bounding_box().max.Z == pytest.approx(res["outer"]["z1"], abs=0.01)
 
 
+def test_route_build_lists_connector_windows():
+    req = route.BuildRequest(spec=EnclosureSpec(board="arduino_uno", skip_connectors=["power"]), render=False, meshes=False)
+    res = asyncio.run(route.build_enclosure(req))
+    by_name = {c["name"]: c for c in res["connectors"]}
+    assert by_name["power"]["window"] is None
+    # USB-B 12.08 x 10.9 plus 0.5 tolerance on every edge
+    assert by_name["usb"] == {"name": "usb", "type": "usb_b", "side": "left", "window": {"width": 13.08, "height": 11.9}}
+
+
+def test_route_build_says_where_openings_can_go():
+    req = route.BuildRequest(spec=EnclosureSpec(board="arduino_uno"), render=False, meshes=False)
+    faces = asyncio.run(route.build_enclosure(req))["faces"]
+    lay = build(EnclosureSpec(board="arduino_uno")).layout
+    assert faces["left"]["along"] == pytest.approx([lay.y0, lay.y1], abs=0.01)
+    assert faces["front"]["along"] == pytest.approx([lay.x0, lay.x1], abs=0.01)
+    assert faces["top"] == {"x": pytest.approx([lay.x0, lay.x1], abs=0.01), "y": pytest.approx([lay.y0, lay.y1], abs=0.01)}
+    zmin, zmax = faces["left"]["z"]
+    assert zmin < 0 < zmax  # from the floor, below the PCB top, up to under the lid lip
+    # a hole in the middle of the left wall, as the faces describe it, passes every check
+    mid = {"face": "left", "diameter": 6, "along": sum(faces["left"]["along"]) / 2, "z": (0 + zmax) / 2}
+    assert errors(build(EnclosureSpec(board="arduino_uno", skip_connectors=["usb", "power"], extras=[mid]))) == []
+
+
 def test_route_build_without_render_and_meshes():
     req = route.BuildRequest(spec=EnclosureSpec(board="arduino_nano", wall=0.8), render=False, meshes=False)
     res = asyncio.run(route.build_enclosure(req))
-    assert res["render_png"] is None and res["base_stl"] is None and res["lid_stl"] is None
+    assert all(res[k] is None for k in ("render_png", "base_stl", "lid_stl", "pcb_stl", "connectors_stl", "battery_stl"))
     assert not res["ok"] and any(v["check"] == "thickness" for v in res["violations"])
 
 
