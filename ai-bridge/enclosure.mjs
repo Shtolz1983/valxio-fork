@@ -38,7 +38,15 @@ export async function listEnclosureBoards(velxioUrl) {
     mount: b.mount,
     connectors: b.connectors.map(({ name, type, side, center, z }) => ({ name, type, side, center, z })),
   }));
-  const moduleList = modules.map((m) => ({ id: m.id, name: m.name, partTypes: m.part_types, size: m.size, height: m.top_height }));
+  const moduleList = modules.map((m) => ({
+    id: m.id,
+    name: m.name,
+    partTypes: m.part_types,
+    size: m.size,
+    height: m.top_height,
+    // a display: it hangs under the lid behind a window (lid_modules), not inside
+    ...(m.window ? { underLid: true, visibleArea: m.window.size } : {}),
+  }));
   return { boards: boardList, batteries, modules: moduleList };
 }
 
@@ -58,6 +66,7 @@ export async function buildEnclosure(velxioUrl, spec) {
     weightG: r.weight_g,
     faces: r.faces,
     modules: r.modules,
+    lidModules: r.lid_modules,
     [TOOL_IMAGES]: r.render_png ? [{ mediaType: 'image/png', data: r.render_png }] : [],
   };
 }

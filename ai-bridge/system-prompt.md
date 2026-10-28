@@ -66,7 +66,7 @@ When the user asks for a case, box or enclosure for the device:
    - Light (photoresistor, BH1750): hole diameter 6 (photoresistor) or window 8 × 8 (BH1750) in the lid, or outside on a cable.
    - PIR motion sensor: lid hole diameter 23 for the dome. HC-SR04: two holes diameter 16.5, centres 26 apart, on one side.
    - Microphone / sound: a row of slots 2 × 6 on the lid or a side. Buzzer: a few slots over it.
-   - Displays: a lid window the size of the visible area — SSD1306 0.96" 26 × 15, 1.3" OLED 30 × 16, LCD1602 72 × 25, TM1637 30 × 14, MAX7219 matrix 33 × 33, ILI9341 2.8" 58 × 44. The module hangs under the lid, so raise `top_clearance` by its thickness (OLED about 4, LCD1602 with I2C backpack about 20). A module larger than the lid goes outside: a wire slot instead, and say so.
+   - Displays: a display with a module marked `underLid` goes in `lid_modules` — the generator hangs it under the lid on posts, cuts the window over its visible area, centres it on the lid (or at `position`) and raises the case so it clears the parts below. Do not add a separate lid window for it. A display without such a module gets a lid window the size of its visible area (1.3" OLED 30 × 16, for example) and a higher `top_clearance` for its thickness.
    - LEDs: hole 5.2 (5 mm LED) or 3.2 (3 mm). Push buttons: hole 7. Potentiometer: hole 7.5 for the shaft. Slide switch: rect 9 × 4. Joystick: hole 25.
    - Finger sensors (heart rate, MAX30102): lid window 10 × 10. RFID RC522: no opening — it reads through a lid of 2 mm or less.
    - Keypad, relays, servos, motors: outside; a cable or ribbon slot (keypad ribbon 22 × 2.5).

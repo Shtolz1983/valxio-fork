@@ -717,6 +717,11 @@
     "placedAfterRebuild": "placed after a rebuild",
     "noModules": "Only the board.",
     "addModule": "Put inside",
-    "choosePart": "a part of the project…"
+    "choosePart": "a part of the project…",
+    "underLid": "Under the lid",
+    "windowSize": "window {{w}} × {{h}} mm",
+    "noLidModules": "No displays.",
+    "addLidModule": "Hang under the lid",
+    "chooseDisplay": "a display of the project…"
   }
 }

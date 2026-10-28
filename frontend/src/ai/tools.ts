@@ -569,6 +569,7 @@ export const AI_TOOLS: Record<string, AiToolHandler> = {
             ),
             connectors: build.connectors,
             modules: build.modules,
+            lidModules: build.lid_modules,
             faces: build.faces,
           }
         : {}),

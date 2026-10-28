@@ -719,6 +719,11 @@
     "placedAfterRebuild": "место появится после пересборки",
     "noModules": "Только плата.",
     "addModule": "Положить внутрь",
-    "choosePart": "деталь проекта…"
+    "choosePart": "деталь проекта…",
+    "underLid": "Под крышкой",
+    "windowSize": "окно {{w}} × {{h}} мм",
+    "noLidModules": "Дисплеев нет.",
+    "addLidModule": "Повесить под крышку",
+    "chooseDisplay": "дисплей проекта…"
   }
 }

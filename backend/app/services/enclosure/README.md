@@ -19,7 +19,7 @@ above the PCB top. Top/bottom extras: `center_x`, `center_y` in board coordinate
 | `spec.py` | pydantic models: `Board`, `Connector`, `ExtraCutout`, `EnclosureSpec` |
 | `registry.py` | loads `boards/*.yaml`; user boards from `$ENCLOSURE_BOARDS_DIR` (opt-in) |
 | `connectors.py` | connector body sizes by type (usb_b, usb_c, micro_usb, dc_jack, ...) |
-| `modules/*.yaml` | the module table: breakouts that can go inside a case (board format plus `part_types`) |
+| `modules/*.yaml` | the module table: breakouts that can go inside a case (board format plus `part_types`), and displays with a `window` that hang under the lid |
 | `batteries.py` | battery pack sizes for the compartment (2xAA, 4xAA, 1x18650, 2x18650, 9V, lipo_503450) |
 | `enclosure.py` | geometry: layout, base, lid, board ghost, keep-out volumes |
 | `checks.py` | collisions, connector windows, wall thickness, supports, bed size, overhangs |
@@ -33,7 +33,7 @@ above the PCB top. Top/bottom extras: `center_x`, `center_y` in board coordinate
 | route | returns |
 |-------|---------|
 | `GET /boards` | every board with size, mount and connectors; the battery packs; the module table |
-| `POST /build` `{spec, render?, meshes?}` | `ok`, `violations`, `outer` box, `weight_g`, `connectors` (window size or null), base64 `render_png` and binary `base_stl` / `lid_stl` / `pcb_stl` / `connectors_stl` / `battery_stl` / `modules_stl` in assembly position, `modules` (where each went) |
+| `POST /build` `{spec, render?, meshes?}` | `ok`, `violations`, `outer` box, `weight_g`, `connectors` (window size or null), base64 `render_png` and binary `base_stl` / `lid_stl` / `pcb_stl` / `connectors_stl` / `battery_stl` / `modules_stl` / `lid_modules_stl` in assembly position, `modules` and `lid_modules` (where each went) |
 | `POST /export` `{spec, step?}` | zip with print files (lid flipped onto the bed); 422 with the errors if a check fails |
 
 Unknown board: 404. Bad spec or unknown `skip_connectors`: 422. Jobs run one at a time (OpenCascade and pyplot
@@ -63,6 +63,14 @@ under both ends; a module too long for the compartment is turned 90 degrees, and
 grows towards an end with neither connector windows nor the battery. `position` pins a module by hand;
 `check_modules` then reports overlaps with the board, its connectors, the battery or other modules. Module sizes are
 nominal and assume header pins up with Dupont plugs on them.
+
+## Displays under the lid
+
+`lid_modules` hangs displays (module table entries with a `window`: OLED, LCD1602/2004, TM1637, MAX7219, ILI9341)
+under the lid on posts that grow from it, display side up against the lid, with the window cut over the visible area.
+They sit in a row across the middle of the lid unless pinned by `position`; the case grows when they do not fit inside
+the lid's lip, and rises so that their back (header, I2C backpack, Dupont plugs) clears whatever lies right under them.
+`check_lid_modules` reports a display under the lip, on another one, or hanging into the parts below.
 
 ## Rules
 

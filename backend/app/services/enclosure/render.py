@@ -71,8 +71,12 @@ def _parts_for(enc: Enclosure, view_key: str) -> list[tuple[str, np.ndarray, np.
         kind = name if name in ("pcb", "battery") else "module" if name.startswith("module:") else "connector"
         meshes.append((kind, v, t))
     if view_key == "iso":
+        lift = np.array([0, 0, EXPLODE])
         v, t = _mesh(enc.lid)
-        meshes.append(("lid", v + np.array([0, 0, EXPLODE]), t))
+        meshes.append(("lid", v + lift, t))
+        for part in enc.lid_parts.values():
+            v, t = _mesh(part, 0.3)
+            meshes.append(("module", v + lift, t))
     return meshes
 
 
@@ -165,6 +169,10 @@ def _label_top(ax, enc: Enclosure, view_key: str) -> None:
     if view_key == "top":
         for m in enc.layout.modules:
             ax.annotate(m.name, ((m.x0 + m.x1) / 2, (m.y0 + m.y1) / 2), ha="center", va="center", fontsize=7, color="white")
+    if view_key == "lid":
+        for m in enc.layout.lid_modules:
+            wx0, wy0, wx1, wy1 = m.window_rect()
+            ax.annotate(m.name, ((wx0 + wx1) / 2, wy1), xytext=(0, 6), textcoords="offset points", ha="center", fontsize=7, color="crimson")
     for e in enc.layout.spec.extras:
         if e.face == "top" and view_key == "lid":
             ax.annotate(e.name or e.shape, (e.center_x, e.center_y), xytext=(0, 8), textcoords="offset points",
@@ -203,6 +211,7 @@ def _summary_panel(ax, enc: Enclosure) -> None:
         f"battery: {lay.spec.battery} ({lay.spec.battery_side} end)" if lay.battery else "battery: none",
         "",
         f"modules inside: {', '.join(m.name for m in lay.modules)}" if lay.modules else "modules inside: none",
+        f"under the lid: {', '.join(m.name for m in lay.lid_modules)}" if lay.lid_modules else "under the lid: none",
         "orange = connectors, green = PCB, blue = battery, teal = modules",
         "origin = PCB lower-left corner",
     ]

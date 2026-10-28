@@ -55,12 +55,16 @@ const BUILT = {
 
 test('boards come back with what the model needs to place openings', async () => {
   const battery = { id: '2xAA', length: 58, width: 32, height: 16, description: '2 x AA holder' };
-  const module = { id: 'ds3231', name: 'ZS-042 DS3231 RTC module', part_types: ['ds3231'], size: [38, 22], top_height: 15, holes: null };
-  const backend = await fakeBackend(() => [200, { boards: [BOARD], batteries: [battery], modules: [module] }]);
+  const module = { id: 'ds3231', name: 'ZS-042 DS3231 RTC module', part_types: ['ds3231'], size: [38, 22], top_height: 15, holes: null, window: null };
+  const display = { id: 'lcd1602', name: 'LCD1602', part_types: ['lcd1602'], size: [80, 36], top_height: 7.5, window: { center: [40, 18], size: [66, 17] } };
+  const backend = await fakeBackend(() => [200, { boards: [BOARD], batteries: [battery], modules: [module, display] }]);
   try {
     const { boards: [b], batteries, modules } = await listEnclosureBoards(backend.url);
     assert.deepEqual(batteries, [battery]);
-    assert.deepEqual(modules, [{ id: 'ds3231', name: 'ZS-042 DS3231 RTC module', partTypes: ['ds3231'], size: [38, 22], height: 15 }]);
+    assert.deepEqual(modules, [
+      { id: 'ds3231', name: 'ZS-042 DS3231 RTC module', partTypes: ['ds3231'], size: [38, 22], height: 15 },
+      { id: 'lcd1602', name: 'LCD1602', partTypes: ['lcd1602'], size: [80, 36], height: 7.5, underLid: true, visibleArea: [66, 17] },
+    ]);
     assert.equal(backend.seen[0].url, '/api/enclosure/boards');
     assert.deepEqual(b.canvasKinds, ['arduino-uno']);
     assert.deepEqual(b.connectors, [{ name: 'usb', type: 'usb_b', side: 'left', center: 37.96, z: 0 }]);
@@ -117,6 +121,7 @@ test('the build_enclosure schema takes a full spec and refuses a bad face', () =
       { face: 'front', shape: 'slots', width: 2, height: 8, along: 34, z: 6, slot_count: 4 },
     ],
     modules: [{ name: 'rtc1', type: 'ds3231' }, { name: 'mp3', size: [21, 21], height: 8, position: [5, 60] }],
+    lid_modules: [{ name: 'lcd1', type: 'lcd1602' }],
     bed: [220, 220, 250],
   };
   assert.ok(tool.check(spec).success);

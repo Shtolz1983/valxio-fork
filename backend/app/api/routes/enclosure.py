@@ -59,7 +59,7 @@ def _build(spec: EnclosureSpec) -> Enclosure:
     """Blocking; call under _lock. Bad input becomes an HTTP error the model can act on."""
     if len(spec.extras) > MAX_EXTRAS:
         raise HTTPException(status_code=422, detail=f"at most {MAX_EXTRAS} extras")
-    if len(spec.modules) > MAX_MODULES:
+    if len(spec.modules) + len(spec.lid_modules) > MAX_MODULES:
         raise HTTPException(status_code=422, detail=f"at most {MAX_MODULES} modules")
     try:
         board = get_board(spec.board)
@@ -121,6 +121,11 @@ def _build_job(req: BuildRequest) -> dict:
                  "y1": round(m.y1, 2), "height": round(m.top - m.bottom, 2), "rotated": m.rotated}
                 for m in lay.modules
             ],
+            "lid_modules": [
+                {"name": m.name, "type": m.module.id, "x0": round(m.x0, 2), "y0": round(m.y0, 2), "x1": round(m.x1, 2),
+                 "y1": round(m.y1, 2), "window": [round(v, 2) for v in m.window_rect()]}
+                for m in lay.lid_modules
+            ],
             "spec": req.spec.model_dump(),
             "render_png": None,
             "base_stl": None,
@@ -129,6 +134,7 @@ def _build_job(req: BuildRequest) -> dict:
             "connectors_stl": None,
             "battery_stl": None,
             "modules_stl": None,
+            "lid_modules_stl": None,
         }
         if req.render:
             result["render_png"] = base64.b64encode(render_png(enc)).decode()
@@ -144,6 +150,9 @@ def _build_job(req: BuildRequest) -> dict:
             modules = [p for name, p in enc.board_parts.items() if name.startswith("module:")]
             if modules:
                 result["modules_stl"] = _stl_b64(Compound(modules))
+            if enc.lid_parts:
+                # in assembly position, like the lid: the viewer lifts them with it
+                result["lid_modules_stl"] = _stl_b64(Compound(list(enc.lid_parts.values())))
         return result
 
 

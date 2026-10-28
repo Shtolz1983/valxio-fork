@@ -24,7 +24,7 @@ interface Props {
 }
 
 interface Scene {
-  lid: THREE.Mesh;
+  lid: THREE.Group;
   board: THREE.Group;
   render: () => void;
 }
@@ -58,7 +58,10 @@ export default function EnclosureViewer({ build, lift, showBoard }: Props) {
     camera.add(key);
     scene.add(camera, new THREE.HemisphereLight(0xffffff, 0x445566, 1.4));
 
-    const lid = mesh(build.lid_stl, COLORS.lid);
+    // the lid with the displays hung under it
+    const lid = new THREE.Group();
+    lid.add(mesh(build.lid_stl, COLORS.lid));
+    if (build.lid_modules_stl) lid.add(mesh(build.lid_modules_stl, COLORS.module));
     const board = new THREE.Group();
     board.add(mesh(build.pcb_stl, COLORS.pcb));
     if (build.connectors_stl) board.add(mesh(build.connectors_stl, COLORS.connector));

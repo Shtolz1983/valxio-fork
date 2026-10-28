@@ -1,0 +1,17 @@
+id: oled_096
+name: "0.96\" SSD1306 OLED module (I2C)"
+part_types: [ssd1306, ssd1306-i2c-4pin]
+source: Typical module as sold, nominal size (not measured).
+verified: false
+notes: "Header soldered on the back, Dupont plugs on it. Hangs under the lid, its display against the window."
+size: [27.8, 27.3]
+pcb_thickness: 1.6
+top_height: 2.5
+bottom_clearance: 15.0
+mount: standoffs
+holes:
+  diameter: 2.0
+  positions: [[2.0, 2.0], [25.8, 2.0], [2.0, 25.3], [25.8, 25.3]]
+window:
+  center: [13.9, 12.0]
+  size: [24.0, 13.0]

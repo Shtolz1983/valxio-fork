@@ -7,7 +7,8 @@ from typing import Literal
 
 from build123d import Axis, GeomType, Part, Vector
 
-from .enclosure import KEEPOUT_GAP, LIP_HEIGHT, LIP_WIDTH, LID_FIT, Enclosure, Opening, _connector_rect
+from .batteries import CATALOG as BATTERIES
+from .enclosure import KEEPOUT_GAP, LID_MODULE_INSET, LIP_HEIGHT, LIP_WIDTH, LID_FIT, Enclosure, Opening, _connector_rect, _rects_overlap
 
 COLLISION_VOLUME = 0.05  # mm3; below this a touching contact is not a collision
 MAX_BRIDGE = 25.0  # longest horizontal bridge considered printable
@@ -137,11 +138,11 @@ def check_supports(enc: Enclosure) -> list[Violation]:
         for x, y in mpoints:
             if not enc.base.is_inside(Vector(x, y, z)):
                 out.append(Violation("error", "supports", f"no support under module {m.name} near ({x:.1f}, {y:.1f})"))
+    for m in lay.lid_modules:
+        for hx, hy in m.holes():
+            if not enc.lid.is_inside(Vector(hx + 2.0, hy, m.pcb_top + 0.3)):
+                out.append(Violation("error", "supports", f"no lid post above display {m.name} near ({hx:.1f}, {hy:.1f})"))
     return out
-
-
-def _overlap(a: tuple[float, float, float, float], b: tuple[float, float, float, float]) -> bool:
-    return a[0] < b[2] and b[0] < a[2] and a[1] < b[3] and b[1] < a[3]
 
 
 def check_modules(enc: Enclosure) -> list[Violation]:
@@ -158,7 +159,7 @@ def check_modules(enc: Enclosure) -> list[Violation]:
         if m.x0 < lay.x0 or m.y0 < lay.y0 or m.x1 > lay.x1 or m.y1 > lay.y1:
             out.append(Violation("error", "module", f"module {m.name} is outside the cavity (X {lay.x0:.1f}..{lay.x1:.1f}, Y {lay.y0:.1f}..{lay.y1:.1f})"))
         for what, rect in taken:
-            if _overlap(m.rect(), rect):
+            if _rects_overlap(m.rect(), rect):
                 out.append(Violation("error", "module", f"module {m.name} overlaps {what}"))
         taken.append((f"module {m.name}", m.rect()))
     return out
@@ -216,8 +217,35 @@ def check_overhangs(enc: Enclosure) -> list[Violation]:
     return out
 
 
+def check_lid_modules(enc: Enclosure) -> list[Violation]:
+    """Displays under the lid stay inside its lip, off each other, and above what is below.
+
+    The corner screw posts make way for them when they are placed (enclosure._place_posts)."""
+    lay = enc.layout
+    L, W = lay.board.size
+    i = LID_MODULE_INSET - 1e-6  # a case grown to fit a display puts it exactly at the inset
+    below = [("the board", (0.0, 0.0, L, W), lay.pcb_top + lay.top_height)]
+    below += [(f"module {m.name}", m.rect(), m.top) for m in lay.modules]
+    if lay.battery:
+        below.append(("the battery", lay.battery, lay.floor_top + BATTERIES[lay.spec.battery].height))
+    out = []
+    seen: list[tuple[str, tuple[float, float, float, float]]] = []
+    for m in lay.lid_modules:
+        if m.x0 < lay.x0 + i or m.y0 < lay.y0 + i or m.x1 > lay.x1 - i or m.y1 > lay.y1 - i:
+            out.append(Violation("error", "lid module", f"display {m.name} reaches under the lid's lip; move it inwards"))
+        for what, rect, top in below:
+            if _rects_overlap(m.rect(), rect) and m.lowest < top:
+                out.append(Violation("error", "lid module", f"display {m.name} hangs into {what} ({m.lowest:.1f} < {top:.1f}); raise top_clearance"))
+        for what, rect in seen:
+            if _rects_overlap(m.rect(), rect):
+                out.append(Violation("error", "lid module", f"display {m.name} overlaps {what}"))
+        seen.append((f"display {m.name}", m.rect()))
+    return out
+
+
 ALL_CHECKS = (
-    check_thickness, check_collisions, check_openings, check_top_extras, check_supports, check_modules, check_bed, check_overhangs,
+    check_thickness, check_collisions, check_openings, check_top_extras, check_supports, check_modules, check_lid_modules,
+    check_bed, check_overhangs,
 )
 
 

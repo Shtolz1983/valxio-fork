@@ -1,0 +1,17 @@
+id: lcd2004
+name: "LCD2004 module with I2C backpack"
+part_types: [lcd2004, lcd2004-i2c]
+source: Typical module as sold, nominal size (not measured).
+verified: false
+notes: "PCF8574 backpack and header on the back. Hangs under the lid, its display against the window."
+size: [98.0, 60.0]
+pcb_thickness: 1.6
+top_height: 9.5
+bottom_clearance: 18.0
+mount: standoffs
+holes:
+  diameter: 3.0
+  positions: [[2.5, 2.5], [95.5, 2.5], [2.5, 57.5], [95.5, 57.5]]
+window:
+  center: [49.0, 30.0]
+  size: [78.0, 27.0]

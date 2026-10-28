@@ -1,0 +1,17 @@
+id: ili9341_28
+name: "2.8\" ILI9341 SPI TFT module"
+part_types: [ili9341]
+source: Typical module as sold, nominal size (not measured).
+verified: false
+notes: "SPI header on the back; SD slot at the right end. Hangs under the lid, its display against the window."
+size: [86.0, 50.0]
+pcb_thickness: 1.6
+top_height: 4.0
+bottom_clearance: 15.0
+mount: standoffs
+holes:
+  diameter: 3.0
+  positions: [[2.7, 2.7], [83.3, 2.7], [2.7, 47.3], [83.3, 47.3]]
+window:
+  center: [41.0, 25.0]
+  size: [59.0, 45.0]

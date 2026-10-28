@@ -9,7 +9,7 @@ import zipfile
 from pathlib import Path
 
 import pytest
-from build123d import import_stl
+from build123d import Vector, import_stl
 from fastapi import HTTPException
 
 from app.api.routes import enclosure as route
@@ -154,7 +154,48 @@ def test_top_height_override_raises_the_lid():
     assert run_checks(high) == []
 
 
-@pytest.mark.parametrize("module", MODULES)
+DISPLAYS = sorted(k for k, m in load_modules().items() if m.window)
+INSIDE_MODULES = sorted(k for k, m in load_modules().items() if not m.window)
+
+
+@pytest.mark.parametrize("display", DISPLAYS)
+def test_each_display_hangs_under_the_lid_behind_its_window(display):
+    enc = build(EnclosureSpec(board="arduino_uno", lid_modules=[{"name": "d1", "type": display}]))
+    assert run_checks(enc) == []
+    lay = enc.layout
+    [m] = lay.lid_modules
+    assert m.top == lay.z_top and m.lowest >= lay.pcb_top + lay.top_height + lay.spec.top_clearance - 1e-6
+    # the window is open: a point in its middle is not lid material, a point beside the display is
+    wx0, wy0, wx1, wy1 = m.window_rect()
+    zmid = (lay.z_top + lay.lid_top) / 2
+    assert not enc.lid.is_inside(Vector((wx0 + wx1) / 2, (wy0 + wy1) / 2, zmid))
+    assert enc.lid.is_inside(Vector(lay.x0 + 1, lay.y0 + 1, zmid))
+    assert set(enc.lid_parts) == {"lid module:d1", "display:d1"}
+
+
+def test_a_display_bigger_than_the_case_grows_it():
+    enc = build(EnclosureSpec(board="arduino_nano", lid_modules=[{"name": "lcd", "type": "lcd2004"}]))
+    assert run_checks(enc) == []
+    assert enc.layout.x1 - enc.layout.x0 > 98 and enc.layout.y1 - enc.layout.y0 > 60
+
+
+def test_two_displays_side_by_side_and_bad_ones():
+    enc = build(EnclosureSpec(board="arduino_uno", lid_modules=[{"name": "oled", "type": "oled_096"}, {"name": "seg", "type": "tm1637"}]))
+    assert run_checks(enc) == []
+    oled, seg = enc.layout.lid_modules
+    assert seg.x0 > oled.x1
+    with pytest.raises(ValueError, match="no display window"):
+        build(EnclosureSpec(board="arduino_uno", lid_modules=[{"name": "r", "type": "relay"}]))
+    # pinned by hand into the corner: under the lip; the corner screw posts move away from it
+    enc = build(EnclosureSpec(board="arduino_uno", lid_modules=[{"name": "oled", "type": "oled_096", "position": (-5, -2)}]))
+    assert any("lid's lip" in v.message for v in errors(enc))
+    # over the board the lid rises with the display; only a negative top_clearance lets it hang into the parts
+    spec = EnclosureSpec(board="arduino_uno", lid_modules=[{"name": "oled", "type": "oled_096", "position": (20, 15)}])
+    assert run_checks(build(spec)) == []
+    assert any("hangs into the board" in v.message for v in errors(build(spec.model_copy(update={"top_clearance": -3}))))
+
+
+@pytest.mark.parametrize("module", INSIDE_MODULES)
 def test_each_module_fits_inside_behind_the_board(module):
     enc = build(EnclosureSpec(board="arduino_uno", modules=[{"name": "m1", "type": module}]))
     assert run_checks(enc) == []
@@ -267,6 +308,11 @@ def test_route_build_returns_checks_render_and_meshes():
         spec=EnclosureSpec(board="arduino_uno", modules=[{"name": "rtc", "type": "ds3231"}]), render=False)))
     assert with_module["modules"][0]["name"] == "rtc" and with_module["modules"][0]["type"] == "ds3231"
     assert stl_triangles(base64.b64decode(with_module["modules_stl"])) == 12
+    with_display = asyncio.run(route.build_enclosure(route.BuildRequest(
+        spec=EnclosureSpec(board="arduino_uno", lid_modules=[{"name": "lcd", "type": "lcd1602"}]), render=False)))
+    [lcd] = with_display["lid_modules"]
+    assert lcd["type"] == "lcd1602" and len(lcd["window"]) == 4
+    assert stl_triangles(base64.b64decode(with_display["lid_modules_stl"])) == 24  # PCB block + display block
     with_battery = asyncio.run(route.build_enclosure(route.BuildRequest(spec=EnclosureSpec(board="arduino_nano", battery="9V"), render=False)))
     assert with_battery["ok"] and stl_triangles(base64.b64decode(with_battery["battery_stl"])) == 12
     # meshes are in assembly position: the lid's top is the top of the outer box

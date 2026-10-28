@@ -38,6 +38,13 @@ class Holes(BaseModel):
     positions: list[tuple[float, float]]
 
 
+class Window(BaseModel):
+    """A display's visible area, in its own module coordinates."""
+
+    center: tuple[float, float]
+    size: tuple[float, float]
+
+
 class Board(BaseModel):
     id: str
     name: str
@@ -54,11 +61,14 @@ class Board(BaseModel):
     support_depth: float = Field(2.0, description="end_supports: how far the supports reach under each short end")
     holes: Holes | None = None
     connectors: list[Connector] = []
+    window: Window | None = Field(None, description="Modules only: a display's visible area; it can hang under the lid")
 
     @model_validator(mode="after")
     def _check(self) -> Board:
         if self.mount == "standoffs" and not (self.holes and self.holes.positions):
             raise ValueError("mount=standoffs requires mounting holes")
+        if self.window and not (self.holes and self.holes.positions):
+            raise ValueError("a module with a window hangs under the lid on its holes: it needs them")
         names = [c.name for c in self.connectors]
         if len(names) != len(set(names)):
             raise ValueError("connector names must be unique")
@@ -125,6 +135,14 @@ class InsideModule(BaseModel):
         return self
 
 
+class LidModule(BaseModel):
+    """A display hung under the lid on standoffs, its visible area behind a window cut in the lid."""
+
+    name: str = Field(description="The part id on the canvas; labels the render")
+    type: str = Field(description="Module table id of a module with a window, e.g. lcd1602")
+    position: tuple[float, float] | None = Field(None, description="PCB lower-left corner in board coordinates; automatic when omitted")
+
+
 class EnclosureSpec(BaseModel):
     board: str = Field(description="Board id from list_boards")
     wall: float = Field(2.0, description="Side wall thickness")
@@ -142,6 +160,7 @@ class EnclosureSpec(BaseModel):
     battery: str | None = Field(None, description="Battery compartment beside the board: a key of batteries.CATALOG")
     battery_side: Literal["left", "right"] = Field("right", description="End of the case the compartment sits at")
     modules: list[InsideModule] = Field([], description="Modules inside the case, placed beside the board")
+    lid_modules: list[LidModule] = Field([], description="Displays hung under the lid behind a window")
     min_wall: float = Field(1.2, description="Thinnest printable wall (3 perimeters of a 0.4 nozzle)")
     bed: tuple[float, float, float] = Field((220.0, 220.0, 250.0), description="Printer build volume X, Y, Z")
 

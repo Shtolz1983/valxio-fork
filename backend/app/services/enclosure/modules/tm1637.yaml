@@ -1,0 +1,17 @@
+id: tm1637
+name: "TM1637 4-digit 7-segment module"
+part_types: [tm1637]
+source: Typical module as sold, nominal size (not measured).
+verified: false
+notes: "Header on the back. Hangs under the lid, its display against the window."
+size: [42.0, 24.0]
+pcb_thickness: 1.6
+top_height: 8.0
+bottom_clearance: 12.0
+mount: standoffs
+holes:
+  diameter: 2.2
+  positions: [[2.5, 2.5], [39.5, 2.5], [2.5, 21.5], [39.5, 21.5]]
+window:
+  center: [21.0, 12.0]
+  size: [31.0, 15.0]

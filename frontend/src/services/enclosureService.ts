@@ -14,7 +14,17 @@ export type EnclosureSpec = {
   battery_side?: 'left' | 'right';
   top_height?: number | null;
   modules?: EnclosureModuleSpec[];
+  lid_modules?: EnclosureLidModuleSpec[];
 } & Record<string, unknown>;
+
+/** A display hung under the lid behind a window (backend LidModule). */
+export interface EnclosureLidModuleSpec {
+  /** The part id on the canvas. */
+  name: string;
+  /** A module table entry with a `window`. */
+  type: string;
+  position?: [number, number] | null;
+}
 
 /** A module inside the case (backend InsideModule): from the module table by `type`, or by its size. */
 export interface EnclosureModuleSpec {
@@ -35,6 +45,8 @@ export interface EnclosureModule {
   part_types: string[];
   size: [number, number];
   top_height: number;
+  /** A display's visible area: such a module hangs under the lid, not inside. */
+  window?: { center: [number, number]; size: [number, number] } | null;
 }
 
 export type EnclosureFace = 'left' | 'right' | 'front' | 'back' | 'top' | 'bottom';
@@ -103,6 +115,8 @@ export interface EnclosureBuild {
   connectors: EnclosureConnector[];
   /** Where each module went: PCB footprint in board coordinates and height. */
   modules: Array<{ name: string; type: string; x0: number; y0: number; x1: number; y1: number; height: number; rotated: boolean }>;
+  /** Where each display hangs, and its window in the lid (x0, y0, x1, y1). */
+  lid_modules: Array<{ name: string; type: string; x0: number; y0: number; x1: number; y1: number; window: [number, number, number, number] }>;
   /** Where an opening can go: side walls by `along` and `z` (above the PCB top), lid and bottom by x / y. */
   faces: Record<'left' | 'right' | 'front' | 'back', { along: [number, number]; z: [number, number] }> &
     Record<'top' | 'bottom', { x: [number, number]; y: [number, number] }>;
@@ -115,6 +129,7 @@ export interface EnclosureBuild {
     battery_side: 'left' | 'right';
     top_height: number | null;
     modules: EnclosureModuleSpec[];
+    lid_modules: EnclosureLidModuleSpec[];
   };
   /** Binary STL, base64, assembly position. */
   base_stl: string;
@@ -123,6 +138,8 @@ export interface EnclosureBuild {
   connectors_stl: string | null;
   battery_stl: string | null;
   modules_stl: string | null;
+  /** Displays under the lid, in assembly position: they move with the lid. */
+  lid_modules_stl: string | null;
 }
 
 /** FastAPI's detail: a sentence, pydantic's list, or the export's { message, errors }. */

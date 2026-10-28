@@ -13,7 +13,7 @@ from build123d import Box, Cylinder, Part, Pos, RectangleRounded, Rot, extrude
 from .batteries import CATALOG as BATTERIES
 from .connectors import ResolvedConnector, resolved_connectors
 from .registry import get_board, get_module
-from .spec import Board, EnclosureSpec, ExtraCutout, InsideModule
+from .spec import Board, EnclosureSpec, ExtraCutout, InsideModule, LidModule
 
 CONNECTOR_GAP = 0.5  # air between a connector face and the inner wall
 POST_D = 6.5  # lid screw post
@@ -33,6 +33,8 @@ BATTERY_RIB = 1.6  # pocket wall thickness
 BATTERY_RIB_MAX = 10.0  # pocket walls rise at most this high above the floor
 MODULE_GAP = 2.0  # air around a module inside the case: to the board, other modules, walls
 GENERIC_MODULE_HEIGHT = 10.0  # a module given only by its size
+LID_MODULE_INSET = LID_FIT + LIP_WIDTH + 0.5  # a display under the lid stays inside the lid's lip
+LID_POST_WALL = 1.5  # plastic around a display's screw in its lid post: M2 holes get thinner posts than STANDOFF_D
 PLA_DENSITY = 1.24  # g/cm3
 
 
@@ -62,6 +64,16 @@ class PlacedModule:
     bottom: float  # PCB underside
     pcb_top: float
     top: float  # tallest part
+
+    @property
+    def lowest(self) -> float:
+        """Underside of what hangs below the PCB (header, backpack)."""
+        return self.bottom - self.module.bottom_clearance
+
+    def window_rect(self) -> tuple[float, float, float, float]:
+        """A display's visible area in world coordinates."""
+        (cx, cy), (w, h) = self.module.window.center, self.module.window.size
+        return self.x0 + cx - w / 2, self.y0 + cy - h / 2, self.x0 + cx + w / 2, self.y0 + cy + h / 2
 
     def holes(self) -> list[tuple[float, float]]:
         if not self.module.holes:
@@ -94,6 +106,8 @@ class Layout:
     # Battery pocket (x0, y0, x1, y1): the battery plus BATTERY_FIT on every side, on the floor at one end.
     battery: tuple[float, float, float, float] | None = None
     modules: list[PlacedModule] = field(default_factory=list)
+    # Displays hung under the lid: `top` is the lid's underside, `bottom` their PCB underside.
+    lid_modules: list[PlacedModule] = field(default_factory=list)
     posts: list[tuple[float, float]] = field(default_factory=list)
 
     def outer(self) -> tuple[float, float, float, float]:
@@ -122,6 +136,7 @@ class Enclosure:
     openings: list[Opening]
     keepouts: dict[str, Part]
     board_parts: dict[str, Part]
+    lid_parts: dict[str, Part] = field(default_factory=dict)  # what hangs under the lid, moves with it
 
     @property
     def weight_g(self) -> float:
@@ -155,6 +170,10 @@ def _connector_rect(c: ResolvedConnector, board: Board) -> tuple[float, float, f
     if c.side == "front":
         return a0, -c.overhang, a1, c.depth - c.overhang
     return a0, W - c.depth + c.overhang, a1, W + c.overhang
+
+
+def _rects_overlap(a: tuple[float, float, float, float], b: tuple[float, float, float, float]) -> bool:
+    return a[0] < b[2] and b[0] < a[2] and a[1] < b[3] and b[1] < a[3]
 
 
 def _circle_hits_rect(cx: float, cy: float, r: float, rect: tuple[float, float, float, float]) -> bool:
@@ -196,6 +215,21 @@ def make_layout(spec: EnclosureSpec, board: Board | None = None) -> Layout:
     if spec.modules:
         modules, x0, x1, y1 = _place_modules(spec, board, windowed, bx0, bx1, x0, x1, y1, floor_top)
         z_top = max(z_top, max(m.top for m in modules) + spec.top_clearance)
+    lid_modules: list[PlacedModule] = []
+    if spec.lid_modules:
+        lid_modules, x0, x1, y1 = _place_lid_modules(spec, windowed, x0, y0, x1, y1)
+        # what hangs from the lid clears the parts right under it
+        below = [((0.0, 0.0, L, W), pcb_top + top_height)] + [(m.rect(), m.top) for m in modules]
+        if battery:
+            below.append((battery, floor_top + BATTERIES[spec.battery].height))
+        for m in lid_modules:
+            hang = m.module.top_height + m.module.pcb_thickness + m.module.bottom_clearance
+            under = [top for rect, top in below if _rects_overlap(rect, m.rect())]
+            z_top = max(z_top, max(under, default=floor_top) + spec.top_clearance + hang)
+        for m in lid_modules:
+            m.top = z_top
+            m.pcb_top = z_top - m.module.top_height
+            m.bottom = m.pcb_top - m.module.pcb_thickness
 
     layout = Layout(
         board=board,
@@ -214,6 +248,7 @@ def make_layout(spec: EnclosureSpec, board: Board | None = None) -> Layout:
         top_height=top_height,
         battery=battery,
         modules=modules,
+        lid_modules=lid_modules,
     )
     if spec.lid == "screw":
         _place_posts(layout)
@@ -289,6 +324,51 @@ def _place_modules(
     return placed, x0, x1, grown_y1
 
 
+def _place_lid_modules(
+    spec: EnclosureSpec, windowed: list[ResolvedConnector], x0: float, y0: float, x1: float, y1: float,
+) -> tuple[list[PlacedModule], float, float, float]:
+    """Displays in a row across the middle of the lid; the case grows when they do not fit inside its lip.
+
+    Heights are set once the lid's height is known. A module with a `position` stays where it is put.
+    """
+    resolved: list[tuple[LidModule, Board]] = []
+    for m in spec.lid_modules:
+        try:
+            module = get_module(m.type)
+        except KeyError as e:
+            raise ValueError(str(e.args[0])) from None
+        if not module.window:
+            raise ValueError(f"module {m.type} has no display window: it cannot hang under the lid")
+        resolved.append((m, module))
+    auto = [(m, mod) for m, mod in resolved if not m.position]
+    row = sum(mod.length for _, mod in auto) + MODULE_GAP * max(len(auto) - 1, 0)
+    depth = max((mod.width for _, mod in auto), default=0.0)
+    need_x = row + 2 * LID_MODULE_INSET - (x1 - x0)
+    if need_x > 0:
+        ends = [s for s in ("right", "left") if not (spec.battery and spec.battery_side == s) and not any(c.side == s for c in windowed)]
+        if not ends:
+            raise ValueError("the displays are wider than the case and both ends are taken by connector windows or the battery")
+        if ends[0] == "right":
+            x1 += need_x
+        else:
+            x0 -= need_x
+    need_y = depth + 2 * LID_MODULE_INSET - (y1 - y0)
+    if need_y > 0:
+        if any(c.side == "back" for c in windowed):
+            raise ValueError("the displays make the case deeper than the board: the back connector windows would not reach the wall")
+        y1 += need_y
+    placed = []
+    cursor = (x0 + x1) / 2 - row / 2
+    for m, module in resolved:
+        if m.position:
+            px, py = m.position
+        else:
+            px, py = cursor, (y0 + y1) / 2 - module.width / 2
+            cursor += module.length + MODULE_GAP
+        placed.append(PlacedModule(m.name, module, px, py, px + module.length, py + module.width, False, 0.0, 0.0, 0.0))
+    return placed, x0, x1, y1
+
+
 def _place_battery(
     spec: EnclosureSpec, windowed: list[ResolvedConnector], x0: float, y0: float, x1: float, y1: float,
 ) -> tuple[tuple[float, float, float, float], float, float, float]:
@@ -323,7 +403,7 @@ def _place_posts(layout: Layout) -> None:
     keepouts = [(-KEEPOUT_GAP, -KEEPOUT_GAP, L + KEEPOUT_GAP, W + KEEPOUT_GAP)]
     if layout.battery:
         keepouts.append(layout.battery)
-    for m in layout.modules:
+    for m in layout.modules + layout.lid_modules:
         keepouts.append((m.x0 - KEEPOUT_GAP, m.y0 - KEEPOUT_GAP, m.x1 + KEEPOUT_GAP, m.y1 + KEEPOUT_GAP))
     for c in layout.connectors:
         x0, y0, x1, y1 = _connector_rect(c, board)
@@ -560,7 +640,33 @@ def build_lid(layout: Layout) -> Part:
     for e in spec.extras:
         if e.face == "top":
             lid -= _flat_cutter(layout, e, layout.z_top - LIP_HEIGHT - 1, layout.lid_top + 1)
+    for m in layout.lid_modules:
+        lid += _lid_standoffs(layout, m)
+        wx0, wy0, wx1, wy1 = m.window_rect()
+        lid -= box(wx0, wy0, layout.z_top - 0.5, wx1, wy1, layout.lid_top + 1)
     return lid
+
+
+def _lid_standoffs(layout: Layout, m: PlacedModule) -> Part:
+    """Posts from the lid's underside down to a display's PCB, with a pilot hole for its screws."""
+    hole_d = m.module.holes.diameter
+    post_d = min(STANDOFF_D, hole_d + 2 * LID_POST_WALL)
+    pilot_d = hole_d * STANDOFF_PILOT_RATIO
+    pilot_top = min(m.pcb_top + 6.0, layout.lid_top - layout.spec.min_wall)
+    posts = None
+    for hx, hy in m.holes():
+        post = cylinder_z(hx, hy, m.pcb_top, layout.z_top + 0.01, post_d) - cylinder_z(hx, hy, m.pcb_top - 0.1, pilot_top, pilot_d)
+        posts = post if posts is None else posts + post
+    return posts
+
+
+def lid_module_bodies(m: PlacedModule) -> dict[str, Part]:
+    """What hangs under the lid: the PCB with its back parts, and the display over its visible area."""
+    wx0, wy0, wx1, wy1 = m.window_rect()
+    return {
+        f"lid module:{m.name}": box(m.x0, m.y0, m.lowest, m.x1, m.y1, m.pcb_top),
+        f"display:{m.name}": box(wx0, wy0, m.pcb_top, wx1, wy1, m.top),
+    }
 
 
 def build_board_parts(layout: Layout) -> dict[str, Part]:
@@ -594,11 +700,13 @@ def build_keepouts(layout: Layout, board_parts: dict[str, Part]) -> dict[str, Pa
 def build(spec: EnclosureSpec, board: Board | None = None) -> Enclosure:
     layout = make_layout(spec, board)
     board_parts = build_board_parts(layout)
+    lid_parts = {k: v for m in layout.lid_modules for k, v in lid_module_bodies(m).items()}
     return Enclosure(
         layout=layout,
         base=build_base(layout),
         lid=build_lid(layout),
         openings=_connector_openings(layout) + _extra_side_openings(layout),
-        keepouts=build_keepouts(layout, board_parts),
+        keepouts={**build_keepouts(layout, board_parts), **lid_parts},
         board_parts=board_parts,
+        lid_parts=lid_parts,
     )

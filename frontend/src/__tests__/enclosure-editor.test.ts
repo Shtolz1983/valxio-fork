@@ -27,6 +27,7 @@ import { useSimulatorStore } from '../store/useSimulatorStore';
 const BUILD = {
   connectors: [{ name: 'usb', type: 'usb_b', side: 'left', window: { width: 13.08, height: 11.9 } }],
   modules: [],
+  lid_modules: [],
   spec: {
     board: 'arduino_uno',
     lid: 'screw',
@@ -35,6 +36,7 @@ const BUILD = {
     battery_side: 'right',
     top_height: null,
     modules: [],
+    lid_modules: [],
     extras: [
       { name: 'bme1', face: 'front', shape: 'rect', width: 10, height: 4, along: 20, z: 3 },
       { name: 'vents', face: 'top', shape: 'slots', width: 2, height: 6, slot_count: 5, slot_pitch: 4, center_x: 30, center_y: 20 },
@@ -48,7 +50,10 @@ const CATALOG: EnclosureCatalog = {
     { id: 'perfboard_50x70', name: 'Prototype board 50 x 70 mm', canvas_kinds: [], verified: false, top_height: 12 },
   ],
   batteries: [{ id: '2xAA', length: 58, width: 32, height: 16, description: '2 x AA holder' }],
-  modules: [{ id: 'ds3231', name: 'ZS-042 DS3231 RTC module', part_types: ['ds3231'], size: [38, 22], top_height: 15 }],
+  modules: [
+    { id: 'ds3231', name: 'ZS-042 DS3231 RTC module', part_types: ['ds3231'], size: [38, 22], top_height: 15 },
+    { id: 'lcd1602', name: 'LCD1602 module', part_types: ['lcd1602'], size: [80, 36], top_height: 7.5, window: { center: [40, 18], size: [66, 17] } },
+  ],
 };
 
 let host: HTMLDivElement;
@@ -59,6 +64,7 @@ beforeEach(() => {
     components: [
       { id: 'bme1', metadataId: 'bme280', x: 0, y: 0, properties: {} },
       { id: 'rtc1', metadataId: 'ds3231', x: 0, y: 0, properties: {} },
+      { id: 'lcd1', metadataId: 'lcd1602', x: 0, y: 0, properties: {} },
     ] as never,
   });
   host = document.createElement('div');
@@ -155,5 +161,17 @@ describe('enclosure openings', () => {
 
     act(() => rtc.querySelector<HTMLButtonElement>('.enc-opening-remove')!.click());
     expect(host.textContent).toContain('Only the board.');
+  });
+
+  it('a display goes under the lid, not inside, and shows its window', () => {
+    const onApply = vi.fn();
+    act(() => root.render(createElement(EnclosureEditor, { build: BUILD, catalog: CATALOG, busy: false, onApply })));
+    expect([...field('Put inside').options].map((o) => o.value)).toEqual(['', 'rtc1']);
+    expect([...field('Hang under the lid').options].map((o) => o.value)).toEqual(['', 'lcd1']);
+    act(() => choose(field('Hang under the lid'), 'lcd1'));
+    const lcd = rows().find((r) => r.textContent?.startsWith('lcd1'))!;
+    expect(lcd.textContent).toContain('LCD1602 module · window 66 × 17 mm · placed after a rebuild');
+    act(() => button('Rebuild')!.click());
+    expect(onApply.mock.calls[0][0].lid_modules).toEqual([{ name: 'lcd1', type: 'lcd1602' }]);
   });
 });

@@ -252,6 +252,16 @@ export const TOOLS = [
         )
         .optional()
         .describe('Modules that go inside the case, placed beside the board on supports; the case grows to hold them.'),
+      lid_modules: z
+        .array(
+          z.object({
+            name: z.string().describe('The part id on the canvas, e.g. "lcd1".'),
+            type: z.string().describe('Module id from list_enclosure_boards marked underLid, e.g. "lcd1602".'),
+            position: z.array(z.number()).length(2).optional().describe('PCB lower-left corner in board coordinates; omit to centre the displays on the lid.'),
+          }),
+        )
+        .optional()
+        .describe('Displays hung under the lid on posts, with a window cut over their visible area; the case rises to clear the parts below.'),
       bed: z.array(z.number()).length(3).optional().describe('Printer build volume X, Y, Z in mm, default [220, 220, 250].'),
     },
   },
