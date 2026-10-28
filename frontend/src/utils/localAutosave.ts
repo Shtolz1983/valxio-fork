@@ -1,6 +1,6 @@
 /**
  * Browser autosave for self-hosted builds: the workspace (the lossless .vlx
- * snapshot — boards, parts, wires, code, libraries) is written to
+ * snapshot — boards, parts, wires, code, libraries, the enclosure) is written to
  * localStorage a moment after every change and when the tab closes, and put
  * back when a plain /editor page loads. A reload or a closed tab no longer
  * loses work; "New workspace" starts over (and that empty state is what
@@ -13,6 +13,7 @@ import type { BoardInstance } from '../types/board';
 import { useSimulatorStore } from '../store/useSimulatorStore';
 import { useEditorStore } from '../store/useEditorStore';
 import { useProjectStore } from '../store/useProjectStore';
+import { useEnclosureStore } from '../store/useEnclosureStore';
 import { buildVlxPayload, type VlxPayload } from './vlxFile';
 
 const KEY = 'velxio.autosave.v1';
@@ -57,6 +58,7 @@ export function restoreLocalAutosave(): boolean {
       wires: payload.wires,
       activeBoardId: payload.activeBoardId,
     });
+    useEnclosureStore.getState().restore(payload.enclosure ?? null);
     return true;
   } catch (err) {
     console.warn('[autosave] could not restore the saved workspace:', err);
@@ -112,6 +114,9 @@ export function startLocalAutosave(): () => void {
   const offEditor = useEditorStore.subscribe((s, prev) => {
     if (s.fileGroups !== prev.fileGroups || s.folderGroups !== prev.folderGroups) schedule();
   });
+  const offEnclosure = useEnclosureStore.subscribe((s, prev) => {
+    if (s.spec !== prev.spec) schedule();
+  });
   window.addEventListener('beforeunload', flush);
   window.addEventListener('pagehide', flush);
 
@@ -119,6 +124,7 @@ export function startLocalAutosave(): () => void {
     flush();
     offSim();
     offEditor();
+    offEnclosure();
     window.removeEventListener('beforeunload', flush);
     window.removeEventListener('pagehide', flush);
   };

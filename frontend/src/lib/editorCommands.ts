@@ -48,6 +48,8 @@ export type EditorCommandId =
   // itself here — same pattern as the account.* commands.
   | 'project.connectAgent'
   | 'firmware.upload'
+  // Opens the 3D-printable enclosure dialog; registered by EnclosureDialog.
+  | 'enclosure.open'
   | 'sim.record'
   | 'sim.compile'
   | 'sim.run'

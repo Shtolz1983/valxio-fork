@@ -145,6 +145,7 @@ export const EditorMenuBar: React.FC = () => {
       id: 'project.exportScreenshot',
       label: t('editor.toolbar.exportScreenshotLabel', 'Schematic image (PNG)'),
     },
+    { kind: 'command', id: 'enclosure.open', label: t('enclosure.menu', '3D-printable enclosure…') },
     { kind: 'separator' },
     // The toolbar's "..." menu folded in here — same actions, same PRO
     // pills, one button fewer in the strip. Share, GitHub sync and recording

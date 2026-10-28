@@ -111,7 +111,9 @@
         "conflictsTitle_other": "{{folder}} already has {{count}} of these files, with other content:",
         "conflictsHint": "Replace them with this project? Their old content is lost.",
         "replace": "Replace",
-        "writeFailed": "Could not write the files: {{error}}"
+        "writeFailed": "Could not write the files: {{error}}",
+        "enclosureSkipped": "The enclosure print files are not saved: {{error}}. The case itself stays in the project.",
+        "saveWithout": "Save without them"
       }
     },
     "fileTabs": {

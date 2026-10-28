@@ -2,7 +2,9 @@
  * "Save project" dialog for self-hosted builds: asks for the project name,
  * then the folder to save into, and writes the project there as a folder of
  * files (utils/projectFolder.ts) — after a warning listing the existing files
- * it would replace. A browser that cannot write to a chosen folder (Safari,
+ * it would replace. A project with a 3D-printable enclosure also gets its
+ * print files; when the case fails its checks the dialog says so first and
+ * saves the project without them. A browser that cannot write to a chosen folder (Safari,
  * Firefox) downloads the workspace as `<name>.vlx` instead. Opened by the OSS
  * default save action (Save button, Ctrl+S, File → Save); the pro overlay
  * installs its own action and never opens it.
@@ -12,11 +14,13 @@ import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { useLocalProjectStore } from '../../store/useLocalProjectStore';
 import { useProjectStore } from '../../store/useProjectStore';
+import { useEnclosureStore } from '../../store/useEnclosureStore';
 import { triggerDownloadVlx } from '../../utils/vlxFile';
 import {
   canSaveToFolder,
   findConflicts,
   pickTarget,
+  planEnclosureFiles,
   planProjectFiles,
   targetLabel,
   writeProject,
@@ -25,11 +29,12 @@ import {
   type PlannedFile,
 } from '../../utils/projectFolder';
 
-/** A save waiting for "Replace": where, what, and what it would overwrite. */
+/** A save waiting for "Replace": where, what, what it would overwrite, and why the enclosure files are missing. */
 interface PendingSave {
   target: FolderTarget;
   files: PlannedFile[];
   conflicts: Conflict[];
+  enclosureError?: string;
 }
 
 export const SaveProjectDialog = () => {
@@ -99,10 +104,11 @@ export const SaveProjectDialog = () => {
     }
     if (!target) return; // the picker was closed
     setBusy(true);
-    const files = planProjectFiles(name);
+    const enclosure = await planEnclosureFiles(useEnclosureStore.getState().spec);
+    const files = [...planProjectFiles(name), ...enclosure.files];
     const conflicts = await findConflicts(target, files).catch(() => []);
     setBusy(false);
-    if (conflicts.length) setPending({ target, files, conflicts });
+    if (conflicts.length || enclosure.error) setPending({ target, files, conflicts, enclosureError: enclosure.error });
     else await write(target, files);
   };
 
@@ -179,21 +185,33 @@ export const SaveProjectDialog = () => {
         </label>
         {pending ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 13 }}>
-            <div style={{ color: 'var(--color-feedback-warning, #d29922)', fontWeight: 600 }}>
-              {t('editor.fileExplorer.saveDialog.conflictsTitle', {
-                count: pending.conflicts.length,
-                folder: targetLabel(pending.target),
-                defaultValue: '{{folder}} already has {{count}} of these files with other content:',
-              })}
-            </div>
-            <ul style={{ margin: 0, paddingLeft: 18, maxHeight: 160, overflowY: 'auto', fontFamily: 'var(--font-mono, monospace)', fontSize: 12 }}>
-              {pending.conflicts.map((c) => (
-                <li key={c.path}>{c.path}</li>
-              ))}
-            </ul>
-            <div style={{ fontSize: 12, color: 'var(--wb-11)' }}>
-              {t('editor.fileExplorer.saveDialog.conflictsHint', 'Replace them with this project? The old content is lost.')}
-            </div>
+            {pending.enclosureError && (
+              <div style={{ color: 'var(--color-feedback-warning, #d29922)' }}>
+                {t('editor.fileExplorer.saveDialog.enclosureSkipped', {
+                  error: pending.enclosureError,
+                  defaultValue: 'The enclosure print files are not saved: {{error}}. The case itself stays in the project.',
+                })}
+              </div>
+            )}
+            {pending.conflicts.length > 0 && (
+              <>
+                <div style={{ color: 'var(--color-feedback-warning, #d29922)', fontWeight: 600 }}>
+                  {t('editor.fileExplorer.saveDialog.conflictsTitle', {
+                    count: pending.conflicts.length,
+                    folder: targetLabel(pending.target),
+                    defaultValue: '{{folder}} already has {{count}} of these files with other content:',
+                  })}
+                </div>
+                <ul style={{ margin: 0, paddingLeft: 18, maxHeight: 160, overflowY: 'auto', fontFamily: 'var(--font-mono, monospace)', fontSize: 12 }}>
+                  {pending.conflicts.map((c) => (
+                    <li key={c.path}>{c.path}</li>
+                  ))}
+                </ul>
+                <div style={{ fontSize: 12, color: 'var(--wb-11)' }}>
+                  {t('editor.fileExplorer.saveDialog.conflictsHint', 'Replace them with this project? The old content is lost.')}
+                </div>
+              </>
+            )}
           </div>
         ) : (
           <div style={{ fontSize: 12, lineHeight: 1.5, color: 'var(--wb-11)' }}>
@@ -224,7 +242,9 @@ export const SaveProjectDialog = () => {
               onClick={() => void write(pending.target, pending.files)}
               style={{ ...buttonBase, color: '#fff', background: 'var(--color-feedback-error, #d73a49)', border: 'none', opacity: busy ? 0.5 : 1 }}
             >
-              {t('editor.fileExplorer.saveDialog.replace', 'Replace')}
+              {pending.conflicts.length
+                ? t('editor.fileExplorer.saveDialog.replace', 'Replace')
+                : t('editor.fileExplorer.saveDialog.saveWithout', 'Save without them')}
             </button>
           ) : (
             <button

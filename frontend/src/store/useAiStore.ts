@@ -13,6 +13,8 @@ import { create } from 'zustand';
 import { runAiTool } from '../ai/tools';
 import { toBridgeImages, type ChatImage } from '../ai/images';
 import { currentChatKey, loadChat, saveChat } from '../ai/chatHistory';
+import { useEnclosureStore } from './useEnclosureStore';
+import type { EnclosureSpec } from '../services/enclosureService';
 import { useProjectStore } from './useProjectStore';
 
 export type AiChatItem =
@@ -274,9 +276,15 @@ export const useAiStore = create<AiState>((set, get) => {
       case 'tool_use':
         push({ id: msg.id, kind: 'tool', name: msg.name, input: msg.input, status: 'running' });
         break;
-      case 'tool_result':
+      case 'tool_result': {
         patchTool(msg.id, { status: msg.isError ? 'error' : 'ok', detail: msg.preview });
+        // A case the assistant built shows up in the 3D viewer right away.
+        const call = get().items.find((it) => it.kind === 'tool' && it.id === msg.id);
+        if (!msg.isError && call?.kind === 'tool' && call.name === 'build_enclosure') {
+          useEnclosureStore.getState().showSpec(call.input as EnclosureSpec);
+        }
         break;
+      }
       case 'result':
         set({ lastCostUsd: typeof msg.costUsd === 'number' ? msg.costUsd : null });
         if (msg.isError) push({ id: newId(), kind: 'error', text: msg.text || msg.subtype || 'The assistant stopped with an error.' });

@@ -8,6 +8,9 @@
  *       arduino-uno.ino          a board's main sketch (sketch.ino in the IDE)
  *       dht.h, …                 its other files as they are
  *     esp32/ …
+ *     enclosure/               the 3D-printable case, when the project has one:
+ *       base.stl, lid.stl      ready to slice (the lid flipped onto the bed)
+ *       base.step, lid.step    for a CAD program
  *
  * Each board folder is an Arduino sketch folder (the main .ino is named after
  * its folder), so it opens in the Arduino IDE as is. Nothing is written before
@@ -17,12 +20,15 @@
  * Browsers without the API (Safari, Firefox) keep the old path: a .vlx
  * download (vlxFile.ts).
  */
+import JSZip from 'jszip';
+import { exportEnclosure, type EnclosureSpec } from '../services/enclosureService';
 import { buildVlxPayload, safeProjectName, type VlxPayload } from './vlxFile';
 
 export interface PlannedFile {
   /** Path inside the project folder, by segments. */
   path: string[];
-  content: string;
+  /** Text, or the bytes of a binary file (STL). */
+  content: string | Uint8Array<ArrayBuffer>;
 }
 
 export interface FolderTarget {
@@ -60,6 +66,27 @@ export function planProjectFiles(name: string, payload: VlxPayload = buildVlxPay
 }
 
 /**
+ * The enclosure's print files under enclosure/, from the backend's export zip
+ * (its spec.json is left out: the spec travels in the .vlx). The backend
+ * refuses a case that fails its checks; `error` then says why, and the rest of
+ * the project is saved without them.
+ */
+export async function planEnclosureFiles(spec: EnclosureSpec | null): Promise<{ files: PlannedFile[]; error?: string }> {
+  if (!spec) return { files: [] };
+  try {
+    const zip = await JSZip.loadAsync(await (await exportEnclosure(spec)).arrayBuffer());
+    const files: PlannedFile[] = [];
+    for (const name of ['base.stl', 'lid.stl', 'base.step', 'lid.step']) {
+      const entry = zip.file(name);
+      if (entry) files.push({ path: ['enclosure', name], content: new Uint8Array(await entry.async('arraybuffer')) });
+    }
+    return { files };
+  } catch (err) {
+    return { files: [], error: (err as Error).message };
+  }
+}
+
+/**
  * Ask for the folder to save into. Picking the project folder itself (one
  * named like the project) saves into it; any other folder gets the project
  * folder inside it. Resolves null when the user closes the picker.
@@ -91,15 +118,15 @@ async function dirIfExists(dir: FileSystemDirectoryHandle, name: string): Promis
   }
 }
 
-async function readIfExists(dir: FileSystemDirectoryHandle, path: string[]): Promise<string | null> {
+async function readIfExists(dir: FileSystemDirectoryHandle, path: string[], binary: boolean): Promise<string | Uint8Array | null> {
   let d: FileSystemDirectoryHandle | null = dir;
   for (const seg of path.slice(0, -1)) {
     d = await dirIfExists(d, seg);
     if (!d) return null;
   }
   try {
-    const handle = await d.getFileHandle(path[path.length - 1]);
-    return await (await handle.getFile()).text();
+    const file = await (await d.getFileHandle(path[path.length - 1])).getFile();
+    return binary ? new Uint8Array(await file.arrayBuffer()) : await file.text();
   } catch {
     return null;
   }
@@ -110,14 +137,19 @@ function sameText(text: string): string {
   return text.replace(/^\s*"exportedAt": "[^"]*",?\n/m, '');
 }
 
+function sameContent(existing: string | Uint8Array, planned: PlannedFile['content']): boolean {
+  if (typeof planned === 'string') return typeof existing === 'string' && sameText(existing) === sameText(planned);
+  return existing instanceof Uint8Array && existing.length === planned.length && existing.every((b, i) => b === planned[i]);
+}
+
 /** The files the save would replace with different content, without writing anything. */
 export async function findConflicts(t: FolderTarget, files: PlannedFile[]): Promise<Conflict[]> {
   const root = t.sub ? await dirIfExists(t.picked, t.sub) : t.picked;
   if (!root) return [];
   const out: Conflict[] = [];
   for (const f of files) {
-    const existing = await readIfExists(root, f.path);
-    if (existing !== null && sameText(existing) !== sameText(f.content)) out.push({ path: f.path.join('/') });
+    const existing = await readIfExists(root, f.path, typeof f.content !== 'string');
+    if (existing !== null && !sameContent(existing, f.content)) out.push({ path: f.path.join('/') });
   }
   return out;
 }

@@ -15,7 +15,8 @@
  *     "fileGroups": { "<groupId>": [{ name, content }, ...] },
  *     "components": [...],
  *     "wires": [...],
- *     "activeBoardId": "..." | null
+ *     "activeBoardId": "..." | null,
+ *     "enclosure": { "board": "arduino_uno", ... }   optional, the 3D-printable case
  *   }
  *
  * Reading: `parseVlxFile(File) → payload` validates and returns a shape
@@ -35,6 +36,8 @@ import type { Wire } from '../types/wire';
 import { useEditorStore, chipFileGroupId } from '../store/useEditorStore';
 import { useSimulatorStore } from '../store/useSimulatorStore';
 import { useProjectStore } from '../store/useProjectStore';
+import { useEnclosureStore } from '../store/useEnclosureStore';
+import type { EnclosureSpec } from '../services/enclosureService';
 
 const VLX_FORMAT = 'velxio-project';
 const VLX_VERSION = 1;
@@ -67,6 +70,8 @@ export interface VlxPayload {
   /** The workspace identity (useProjectStore.workspaceId): reopening the
    *  file finds its AI chat. Absent in older files. */
   workspaceId?: string;
+  /** The 3D-printable enclosure's spec (useEnclosureStore); the case itself is rebuilt from it. */
+  enclosure?: EnclosureSpec;
 }
 
 function serialisableBoard(b: BoardInstance) {
@@ -98,6 +103,7 @@ function serialisableBoard(b: BoardInstance) {
 export function buildVlxPayload(opts: { name?: string } = {}): VlxPayload {
   const sim = useSimulatorStore.getState();
   const editor = useEditorStore.getState();
+  const enclosure = useEnclosureStore.getState().spec;
 
   // Persist file groups referenced by a board, plus each programmable chip's
   // own program group (group-chip-<id>) — otherwise the chip's program would
@@ -131,6 +137,7 @@ export function buildVlxPayload(opts: { name?: string } = {}): VlxPayload {
     wires: sim.wires,
     activeBoardId: sim.activeBoardId,
     workspaceId: useProjectStore.getState().workspaceId,
+    ...(enclosure ? { enclosure } : {}),
   };
 }
 
@@ -224,6 +231,10 @@ function validatePayload(data: unknown): VlxPayload {
     // Optional: a file without a usable one just starts a new chat.
     delete data.workspaceId;
   }
+  if (data.enclosure !== undefined && !(isPlainObject(data.enclosure) && typeof data.enclosure.board === 'string')) {
+    // Optional: a broken enclosure spec only loses the case, not the project.
+    delete data.enclosure;
+  }
   if (data.folderGroups !== undefined && !isPlainObject(data.folderGroups)) {
     // Optional field (empty folders per group) — drop silently if malformed.
     delete data.folderGroups;
@@ -280,5 +291,6 @@ export async function importVlxFile(file: File): Promise<VlxPayload> {
     wires: payload.wires,
     activeBoardId: payload.activeBoardId,
   });
+  useEnclosureStore.getState().restore(payload.enclosure ?? null);
   return payload;
 }

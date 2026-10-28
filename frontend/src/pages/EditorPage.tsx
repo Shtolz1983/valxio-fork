@@ -35,6 +35,7 @@ import {
 } from '../components/editor/NewProjectDialog';
 import { SaveProjectDialog } from '../components/editor/SaveProjectDialog';
 import { SensorCatalogModal } from '../components/sensors/SensorCatalogModal';
+import { EnclosureDialog } from '../components/enclosure/EnclosureDialog';
 import { useAutoSaveProject } from '../hooks/useAutoSaveProject';
 import { useHoverTips } from '../hooks/useHoverTips';
 import { registerEditorCommand } from '../lib/editorCommands';
@@ -863,6 +864,7 @@ export const EditorPage: React.FC = () => {
       />
       <SaveProjectDialog />
       <SensorCatalogModal />
+      <EnclosureDialog />
       {/* Slot reserved for the private pro overlay (e.g. agent chat panel).
           Self-hosted builds without an overlay see nothing here. */}
       <div data-velxio-slot="agent-chat" />

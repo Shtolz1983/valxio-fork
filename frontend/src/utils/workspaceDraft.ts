@@ -18,6 +18,7 @@ import { useProjectStore } from '../store/useProjectStore';
 import { useSimulatorStore } from '../store/useSimulatorStore';
 import { useEditorStore } from '../store/useEditorStore';
 import { isProBoardKind } from '../lib/proBoardGate';
+import { useEnclosureStore } from '../store/useEnclosureStore';
 import { buildVlxPayload } from './vlxFile';
 
 const DRAFT_KEY = 'velxio_ws_draft';
@@ -80,6 +81,7 @@ export function restoreStashedWorkspace(): boolean {
       wires: payload.wires,
       activeBoardId: payload.activeBoardId,
     });
+    useEnclosureStore.getState().restore(payload.enclosure ?? null);
     return true;
   } catch {
     return false;
