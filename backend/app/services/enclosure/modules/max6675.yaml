@@ -1,5 +1,6 @@
 id: max6675
 name: MAX6675 thermocouple module
+name_ru: "Модуль термопары MAX6675"
 part_types: [max6675]
 source: Typical breakout board as sold, nominal size (not measured).
 verified: false

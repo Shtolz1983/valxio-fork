@@ -1,5 +1,6 @@
 id: hx711
 name: HX711 load cell amplifier
+name_ru: "Усилитель тензодатчика HX711"
 part_types: [hx711]
 source: Typical breakout board as sold, nominal size (not measured).
 verified: false

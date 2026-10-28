@@ -1,5 +1,6 @@
 id: lcd1602
 name: "LCD1602 module with I2C backpack"
+name_ru: "LCD1602 с платой I2C"
 part_types: [lcd1602, lcd1602-i2c]
 source: Typical module as sold, nominal size (not measured).
 verified: false

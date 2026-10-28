@@ -291,6 +291,26 @@ def test_modules_and_battery_together():
     assert rtc.x1 < enc.layout.battery[0]  # stays in the board's compartment
 
 
+def test_every_violation_has_a_code_the_editor_translates():
+    """The editor shows checks in the user's language by `code`: each code needs an English and a Russian text."""
+    source = (REPO / "backend/app/services/enclosure/checks.py").read_text()
+    codes = set(re.findall(r'_v\(\s*"(?:error|warning)", "[^"]+", "([a-z_]+)"', source))
+    codes |= set(re.findall(r'"(overhang_[a-z]+)"', source))
+    assert len(codes) >= 20
+    for lang in ("en", "ru"):
+        texts = json.loads((REPO / f"frontend/src/i18n/locales/{lang}/common.json").read_text())["enclosure"]["violation"]
+        assert codes <= set(texts), (lang, sorted(codes - set(texts)))
+    # and the checks fill it in: a few broken cases, every violation coded
+    found = [v for spec in (
+        EnclosureSpec(board="arduino_uno", wall=0.8, bed=(60, 60, 60)),
+        EnclosureSpec(board="arduino_uno", top_clearance=0.5),
+        EnclosureSpec(board="arduino_uno", modules=[{"name": "rtc", "type": "ds3231", "position": (10, 10)}]),
+    ) for v in run_checks(build(spec))]
+    assert found and all(v.code in codes for v in found)
+    overlap = next(v for v in found if v.code == "module_overlap")
+    assert overlap.params == {"name": "rtc", "what_kind": "board", "what_name": ""}
+
+
 def test_render_png():
     png = render_png(build(EnclosureSpec(board="arduino_nano", lid="snap")))
     assert png[:8] == b"\x89PNG\r\n\x1a\n" and len(png) > 20_000

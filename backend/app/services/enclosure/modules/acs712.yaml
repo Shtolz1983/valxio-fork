@@ -1,5 +1,6 @@
 id: acs712
 name: ACS712 current sensor module
+name_ru: "Датчик тока ACS712"
 part_types: [acs712]
 source: Typical breakout board as sold, nominal size (not measured).
 verified: false

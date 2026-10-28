@@ -1,5 +1,6 @@
 id: oled_096
 name: "0.96\" SSD1306 OLED module (I2C)"
+name_ru: "OLED 0,96\" SSD1306 (I2C)"
 part_types: [ssd1306, ssd1306-i2c-4pin]
 source: Typical module as sold, nominal size (not measured).
 verified: false

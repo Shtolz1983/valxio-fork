@@ -1,5 +1,6 @@
 id: microsd
 name: microSD card module (SPI)
+name_ru: "Модуль microSD (SPI)"
 part_types: [microsd-card]
 source: Typical breakout board as sold, nominal size (not measured).
 verified: false

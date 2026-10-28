@@ -1,5 +1,6 @@
 id: relay
 name: 1-channel 5 V relay module
+name_ru: "Модуль реле 5 В, 1 канал"
 part_types: [relay]
 source: Typical breakout board as sold, nominal size (not measured).
 verified: false

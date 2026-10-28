@@ -1,5 +1,6 @@
 id: perfboard_50x70
 name: Prototype board 50 x 70 mm
+name_ru: "Макетная плата 50 × 70 мм"
 canvas_kinds: []
 source: >-
   Common double-sided FR-4 prototype board (2.54 mm grid) sold as 50 x 70 mm;

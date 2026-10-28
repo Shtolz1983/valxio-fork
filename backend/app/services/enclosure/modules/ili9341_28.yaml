@@ -1,5 +1,6 @@
 id: ili9341_28
 name: "2.8\" ILI9341 SPI TFT module"
+name_ru: "TFT 2,8\" ILI9341 (SPI)"
 part_types: [ili9341]
 source: Typical module as sold, nominal size (not measured).
 verified: false

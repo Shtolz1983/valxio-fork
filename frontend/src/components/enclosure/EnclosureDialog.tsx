@@ -15,6 +15,7 @@ import { registerEditorCommand } from '../../lib/editorCommands';
 import {
   exportEnclosure,
   listEnclosureBoards,
+  localName,
   type EnclosureBoard,
   type EnclosureCatalog,
   type EnclosureSpec,
@@ -23,6 +24,7 @@ import { useEnclosureStore } from '../../store/useEnclosureStore';
 import { useSimulatorStore } from '../../store/useSimulatorStore';
 import { EnclosureChat } from './EnclosureChat';
 import { EnclosureEditor } from './EnclosureEditor';
+import { violationText } from './violationText';
 import './EnclosureDialog.css';
 
 const EnclosureViewer = lazy(() => import('./EnclosureViewer'));
@@ -48,10 +50,10 @@ function downloadBlob(blob: Blob, name: string) {
 }
 
 const mm = (v: number) => (Math.round(v * 10) / 10).toString();
-const names = (boards: EnclosureBoard[]) => boards.map((b) => b.name).join(', ');
+const names = (boards: EnclosureBoard[], language: string) => boards.map((b) => localName(b, language)).join(', ');
 
 export function EnclosureDialog() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { spec, build, loading, error, open, showSpec, openViewer, close } = useEnclosureStore();
   const activeKind = useSimulatorStore((s) => s.boards.find((b) => b.id === s.activeBoardId)?.boardKind);
   const [catalog, setCatalog] = useState<EnclosureCatalog | null>(null);
@@ -120,14 +122,14 @@ export function EnclosureDialog() {
         {boardsError && <p className="enc-error">{boardsError}</p>}
         {fits && (
           <button className="enc-btn enc-btn-primary" onClick={() => showSpec({ board: fits.id })}>
-            {t('enclosure.makeDefault', 'Make the standard case for {{board}}', { board: fits.name })}
+            {t('enclosure.makeDefault', 'Make the standard case for {{board}}', { board: localName(fits, i18n.language) })}
           </button>
         )}
         {boards && !fits && (
           <p className="enc-muted">
             {activeKind
-              ? t('enclosure.unsupported', 'No enclosure for the board on the canvas yet. Supported: {{boards}}.', { boards: names(boards) })
-              : t('enclosure.noBoard', 'Put a board on the canvas first. Supported: {{boards}}.', { boards: names(boards) })}
+              ? t('enclosure.unsupported', 'No enclosure for the board on the canvas yet. Supported: {{boards}}.', { boards: names(boards, i18n.language) })
+              : t('enclosure.noBoard', 'Put a board on the canvas first. Supported: {{boards}}.', { boards: names(boards, i18n.language) })}
           </p>
         )}
       </div>
@@ -141,7 +143,7 @@ export function EnclosureDialog() {
           <Box size={16} />
           <h3 className="enc-title">
             {t('enclosure.title', '3D-printable enclosure')}
-            {build && <span className="enc-subtitle"> — {build.board.name}</span>}
+            {build && <span className="enc-subtitle"> — {localName(build.board, i18n.language)}</span>}
           </h3>
           {loading && <Loader2 size={16} className="enc-spin" />}
           <button
@@ -210,7 +212,7 @@ export function EnclosureDialog() {
                   {[...errors, ...warnings].map((v, i) => (
                     <div key={i} className={`enc-check enc-check-${v.severity}`}>
                       {v.severity === 'error' ? <XCircle size={14} /> : <AlertTriangle size={14} />}
-                      <span>{v.message}</span>
+                      <span>{violationText(v, t)}</span>
                     </div>
                   ))}
                   {!build.board.verified && (

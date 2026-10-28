@@ -1,5 +1,6 @@
 id: ds3231
 name: ZS-042 DS3231 RTC module
+name_ru: "Часы реального времени DS3231 (ZS-042)"
 part_types: [ds3231]
 source: Typical breakout board as sold, nominal size (not measured).
 verified: false

@@ -1,5 +1,6 @@
 id: bme280
 name: GY-BME280 breakout
+name_ru: "Модуль GY-BME280"
 part_types: [bme280]
 source: Typical breakout board as sold, nominal size (not measured).
 verified: false

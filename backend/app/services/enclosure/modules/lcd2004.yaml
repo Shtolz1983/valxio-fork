@@ -1,5 +1,6 @@
 id: lcd2004
 name: "LCD2004 module with I2C backpack"
+name_ru: "LCD2004 с платой I2C"
 part_types: [lcd2004, lcd2004-i2c]
 source: Typical module as sold, nominal size (not measured).
 verified: false

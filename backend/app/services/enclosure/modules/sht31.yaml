@@ -1,5 +1,6 @@
 id: sht31
 name: GY-SHT31-D breakout
+name_ru: "Модуль GY-SHT31-D"
 part_types: [sht31]
 source: Typical breakout board as sold, nominal size (not measured).
 verified: false

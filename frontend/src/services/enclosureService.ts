@@ -42,6 +42,7 @@ export interface EnclosureModuleSpec {
 export interface EnclosureModule {
   id: string;
   name: string;
+  name_ru?: string | null;
   /** Canvas part types this module is. */
   part_types: string[];
   size: [number, number];
@@ -76,9 +77,15 @@ export interface EnclosureConnector {
   window: { width: number; height: number } | null;
 }
 
+/** A board's or module's name in the UI language: `name_ru` where the data has one. */
+export function localName(item: { name: string; name_ru?: string | null }, language: string | undefined): string {
+  return language?.startsWith('ru') && item.name_ru ? item.name_ru : item.name;
+}
+
 export interface EnclosureBoard {
   id: string;
   name: string;
+  name_ru?: string | null;
   canvas_kinds: string[];
   verified: boolean;
   /** Tallest component above the PCB, mm (what the case leaves room for unless the spec overrides it). */
@@ -103,13 +110,16 @@ export interface EnclosureCatalog {
 export interface EnclosureViolation {
   severity: 'error' | 'warning';
   check: string;
+  /** English, for the AI assistant; the editor shows `code` + `params` translated (violationText.ts). */
   message: string;
+  code?: string;
+  params?: Record<string, string | number>;
 }
 
 export interface EnclosureBuild {
   ok: boolean;
   violations: EnclosureViolation[];
-  board: { id: string; name: string; verified: boolean };
+  board: { id: string; name: string; name_ru?: string | null; verified: boolean };
   /** Outer box in board coordinates, mm. */
   outer: { x0: number; y0: number; x1: number; y1: number; z0: number; z1: number };
   weight_g: number;

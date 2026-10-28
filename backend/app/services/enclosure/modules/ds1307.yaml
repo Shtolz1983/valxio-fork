@@ -1,5 +1,6 @@
 id: ds1307
 name: Tiny RTC DS1307 module
+name_ru: "Часы реального времени DS1307 (Tiny RTC)"
 part_types: [ds1307]
 source: Typical breakout board as sold, nominal size (not measured).
 verified: false

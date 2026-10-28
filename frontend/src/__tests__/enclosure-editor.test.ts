@@ -12,6 +12,7 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (_key: string, fallback: string, vars?: Record<string, unknown>) =>
       fallback.replace(/\{\{(\w+)\}\}/g, (_, k) => String(vars?.[k] ?? '')),
+    i18n: { language: 'en' },
   }),
 }));
 vi.mock('../services/ComponentRegistry', () => ({

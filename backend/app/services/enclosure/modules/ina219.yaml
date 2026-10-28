@@ -1,5 +1,6 @@
 id: ina219
 name: CJMCU-219 INA219 breakout
+name_ru: "Датчик тока INA219 (CJMCU-219)"
 part_types: [ina219]
 source: Typical breakout board as sold, nominal size (not measured).
 verified: false

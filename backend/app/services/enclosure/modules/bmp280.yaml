@@ -1,5 +1,6 @@
 id: bmp280
 name: GY-BMP280 breakout
+name_ru: "Модуль GY-BMP280"
 part_types: [bmp280]
 source: Typical breakout board as sold, nominal size (not measured).
 verified: false

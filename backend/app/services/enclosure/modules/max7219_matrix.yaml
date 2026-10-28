@@ -1,5 +1,6 @@
 id: max7219_matrix
 name: "MAX7219 8x8 LED matrix module"
+name_ru: "Светодиодная матрица 8×8 MAX7219"
 part_types: [max7219-matrix]
 source: Typical module as sold, nominal size (not measured).
 verified: false

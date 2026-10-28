@@ -1,5 +1,6 @@
 id: mpu6050
 name: GY-521 MPU-6050 breakout
+name_ru: "Гироскоп-акселерометр GY-521 (MPU-6050)"
 part_types: [mpu6050]
 source: Typical breakout board as sold, nominal size (not measured).
 verified: false

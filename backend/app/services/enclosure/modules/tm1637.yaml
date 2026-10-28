@@ -1,5 +1,6 @@
 id: tm1637
 name: "TM1637 4-digit 7-segment module"
+name_ru: "Индикатор TM1637, 4 цифры"
 part_types: [tm1637]
 source: Typical module as sold, nominal size (not measured).
 verified: false

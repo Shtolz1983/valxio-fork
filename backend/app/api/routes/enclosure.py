@@ -108,8 +108,11 @@ def _build_job(req: BuildRequest) -> dict:
         ox0, oy0, ox1, oy1 = lay.outer()
         result = {
             "ok": not any(v.severity == "error" for v in violations),
-            "violations": [{"severity": v.severity, "check": v.check, "message": v.message} for v in violations],
-            "board": {"id": lay.board.id, "name": lay.board.name, "verified": lay.board.verified},
+            "violations": [
+                {"severity": v.severity, "check": v.check, "message": v.message, "code": v.code, "params": v.params}
+                for v in violations
+            ],
+            "board": {"id": lay.board.id, "name": lay.board.name, "name_ru": lay.board.name_ru, "verified": lay.board.verified},
             # Outer box in board coordinates: the viewer centres on it, the model quotes it.
             "outer": {"x0": ox0, "y0": oy0, "x1": ox1, "y1": oy1, "z0": 0.0, "z1": lay.lid_top},
             "weight_g": round(enc.weight_g, 1),

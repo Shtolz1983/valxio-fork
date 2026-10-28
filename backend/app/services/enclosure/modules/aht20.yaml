@@ -1,5 +1,6 @@
 id: aht20
 name: AHT20 breakout
+name_ru: "Модуль AHT20"
 part_types: [aht20]
 source: Typical breakout board as sold, nominal size (not measured).
 verified: false

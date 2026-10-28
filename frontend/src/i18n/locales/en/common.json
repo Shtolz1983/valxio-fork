@@ -730,6 +730,51 @@
     "chatConnecting": "Connecting to the AI assistant…",
     "chatOff": "The AI assistant is not connected: see the AI panel on the right.",
     "chatHint": "Ask for a change and watch the case update, e.g. \"a 6 mm cable hole in the middle of the left wall\".",
-    "chatPlaceholder": "What should change in the case?"
+    "chatPlaceholder": "What should change in the case?",
+    "part": {
+      "base": "base",
+      "lid": "lid",
+      "hatch": "hatch"
+    },
+    "thick": {
+      "wall": "wall",
+      "floor": "floor",
+      "lid_thickness": "lid"
+    },
+    "obstacle": {
+      "board": "the board",
+      "pcb": "the board",
+      "components above board": "the parts on the board",
+      "battery": "the battery",
+      "connector": "connector {{name}}",
+      "module": "module {{name}}",
+      "display": "display {{name}}",
+      "lid module": "the back of display {{name}}"
+    },
+    "violation": {
+      "thin": "{{what}} is {{value}} mm, thinner than the printable {{min}} mm",
+      "collision": "{{part}} runs into {{what}} ({{volume}} mm³): raise the clearances or check the board data",
+      "opening_corner": "{{name}} ({{side}}) runs past the inner corner of the case",
+      "opening_lip": "{{name}} ({{side}}) reaches the lid's lip: raise the gap above the parts",
+      "opening_thin_top": "{{name}} ({{side}}) leaves less than {{min}} mm of wall above it",
+      "opening_floor": "{{name}} ({{side}}) cuts into the floor",
+      "openings_close": "{{name}} and {{other}} ({{side}}) are closer than {{min}} mm",
+      "extra_outside": "{{name}} ({{side}}) is outside the area where an opening can go",
+      "extra_post": "{{name}} ({{side}}) hits a lid screw post",
+      "no_support": "no support under the board near ({{x}}, {{y}})",
+      "no_support_module": "no support under module {{name}} near ({{x}}, {{y}})",
+      "no_lid_post": "no lid post above display {{name}} near ({{x}}, {{y}})",
+      "module_outside": "module {{name}} is outside the case",
+      "module_overlap": "module {{name}} overlaps {{what}}",
+      "bed": "{{part}} ({{size}} mm) does not fit the printer's bed {{bed}}",
+      "overhang_bridge": "{{part}}: a {{span}} mm horizontal bridge needs supports",
+      "overhang_flat": "{{part}}: an overhanging flat face at {{z}} mm needs supports",
+      "overhang_curved": "{{part}}: an overhanging curved face, {{height}} mm tall at {{z}} mm, needs supports",
+      "hatch_overlap": "the battery hatch overlaps the base ({{volume}} mm³)",
+      "hatch_no_boss": "no screw boss for the battery hatch near ({{x}}, {{y}})",
+      "display_lip": "display {{name}} reaches under the lid's lip: move it inwards",
+      "display_hangs": "display {{name}} hangs into {{what}}: raise the gap above the parts",
+      "display_overlap": "display {{name}} overlaps {{what}}"
+    }
   }
 }

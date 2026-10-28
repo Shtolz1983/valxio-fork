@@ -1,5 +1,6 @@
 id: perfboard_60x80
 name: Prototype board 60 x 80 mm
+name_ru: "Макетная плата 60 × 80 мм"
 canvas_kinds: []
 source: >-
   Common double-sided FR-4 prototype board (2.54 mm grid) sold as 60 x 80 mm;

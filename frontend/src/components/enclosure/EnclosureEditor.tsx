@@ -15,15 +15,16 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Trash2 } from 'lucide-react';
 import registry from '../../services/ComponentRegistry';
-import type {
-  EnclosureBuild,
-  EnclosureCatalog,
-  EnclosureExtra,
-  EnclosureFace,
-  EnclosureLidModuleSpec,
-  EnclosureModule,
-  EnclosureModuleSpec,
-  EnclosureSpec,
+import {
+  localName,
+  type EnclosureBuild,
+  type EnclosureCatalog,
+  type EnclosureExtra,
+  type EnclosureFace,
+  type EnclosureLidModuleSpec,
+  type EnclosureModule,
+  type EnclosureModuleSpec,
+  type EnclosureSpec,
 } from '../../services/enclosureService';
 import { useSimulatorStore } from '../../store/useSimulatorStore';
 
@@ -71,7 +72,7 @@ interface Props {
 }
 
 export function EnclosureEditor({ build, catalog, busy, onApply }: Props) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const components = useSimulatorStore((s) => s.components);
   const [draft, setDraft] = useState<Draft>(() => draftOf(build.spec));
   const { extras, skip_connectors: skip } = draft;
@@ -146,7 +147,7 @@ export function EnclosureEditor({ build, catalog, busy, onApply }: Props) {
             <select value={draft.board} onChange={(e) => change({ board: e.target.value, skip_connectors: [] })}>
               {catalog.boards.map((b) => (
                 <option key={b.id} value={b.id}>
-                  {b.name}
+                  {localName(b, i18n.language)}
                 </option>
               ))}
             </select>
@@ -216,7 +217,7 @@ export function EnclosureEditor({ build, catalog, busy, onApply }: Props) {
               </button>
             </span>
             <span className="enc-opening-sub">
-              {table?.name ?? t('enclosure.ownSize', 'own size')} · {fmt(l)} × {fmt(w)} × {fmt(m.height ?? table?.top_height)} {t('enclosure.mm', 'mm')} ·{' '}
+              {table ? localName(table, i18n.language) : t('enclosure.ownSize', 'own size')} · {fmt(l)} × {fmt(w)} × {fmt(m.height ?? table?.top_height)} {t('enclosure.mm', 'mm')} ·{' '}
               {placed
                 ? `X ${fmt(placed.x0)}, Y ${fmt(placed.y0)}${m.position ? '' : ` (${t('enclosure.auto', 'placed by the generator')})`}`
                 : t('enclosure.placedAfterRebuild', 'placed after a rebuild')}
@@ -263,7 +264,7 @@ export function EnclosureEditor({ build, catalog, busy, onApply }: Props) {
             </span>
             <span className="enc-opening-sub">
               {[
-                table?.name ?? m.type,
+                table ? localName(table, i18n.language) : m.type,
                 table?.window &&
                   t('enclosure.windowSize', 'window {{w}} × {{h}} mm', { w: fmt(table.window.size[0]), h: fmt(table.window.size[1]) }),
                 placed

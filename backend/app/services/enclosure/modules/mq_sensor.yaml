@@ -1,5 +1,6 @@
 id: mq_sensor
 name: MQ-x gas sensor module
+name_ru: "Модуль датчика газа MQ-x"
 part_types: [mq135, gas-sensor]
 source: Typical breakout board as sold, nominal size (not measured).
 verified: false

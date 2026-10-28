@@ -48,6 +48,7 @@ class Window(BaseModel):
 class Board(BaseModel):
     id: str
     name: str
+    name_ru: str | None = Field(None, description="The name in Russian, where it is more than a product name")
     canvas_kinds: list[str] = Field([], description="Velxio canvas board kinds this enclosure board fits")
     part_types: list[str] = Field([], description="Modules only: canvas part types this module is")
     source: str = ""
