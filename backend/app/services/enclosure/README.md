@@ -52,7 +52,7 @@ AI assistant picks the enclosure board by it.
 
 `battery` puts a pocket for the pack at one end of the case (`battery_side`, never the side with connector windows):
 the pack lies on the floor, low ribs hold it, a divider separates it from the board. The pack's long edge runs along
-X or Y, whichever keeps the case smaller; the case grows deeper when the pack is wider than the board. It is changed
+X or Y, whichever keeps the case smaller (with modules or displays, counting where they then go); the case grows deeper when the pack is wider than the board. It is changed
 by opening the lid, or with `battery_hatch` through the floor: the floor under the pack opens (tapered 45 degrees, so
 it prints without supports and the hatch cannot fall in) and a third printed part, `hatch`, fills it flush, held by
 two M3 screws through its ears into bosses at both ends of the pocket (the pocket grows 8 mm at each end for them and

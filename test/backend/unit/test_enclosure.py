@@ -284,6 +284,21 @@ def test_modules_use_the_room_behind_a_shallow_battery():
     assert len({m.y0 for m in lay.modules}) == 1  # one row, where the board's compartment alone needs two
 
 
+def test_battery_turns_to_leave_room_for_the_modules():
+    """Alone, 2xAA stands across the Uno's case; with two modules it lies along the front and they go behind it."""
+    def lies_along_x(lay):
+        x0, y0, x1, y1 = lay.battery
+        return x1 - x0 > y1 - y0
+
+    alone = make_layout(EnclosureSpec(board="arduino_uno", battery="2xAA"))
+    mods = [{"name": "sd", "type": "microsd"}, {"name": "rtc1", "type": "ds3231"}]
+    enc = build(EnclosureSpec(board="arduino_uno", battery="2xAA", modules=mods))
+    assert run_checks(enc) == []
+    assert not lies_along_x(alone) and lies_along_x(enc.layout)
+    # the turn is worth it: the modules' row runs on behind the pocket instead of making the case deeper
+    assert max(m.x1 for m in enc.layout.modules) > enc.layout.battery[0]
+
+
 def test_modules_and_battery_together():
     enc = build(EnclosureSpec(board="arduino_uno", battery="1x18650", modules=[{"name": "rtc", "type": "ds3231"}, {"name": "bme", "type": "bme280"}]))
     assert run_checks(enc) == []

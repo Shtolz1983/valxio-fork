@@ -228,32 +228,51 @@ def make_layout(spec: EnclosureSpec, board: Board | None = None) -> Layout:
     top_height = spec.top_height if spec.top_height is not None else board.top_height
     z_top = pcb_top + top_height + spec.top_clearance
     windowed = [c for c in conns if c.name not in skip]
-    x0, y0, x1, y1 = -cl["left"], -cl["front"], L + cl["right"], W + cl["back"]
-    bx0, bx1 = x0, x1  # the board's compartment along X, before a battery pocket joins it
-    battery = None
-    if spec.battery:
-        battery, x0, x1, y1 = _place_battery(spec, windowed, x0, y0, x1, y1)
-        # the lid lip hangs LIP_HEIGHT into the cavity along the walls the pocket touches
-        z_top = max(z_top, floor_top + BATTERIES[spec.battery].height + max(spec.top_clearance, LIP_HEIGHT + BATTERY_FIT))
-    modules: list[PlacedModule] = []
-    if spec.modules:
-        modules, x0, x1, y1 = _place_modules(spec, board, windowed, battery, bx0, bx1, x0, x1, y1, floor_top)
-        z_top = max(z_top, max(m.top for m in modules) + spec.top_clearance)
-    lid_modules: list[PlacedModule] = []
-    if spec.lid_modules:
-        lid_modules, x0, x1, y1 = _place_lid_modules(spec, windowed, x0, y0, x1, y1)
-        # what hangs from the lid clears the parts right under it
-        below = [((0.0, 0.0, L, W), pcb_top + top_height)] + [(m.rect(), m.top) for m in modules]
-        if battery:
-            below.append((battery, floor_top + BATTERIES[spec.battery].height))
-        for m in lid_modules:
-            hang = m.module.top_height + m.module.pcb_thickness + m.module.bottom_clearance
-            under = [top for rect, top in below if _rects_overlap(rect, m.rect())]
-            z_top = max(z_top, max(under, default=floor_top) + spec.top_clearance + hang)
-        for m in lid_modules:
-            m.top = z_top
-            m.pcb_top = z_top - m.module.top_height
-            m.bottom = m.pcb_top - m.module.pcb_thickness
+    y0 = -cl["front"]
+    bx0, bx1 = -cl["left"], L + cl["right"]  # the board's compartment along X, before a battery pocket joins it
+
+    def arrange(battery_along_x: bool | None):
+        """Battery, modules, displays; returns them with the grown cavity (x0, x1, y1) and the lid's seat."""
+        x0, x1, y1, z = bx0, bx1, W + cl["back"], z_top
+        battery = None
+        if spec.battery:
+            battery, x0, x1, y1 = _place_battery(spec, windowed, x0, y0, x1, y1, battery_along_x)
+            # the lid lip hangs LIP_HEIGHT into the cavity along the walls the pocket touches
+            z = max(z, floor_top + BATTERIES[spec.battery].height + max(spec.top_clearance, LIP_HEIGHT + BATTERY_FIT))
+        modules: list[PlacedModule] = []
+        if spec.modules:
+            modules, x0, x1, y1 = _place_modules(spec, board, windowed, battery, bx0, bx1, x0, x1, y1, floor_top)
+            z = max(z, max(m.top for m in modules) + spec.top_clearance)
+        lid_modules: list[PlacedModule] = []
+        if spec.lid_modules:
+            lid_modules, x0, x1, y1 = _place_lid_modules(spec, windowed, x0, y0, x1, y1)
+            # what hangs from the lid clears the parts right under it
+            below = [((0.0, 0.0, L, W), pcb_top + top_height)] + [(m.rect(), m.top) for m in modules]
+            if battery:
+                below.append((battery, floor_top + BATTERIES[spec.battery].height))
+            for m in lid_modules:
+                hang = m.module.top_height + m.module.pcb_thickness + m.module.bottom_clearance
+                under = [top for rect, top in below if _rects_overlap(rect, m.rect())]
+                z = max(z, max(under, default=floor_top) + spec.top_clearance + hang)
+            for m in lid_modules:
+                m.top = z
+                m.pcb_top = z - m.module.top_height
+                m.bottom = m.pcb_top - m.module.pcb_thickness
+        return battery, modules, lid_modules, x0, x1, y1, z
+
+    if spec.battery and (spec.modules or spec.lid_modules):
+        # the battery turned either way: which one leaves the smaller case once the modules are in
+        arranged, first_error = [], None
+        for along_x in (True, False):
+            try:
+                arranged.append(arrange(along_x))
+            except ValueError as e:
+                first_error = first_error or e
+        if not arranged:
+            raise first_error
+        battery, modules, lid_modules, x0, x1, y1, z_top = min(arranged, key=lambda a: (a[4] - a[3]) * (a[5] - y0))
+    else:
+        battery, modules, lid_modules, x0, x1, y1, z_top = arrange(None)
 
     layout = Layout(
         board=board,
@@ -406,8 +425,12 @@ def _place_lid_modules(
 
 def _place_battery(
     spec: EnclosureSpec, windowed: list[ResolvedConnector], x0: float, y0: float, x1: float, y1: float,
+    along_x: bool | None = None,
 ) -> tuple[tuple[float, float, float, float], float, float, float]:
-    """Battery pocket at one end of the case, behind a divider rib; returns the pocket and the grown cavity."""
+    """Battery pocket at one end of the case, behind a divider rib; returns the pocket and the grown cavity.
+
+    `along_x` lays the pack's long edge along X (True) or Y (False); None picks whichever keeps the case smaller.
+    """
     bat = BATTERIES[spec.battery]
     side = spec.battery_side
     blocked = [c.name for c in windowed if c.side == side]
@@ -422,8 +445,11 @@ def _place_battery(
     def footprint(length: float, width: float) -> float:
         return (x1 - x0 + BATTERY_RIB + length + 2 * BATTERY_FIT + ends) * (max(y1, y0 + width + 2 * BATTERY_FIT + 2 * side_gap) - y0)
 
-    # long edge along X or along Y, whichever keeps the case smaller
-    length, width = min((bat.length, bat.width), (bat.width, bat.length), key=lambda lw: footprint(*lw))
+    if along_x is None:
+        # long edge along X or along Y, whichever keeps the case smaller
+        length, width = min((bat.length, bat.width), (bat.width, bat.length), key=lambda lw: footprint(*lw))
+    else:
+        length, width = (bat.length, bat.width) if along_x else (bat.width, bat.length)
     pl, pw = length + 2 * BATTERY_FIT + ends, width + 2 * BATTERY_FIT
     grown_y1 = max(y1, y0 + pw + 2 * side_gap)
     py0 = y0 + side_gap
