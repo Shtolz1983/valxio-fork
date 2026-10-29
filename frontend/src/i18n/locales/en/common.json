@@ -692,7 +692,6 @@
       "pitch": "pitch"
     },
     "unnamed": "opening",
-    "sidePosition": "along {{along}}, {{z}} above the board",
     "window": "window {{w}} × {{h}} mm",
     "windowAfterRebuild": "window after rebuild",
     "closed": "no window",
@@ -700,10 +699,24 @@
     "noOpenings": "No openings.",
     "rebuild": "Rebuild",
     "reset": "Undo changes",
-    "badSize": "Every size must be above zero.",
+    "badSize": "Every size must be above zero and every position filled in.",
     "boardAndPower": "Board and power",
     "board": "Board",
     "partsHeight": "Parts above the board",
+      "gaps": "Gap to the walls",
+      "gapsHint": "Room between the board and each wall; empty is the usual gap. A wall with a connector keeps the connector at its window.",
+      "gapSide": {
+        "left": "left",
+        "right": "right",
+        "front": "front",
+        "back": "back"
+      },
+      "shiftDir": {
+        "right": "to the right",
+        "left": "to the left",
+        "back": "towards the back",
+        "front": "towards the front"
+      },
     "battery": "Battery",
     "noBattery": "none (USB or external supply)",
     "batterySide": "Battery at the",
@@ -754,7 +767,8 @@
     "violation": {
       "thin": "{{what}} is {{value}} mm, thinner than the printable {{min}} mm",
       "collision": "{{part}} runs into {{what}} ({{volume}} mm³): raise the clearances or check the board data",
-      "opening_corner": "{{name}} ({{side}}) runs past the inner corner of the case",
+      "opening_corner": "{{name}} ({{side}}) runs past the inner corner of the case: move it {{shift}} mm {{dir}}",
+      "opening_too_long": "{{name}} ({{side}}) is longer than the wall ({{length}} mm, the wall is {{wall}} mm) and the case cannot grow past a connector window: make it shorter or give that end its own gap",
       "opening_lip": "{{name}} ({{side}}) reaches the lid's lip: raise the gap above the parts",
       "opening_thin_top": "{{name}} ({{side}}) leaves less than {{min}} mm of wall above it",
       "opening_floor": "{{name}} ({{side}}) cuts into the floor",
@@ -775,6 +789,14 @@
       "display_lip": "display {{name}} reaches under the lid's lip: move it inwards",
       "display_hangs": "display {{name}} hangs into {{what}}: raise the gap above the parts",
       "display_overlap": "display {{name}} overlaps {{what}}"
-    }
+    },
+    "pos": {
+      "along": "along",
+      "z": "height"
+    },
+    "range": "from {{lo}} to {{hi}} mm",
+    "addOpening": "Add an opening",
+    "newFace": "Face",
+    "newShape": "Shape"
   }
 }

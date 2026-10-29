@@ -33,6 +33,15 @@ describe('enclosure check results in Russian', () => {
     expect(violationText(v('thin', { what: 'wall', value: 0.8, min: 1.2 }), i18n.t)).toBe('Стенка: 0.8 мм — тоньше, чем можно напечатать (1.2 мм)');
   });
 
+  it('say which way to move an opening that runs past a corner', () => {
+    expect(violationText(v('opening_corner', { name: 'matrix', side: 'front', shift: 26.5 }), i18n.t)).toBe(
+      'matrix (передняя стенка) заходит за внутренний угол корпуса: сдвиньте его на 26.5 мм вправо',
+    );
+    expect(violationText(v('opening_corner', { name: 'cable', side: 'left', shift: -4 }), i18n.t)).toBe(
+      'cable (левая стенка) заходит за внутренний угол корпуса: сдвиньте его на 4 мм вперёд',
+    );
+  });
+
   it('keep the English sentence for a code without a text', () => {
     expect(violationText(v('something_new', {}, 'a new check'), i18n.t)).toBe('A new check');
     expect(violationText({ severity: 'warning', check: 'x', message: 'no code at all' }, i18n.t)).toBe('no code at all');

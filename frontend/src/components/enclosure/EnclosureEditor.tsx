@@ -3,9 +3,9 @@
  * catalogue board or a prototype board) with the height of what is on it, the
  * battery compartment, the modules inside the case and the displays under the
  * lid (parts of the project that have a module table entry), the board's
- * connector windows (on / off) and every
- * extra opening — the part it is for (its `name` is the part id the assistant
- * gave it), the face, the shape and the sizes. Edits stay a draft until
+ * connector windows (on / off), every extra opening — the part it is for (its
+ * `name` is the part id the assistant gave it), the face, the shape, the sizes
+ * and the position — and new openings the user adds. Edits stay a draft until
  * "Rebuild" sends the changed spec.
  *
  * Mounted with a key per build, so a new build (from the assistant or from a
@@ -24,6 +24,7 @@ import {
   type EnclosureLidModuleSpec,
   type EnclosureModule,
   type EnclosureModuleSpec,
+  type EnclosureSide,
   type EnclosureSpec,
 } from '../../services/enclosureService';
 import { useSimulatorStore } from '../../store/useSimulatorStore';
@@ -38,22 +39,50 @@ const SIZE_FIELDS: Record<NonNullable<EnclosureExtra['shape']>, SizeKey[]> = {
 
 const fmt = (v: number | null | undefined) => (v == null ? '—' : String(Math.round(v * 10) / 10));
 
-function sizesValid(e: EnclosureExtra): boolean {
-  return SIZE_FIELDS[e.shape ?? 'circle'].every((k) => {
+type PosKey = 'along' | 'z' | 'center_x' | 'center_y';
+
+const isFlat = (face: EnclosureFace) => face === 'top' || face === 'bottom';
+/** Side walls place an opening along the wall and above the PCB top; the lid and the bottom by X and Y. */
+const posFields = (face: EnclosureFace): PosKey[] => (isFlat(face) ? ['center_x', 'center_y'] : ['along', 'z']);
+
+/** A new opening's sizes, by shape. */
+const NEW_SIZES: Record<NonNullable<EnclosureExtra['shape']>, Partial<EnclosureExtra>> = {
+  circle: { diameter: 6 },
+  rect: { width: 10, height: 4 },
+  slots: { width: 2, height: 8, slot_count: 5, slot_pitch: 4 },
+};
+
+const FACES: EnclosureFace[] = ['top', 'left', 'right', 'front', 'back', 'bottom'];
+
+function extraValid(e: EnclosureExtra): boolean {
+  const sized = SIZE_FIELDS[e.shape ?? 'circle'].every((k) => {
     const v = e[k];
     return typeof v === 'number' && Number.isFinite(v) && v > 0;
   });
+  return sized && posFields(e.face).every((k) => typeof e[k] === 'number' && Number.isFinite(e[k]));
 }
 
 /** The part of the spec this editor changes. */
 type Draft = Pick<
   EnclosureBuild['spec'],
-  'board' | 'top_height' | 'battery' | 'battery_side' | 'battery_hatch' | 'modules' | 'lid_modules' | 'extras' | 'skip_connectors'
+  | 'board'
+  | 'top_height'
+  | 'side_clearance'
+  | 'battery'
+  | 'battery_side'
+  | 'battery_hatch'
+  | 'modules'
+  | 'lid_modules'
+  | 'extras'
+  | 'skip_connectors'
 >;
+
+const SIDES: EnclosureSide[] = ['left', 'right', 'front', 'back'];
 
 const draftOf = (spec: EnclosureBuild['spec']): Draft => ({
   board: spec.board,
   top_height: spec.top_height,
+  side_clearance: spec.side_clearance ?? {},
   battery: spec.battery,
   battery_side: spec.battery_side,
   battery_hatch: spec.battery_hatch,
@@ -126,16 +155,49 @@ export function EnclosureEditor({ build, catalog, busy, onApply }: Props) {
   const addableUnderLid = candidates(true);
   const placedOf = (name: string) => (draft.board === build.spec.board ? build.modules.find((m) => m.name === name) : undefined);
 
-  const position = (e: EnclosureExtra) =>
-    e.face === 'top' || e.face === 'bottom'
-      ? `X ${fmt(e.center_x)}, Y ${fmt(e.center_y)}`
-      : t('enclosure.sidePosition', 'along {{along}}, {{z}} above the board', { along: fmt(e.along), z: fmt(e.z) });
+  const posLabel: Record<PosKey, string> = {
+    along: t('enclosure.pos.along', 'along'),
+    z: t('enclosure.pos.z', 'height'),
+    center_x: 'X',
+    center_y: 'Y',
+  };
 
-  const setSize = (i: number, key: SizeKey, value: string) =>
+  /** Where an opening fits on a face of the built case, for the position fields' hint. */
+  const rangeOf = (face: EnclosureFace, key: PosKey): [number, number] | undefined => {
+    const f = build.faces?.[face] as { along?: [number, number]; z?: [number, number]; x?: [number, number]; y?: [number, number] } | undefined;
+    if (!f) return undefined;
+    return key === 'center_x' ? f.x : key === 'center_y' ? f.y : f[key];
+  };
+
+  const setField = (i: number, key: SizeKey | PosKey, value: string) =>
     setExtras((list) => list.map((e, j) => (j === i ? { ...e, [key]: value === '' ? null : Number(value) } : e)));
 
+  // A new opening: the chosen face and shape, a default size, in the middle of that face.
+  const [newFace, setNewFace] = useState<EnclosureFace>('top');
+  const [newShape, setNewShape] = useState<NonNullable<EnclosureExtra['shape']>>('circle');
+  const addOpening = () => {
+    const mid = (r: [number, number] | undefined) => (r ? Math.round(((r[0] + r[1]) / 2) * 10) / 10 : 0);
+    const taken = new Set(extras.map((e) => e.name));
+    let n = 1;
+    while (taken.has(`hole${n}`)) n++;
+    const position = isFlat(newFace)
+      ? { center_x: mid(rangeOf(newFace, 'center_x')), center_y: mid(rangeOf(newFace, 'center_y')) }
+      : { along: mid(rangeOf(newFace, 'along')), z: mid(rangeOf(newFace, 'z')) };
+    setExtras((list) => [...list, { name: `hole${n}`, face: newFace, shape: newShape, ...NEW_SIZES[newShape], ...position }]);
+  };
+
   const dirty = JSON.stringify(draft) !== JSON.stringify(draftOf(build.spec));
-  const valid = extras.every(sizesValid) && (draft.top_height == null || draft.top_height > 0);
+  const setGap = (side: EnclosureSide, value: string) =>
+    setDraft((d) => {
+      const gaps = { ...d.side_clearance };
+      if (value === '') delete gaps[side];
+      else gaps[side] = Number(value);
+      return { ...d, side_clearance: gaps };
+    });
+  const valid =
+    extras.every(extraValid) &&
+    (draft.top_height == null || draft.top_height > 0) &&
+    Object.values(draft.side_clearance).every((v) => Number.isFinite(v) && v! >= 0);
 
   return (
     <div className="enc-openings">
@@ -166,6 +228,26 @@ export function EnclosureEditor({ build, catalog, busy, onApply }: Props) {
               {t('enclosure.mm', 'mm')}
             </span>
           </label>
+          <div className="enc-field enc-gaps" title={t('enclosure.gapsHint', 'Room between the board and each wall; empty is the usual gap. A wall with a connector keeps the connector at its window.')}>
+            <span>
+              {t('enclosure.gaps', 'Gap to the walls')}, {t('enclosure.mm', 'mm')}
+            </span>
+            <span className="enc-gap-grid">
+              {SIDES.map((side) => (
+                <label key={side} className="enc-size">
+                  {t(`enclosure.gapSide.${side}`, side)}
+                  <input
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={draft.side_clearance[side] ?? ''}
+                    placeholder={String(build.spec.clearance ?? 1)}
+                    onChange={(e) => setGap(side, e.target.value)}
+                  />
+                </label>
+              ))}
+            </span>
+          </div>
           <label className="enc-field">
             <span>{t('enclosure.battery', 'Battery')}</span>
             <select
@@ -345,19 +427,60 @@ export function EnclosureEditor({ build, catalog, busy, onApply }: Props) {
                   min={key === 'slot_count' ? 1 : 0.5}
                   step={key === 'slot_count' ? 1 : 0.1}
                   value={e[key] ?? ''}
-                  onChange={(ev) => setSize(i, key, ev.target.value)}
+                  onChange={(ev) => setField(i, key, ev.target.value)}
                 />
               </label>
             ))}
             <span className="enc-muted-inline">{t('enclosure.mm', 'mm')}</span>
           </span>
+          <span className="enc-sizes">
+            {posFields(e.face).map((key) => {
+              const range = rangeOf(e.face, key);
+              return (
+                <label key={key} className="enc-size">
+                  <span>{posLabel[key]}</span>
+                  <input
+                    type="number"
+                    step={0.5}
+                    value={e[key] ?? ''}
+                    title={range ? t('enclosure.range', 'from {{lo}} to {{hi}} mm', { lo: fmt(range[0]), hi: fmt(range[1]) }) : undefined}
+                    onChange={(ev) => setField(i, key, ev.target.value)}
+                  />
+                </label>
+              );
+            })}
+          </span>
           <span className="enc-opening-sub">
-            {faceLabel(e.face)} · {t(`enclosure.shape.${e.shape ?? 'circle'}`, e.shape ?? 'circle')} · {position(e)}
+            {faceLabel(e.face)} · {t(`enclosure.shape.${e.shape ?? 'circle'}`, e.shape ?? 'circle')}
           </span>
         </div>
       ))}
 
       {extras.length === 0 && (!sameBoard || build.connectors.length === 0) && <p className="enc-muted">{t('enclosure.noOpenings', 'No openings.')}</p>}
+
+      <div className="enc-add-opening">
+        <select value={newFace} onChange={(e) => setNewFace(e.target.value as EnclosureFace)} aria-label={t('enclosure.newFace', 'Face')}>
+          {FACES.map((f) => (
+            <option key={f} value={f}>
+              {faceLabel(f)}
+            </option>
+          ))}
+        </select>
+        <select
+          value={newShape}
+          onChange={(e) => setNewShape(e.target.value as NonNullable<EnclosureExtra['shape']>)}
+          aria-label={t('enclosure.newShape', 'Shape')}
+        >
+          {(['circle', 'rect', 'slots'] as const).map((shape) => (
+            <option key={shape} value={shape}>
+              {t(`enclosure.shape.${shape}`, shape)}
+            </option>
+          ))}
+        </select>
+        <button className="enc-btn" onClick={addOpening}>
+          {t('enclosure.addOpening', 'Add an opening')}
+        </button>
+      </div>
 
       {dirty && (
         <div className="enc-openings-actions">
@@ -374,7 +497,7 @@ export function EnclosureEditor({ build, catalog, busy, onApply }: Props) {
           >
             {t('enclosure.reset', 'Undo changes')}
           </button>
-          {!valid && <span className="enc-error">{t('enclosure.badSize', 'Every size must be above zero.')}</span>}
+          {!valid && <span className="enc-error">{t('enclosure.badSize', 'Every size must be above zero and every position filled in.')}</span>}
         </div>
       )}
     </div>

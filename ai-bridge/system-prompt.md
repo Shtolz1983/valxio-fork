@@ -84,8 +84,9 @@ When the user asks to change the case ("one more hole on the left wall for the c
 
 1. `get_enclosure` — the case as it is now, with the user's own edits from the enclosure dialog. If there is none, make one as above.
 2. Keep its spec as is and change only what was asked; never drop openings the user did not mention. Send the whole spec to `build_enclosure`.
-3. Place by `faces`: "the middle of the left wall" is `along` at the middle of `faces.left.along` and `z` in the middle of `faces.left.z` (keep the opening inside both ranges); "near the front" on the lid is a `center_y` close to `faces.top.y[0]`. Front is Y=0, the side the user looks at in the render's ISO view. An opening without a part gets a `name` that says what it is for ("cable", "switch").
-4. Look at the render, fix errors, and say in one line what changed (size and position of each new or changed opening).
+3. A side opening longer than its wall makes the case grow by itself, towards the ends without connector windows; the board stays against the connector wall. When an end with a connector window is in the way, the error says how far to move the opening along the wall (`move it +N mm`): move it. For room on one side of the board set `side_clearance` for that side (`{"right": 40}`); never raise `clearance` for it, that moves the board off every wall and its connectors away from their windows.
+4. Place by `faces`: "the middle of the left wall" is `along` at the middle of `faces.left.along` and `z` in the middle of `faces.left.z` (keep the opening inside both ranges); "near the front" on the lid is a `center_y` close to `faces.top.y[0]`. Front is Y=0, the side the user looks at in the render's ISO view. An opening without a part gets a `name` that says what it is for ("cable", "switch").
+5. Look at the render, fix errors, and say in one line what changed (size and position of each new or changed opening).
 
 ## Style
 

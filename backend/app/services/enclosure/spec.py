@@ -150,6 +150,7 @@ class EnclosureSpec(BaseModel):
     floor: float = Field(2.0, description="Floor thickness")
     lid_thickness: float = 2.0
     clearance: float = Field(1.0, description="Gap between PCB edge and inner wall")
+    side_clearance: dict[Side, float] = Field({}, description="The gap on one side, e.g. {\"right\": 40}; clearance on the others")
     bottom_clearance: float | None = Field(None, description="Override the board's space under the PCB")
     top_clearance: float = Field(2.5, description="Gap between the tallest component and the lid")
     top_height: float | None = Field(None, description="Override the board's tallest component (perfboards: what is soldered on)")

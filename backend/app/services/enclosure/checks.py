@@ -11,7 +11,7 @@ from typing import Literal
 from build123d import Axis, GeomType, Part, Vector
 
 from .batteries import CATALOG as BATTERIES
-from .enclosure import KEEPOUT_GAP, LID_MODULE_INSET, LIP_HEIGHT, LIP_WIDTH, LID_FIT, Enclosure, Opening, _connector_rect, _rects_overlap
+from .enclosure import EXTRA_CORNER_MARGIN, KEEPOUT_GAP, LID_MODULE_INSET, LIP_HEIGHT, LIP_WIDTH, LID_FIT, Enclosure, Opening, _connector_rect, _rects_overlap
 
 COLLISION_VOLUME = 0.05  # mm3; below this a touching contact is not a collision
 MAX_BRIDGE = 25.0  # longest horizontal bridge considered printable
@@ -85,11 +85,26 @@ def check_openings(enc: Enclosure) -> list[Violation]:
     for o in enc.openings:
         lo, hi = lay.side_range(o.side)
         if o.along0 < lo or o.along1 > hi:
-            out.append(_v(
-                "error", "opening", "opening_corner",
-                f"{o.name} on {o.side} runs past the inner corner (along {o.along0:.1f}..{o.along1:.1f}, cavity {lo:.1f}..{hi:.1f})",
-                name=o.name, side=o.side,
-            ))
+            # the case grows by itself where it can (enclosure._grow_for_extras): what is left is a wall with a
+            # connector window in the way, so say how far along the wall the opening has to move
+            length = o.along1 - o.along0
+            ends = ("left", "right") if o.side in ("front", "back") else ("front", "back")
+            held = {c.side for c in lay.windowed}
+            if all(end in held for end in ends) and length > hi - lo - 2 * EXTRA_CORNER_MARGIN:
+                out.append(_v(
+                    "error", "opening", "opening_too_long",
+                    f"{o.name} on {o.side} is {length:.1f} mm long, the wall inside is {hi - lo:.1f} mm and cannot grow past a "
+                    f"connector window; make it shorter or set side_clearance for that end",
+                    name=o.name, side=o.side, length=length, wall=hi - lo,
+                ))
+            else:
+                shift = lo + EXTRA_CORNER_MARGIN - o.along0 if o.along0 < lo else hi - EXTRA_CORNER_MARGIN - o.along1
+                out.append(_v(
+                    "error", "opening", "opening_corner",
+                    f"{o.name} on {o.side} runs past the inner corner (along {o.along0:.1f}..{o.along1:.1f}, cavity {lo:.1f}..{hi:.1f}); "
+                    f"move it {shift:+.1f} mm along the wall",
+                    name=o.name, side=o.side, shift=shift,
+                ))
         if o.z1 > lip_bottom:
             out.append(_v(
                 "error", "opening", "opening_lip",

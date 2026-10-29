@@ -262,9 +262,39 @@
 .enc-field > span:first-child {
   flex-shrink: 0;
 }
+.enc-gaps {
+  align-items: flex-start;
+}
+.enc-gaps > span:first-child {
+  flex-shrink: 1;
+  min-width: 0;
+}
+.enc-gap-grid {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 6px 10px;
+  justify-items: end;
+}
+.enc-gaps .enc-size input {
+  width: 44px;
+}
 .enc-field select {
   flex: 1;
   min-width: 0;
+  padding: 4px 6px;
+  background: var(--wb-4);
+  border: 1px solid var(--wb-7);
+  border-radius: 4px;
+  color: var(--wb-13);
+  font: inherit;
+}
+.enc-add-opening {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.enc-add-opening select {
   padding: 4px 6px;
   background: var(--wb-4);
   border: 1px solid var(--wb-7);

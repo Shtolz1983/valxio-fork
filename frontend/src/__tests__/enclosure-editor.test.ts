@@ -29,6 +29,14 @@ const BUILD = {
   connectors: [{ name: 'usb', type: 'usb_b', side: 'left', window: { width: 13.08, height: 11.9 } }],
   modules: [],
   lid_modules: [],
+  faces: {
+    left: { along: [-1, 54.3], z: [-4.6, 11.5] },
+    right: { along: [-1, 54.3], z: [-4.6, 11.5] },
+    front: { along: [-8.7, 69.6], z: [-4.6, 11.5] },
+    back: { along: [-8.7, 69.6], z: [-4.6, 11.5] },
+    top: { x: [-8.7, 69.6], y: [-1, 54.3] },
+    bottom: { x: [-8.7, 69.6], y: [-1, 54.3] },
+  },
   spec: {
     board: 'arduino_uno',
     lid: 'screw',
@@ -101,8 +109,8 @@ describe('enclosure openings', () => {
     expect(usb.textContent).toContain('window 13.1 × 11.9 mm');
     expect(bme.textContent).toContain('bme1 · BME280');
     expect(bme.textContent).toContain('front wall');
-    expect([...bme.querySelectorAll('input')].map((i) => i.value)).toEqual(['10', '4']);
-    expect(vents.querySelectorAll('input')).toHaveLength(4); // width, height, count, pitch
+    expect([...bme.querySelectorAll('input')].map((i) => i.value)).toEqual(['10', '4', '20', '3']); // sizes, then along and height
+    expect(vents.querySelectorAll('input')).toHaveLength(6); // width, height, count, pitch, X, Y
     expect(button('Rebuild')).toBeUndefined();
   });
 
@@ -124,7 +132,7 @@ describe('enclosure openings', () => {
     act(() => root.render(createElement(EnclosureEditor, { build: BUILD, catalog: CATALOG, busy: false, onApply: vi.fn() })));
     act(() => type(rows()[1].querySelector('input')!, ''));
     expect(button('Rebuild')!.disabled).toBe(true);
-    expect(host.textContent).toContain('Every size must be above zero.');
+    expect(host.textContent).toContain('Every size must be above zero and every position filled in.');
     act(() => button('Undo changes')!.click());
     expect(button('Rebuild')).toBeUndefined();
   });
@@ -152,6 +160,18 @@ describe('enclosure openings', () => {
     expect(host.textContent).toContain('appear after a rebuild');
     act(() => button('Rebuild')!.click());
     expect(onApply.mock.calls[1][0]).toMatchObject({ board: 'perfboard_50x70', top_height: 17, skip_connectors: [] });
+  });
+
+  it('a gap to one wall goes into the spec; emptied, that wall takes the usual gap again', () => {
+    const onApply = vi.fn();
+    const build = { ...BUILD, spec: { ...BUILD.spec, clearance: 1, side_clearance: { front: 3 } } } as EnclosureBuild;
+    act(() => root.render(createElement(EnclosureEditor, { build, catalog: CATALOG, busy: false, onApply })));
+    const gaps = [...host.querySelectorAll<HTMLInputElement>('.enc-gaps input')];
+    expect(gaps.map((g) => [g.value, g.placeholder])).toEqual([['', '1'], ['', '1'], ['3', '1'], ['', '1']]); // left, right, front, back
+    act(() => type(gaps[1], '40'));
+    act(() => type(gaps[2], ''));
+    act(() => button('Rebuild')!.click());
+    expect(onApply.mock.calls[0][0].side_clearance).toEqual({ right: 40 });
   });
 
   it('a part of the project with a module entry can be put inside the case and taken out again', () => {
@@ -182,5 +202,25 @@ describe('enclosure openings', () => {
     expect(lcd.textContent).toContain('LCD1602 module · window 66 × 17 mm · placed after a rebuild');
     act(() => button('Rebuild')!.click());
     expect(onApply.mock.calls[0][0].lid_modules).toEqual([{ name: 'lcd1', type: 'lcd1602' }]);
+  });
+
+  it('moves an opening and adds a new one in the middle of the chosen face', () => {
+    const onApply = vi.fn();
+    act(() => root.render(createElement(EnclosureEditor, { build: BUILD, catalog: CATALOG, busy: false, onApply })));
+    // bme1 on the front wall: width, height, then along and height above the board
+    const [, , along, z] = [...rows()[1].querySelectorAll('input')];
+    expect(along.value).toBe('20');
+    expect(along.title).toBe('from -8.7 to 69.6 mm');
+    act(() => type(along, '35'));
+    act(() => type(z, '5'));
+
+    const selects = host.querySelectorAll<HTMLSelectElement>('.enc-add-opening select');
+    act(() => choose(selects[0], 'left'));
+    act(() => choose(selects[1], 'rect'));
+    act(() => button('Add an opening')!.click());
+    act(() => button('Rebuild')!.click());
+    const { extras } = onApply.mock.calls[0][0];
+    expect(extras[0]).toMatchObject({ name: 'bme1', along: 35, z: 5 });
+    expect(extras[2]).toEqual({ name: 'hole1', face: 'left', shape: 'rect', width: 10, height: 4, along: 26.7, z: 3.5 });
   });
 });

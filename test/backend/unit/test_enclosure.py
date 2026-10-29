@@ -88,6 +88,44 @@ def test_extras_outside_or_on_posts_are_reported():
     assert any("post" in m and "screw post" in m for m in msgs)
 
 
+MATRIX = {"name": "matrix", "face": "front", "shape": "rect", "width": 128, "height": 32, "z": 10}
+
+
+def test_long_side_opening_grows_the_case_away_from_the_connector_wall():
+    """A 128 mm window on the front of a Nano: the case grows to the right, the USB stays at its window on the left."""
+    plain = make_layout(EnclosureSpec(board="arduino_nano"))
+    enc = build(EnclosureSpec(board="arduino_nano", extras=[{**MATRIX, "along": 66}]))
+    lay = enc.layout
+    assert lay.x0 == plain.x0 and lay.y0 == plain.y0
+    assert lay.x1 >= 66 + 64 + 1.5
+    assert lay.z_top - 2.0 >= lay.pcb_top + 10 + 16  # the window clears the lid's lip
+    assert [v for v in run_checks(enc) if v.check == "opening"] == []
+
+
+def test_side_opening_past_a_connector_wall_says_how_far_to_move_it():
+    enc = build(EnclosureSpec(board="arduino_nano", extras=[{**MATRIX, "along": 30}]))
+    corner = [v for v in errors(enc) if v.code == "opening_corner"]
+    assert len(corner) == 1 and "move it +" in corner[0].message
+    moved = {**MATRIX, "along": 30 + corner[0].params["shift"] + 0.1}
+    assert [v for v in errors(build(EnclosureSpec(board="arduino_nano", extras=[moved]))) if v.check == "opening"] == []
+
+
+def test_side_opening_longer_than_a_wall_held_by_connectors_at_both_ends():
+    board = get_board("arduino_nano").model_copy(deep=True)
+    board.connectors.append(board.connectors[0].model_copy(update={"name": "usb2", "side": "right"}))
+    enc = build(EnclosureSpec(board="arduino_nano", extras=[{**MATRIX, "along": 20}]), board)
+    assert [v.code for v in errors(enc) if v.check == "opening"] == ["opening_too_long"]
+
+
+def test_side_clearance_makes_room_on_one_side_only():
+    plain = make_layout(EnclosureSpec(board="arduino_nano"))
+    lay = make_layout(EnclosureSpec(board="arduino_nano", side_clearance={"right": 40, "left": 0}))
+    assert lay.x1 == pytest.approx(43.18 + 40)
+    assert lay.x0 == plain.x0  # the USB still reaches its window
+    assert (lay.y0, lay.y1) == (plain.y0, plain.y1)
+    assert errors(build(EnclosureSpec(board="arduino_nano", side_clearance={"right": 40}))) == []
+
+
 def test_large_round_side_hole_needs_supports():
     spec = EnclosureSpec(board="arduino_uno", top_clearance=6,
                          extras=[{"face": "front", "shape": "circle", "diameter": 12, "along": 34, "z": 6}])

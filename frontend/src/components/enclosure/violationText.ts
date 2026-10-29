@@ -14,6 +14,13 @@ export function violationText(v: EnclosureViolation, t: TFunction): string {
   if (typeof p.side === 'string') p.side = t(`enclosure.face.${p.side}`, p.side);
   if (typeof p.part === 'string') p.part = t(`enclosure.part.${p.part}`, p.part);
   if (typeof p.what === 'string') p.what = t(`enclosure.thick.${p.what}`, p.what);
+  if (typeof p.shift === 'number' && typeof v.params?.side === 'string') {
+    // along X on the front and back walls, along Y on the left and right ones
+    const alongX = v.params.side === 'front' || v.params.side === 'back';
+    const dir = alongX ? (p.shift > 0 ? 'right' : 'left') : p.shift > 0 ? 'back' : 'front';
+    p.dir = t(`enclosure.shiftDir.${dir}`, dir);
+    p.shift = Math.abs(p.shift);
+  }
   if (typeof p.what_kind === 'string') {
     p.what = t(`enclosure.obstacle.${p.what_kind}`, { name: p.what_name, defaultValue: `${p.what_kind} ${p.what_name ?? ''}`.trim() });
   }

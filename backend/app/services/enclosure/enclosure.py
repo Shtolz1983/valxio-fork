@@ -28,6 +28,7 @@ LID_FIT = 0.2  # gap between lid lip and inner wall
 SNAP_BUMP_R = 0.6
 SNAP_GROOVE_R = 0.8
 KEEPOUT_GAP = 0.5  # clearance kept around board and connectors when placing posts
+EXTRA_CORNER_MARGIN = 1.5  # a side opening the case grows for keeps this far from the inner corner
 BATTERY_FIT = 0.5  # air around a battery in its pocket
 BATTERY_RIB = 1.6  # pocket wall thickness
 BATTERY_RIB_MAX = 10.0  # pocket walls rise at most this high above the floor
@@ -218,7 +219,7 @@ def make_layout(spec: EnclosureSpec, board: Board | None = None) -> Layout:
 
     def side_clearance(side: str) -> float:
         overhangs = [c.overhang for c in conns if c.side == side]
-        return max([spec.clearance] + [o + CONNECTOR_GAP for o in overhangs])
+        return max([spec.side_clearance.get(side, spec.clearance)] + [o + CONNECTOR_GAP for o in overhangs])
 
     cl = {s: side_clearance(s) for s in ("left", "right", "front", "back")}
     bottom = spec.bottom_clearance if spec.bottom_clearance is not None else board.bottom_clearance
@@ -254,10 +255,6 @@ def make_layout(spec: EnclosureSpec, board: Board | None = None) -> Layout:
                 hang = m.module.top_height + m.module.pcb_thickness + m.module.bottom_clearance
                 under = [top for rect, top in below if _rects_overlap(rect, m.rect())]
                 z = max(z, max(under, default=floor_top) + spec.top_clearance + hang)
-            for m in lid_modules:
-                m.top = z
-                m.pcb_top = z - m.module.top_height
-                m.bottom = m.pcb_top - m.module.pcb_thickness
         return battery, modules, lid_modules, x0, x1, y1, z
 
     if spec.battery and (spec.modules or spec.lid_modules):
@@ -273,6 +270,11 @@ def make_layout(spec: EnclosureSpec, board: Board | None = None) -> Layout:
         battery, modules, lid_modules, x0, x1, y1, z_top = min(arranged, key=lambda a: (a[4] - a[3]) * (a[5] - y0))
     else:
         battery, modules, lid_modules, x0, x1, y1, z_top = arrange(None)
+    x0, x1, y0, y1, z_top = _grow_for_extras(spec, windowed, x0, x1, y0, y1, z_top, pcb_top)
+    for m in lid_modules:  # the displays hang from the lid's final height
+        m.top = z_top
+        m.pcb_top = z_top - m.module.top_height
+        m.bottom = m.pcb_top - m.module.pcb_thickness
 
     layout = Layout(
         board=board,
@@ -534,6 +536,46 @@ def _connector_openings(layout: Layout) -> list[Opening]:
     ]
 
 
+def _side_extra_halves(e: ExtraCutout) -> tuple[float, float]:
+    """Half the size of a side opening's bounding rectangle: along the wall, and in height."""
+    if e.shape == "circle":
+        return e.diameter / 2, e.diameter / 2
+    if e.shape == "rect":
+        return e.width / 2, e.height / 2
+    return (e.slot_count - 1) * e.slot_pitch / 2 + e.width / 2, e.height / 2
+
+
+def _grow_for_extras(
+    spec: EnclosureSpec, windowed: list[ResolvedConnector], x0: float, x1: float, y0: float, y1: float,
+    z_top: float, pcb_top: float,
+) -> tuple[float, float, float, float, float]:
+    """Grow the cavity so every side opening fits its wall: along the wall, towards sides without connector windows
+    (moving such a wall would take the connector away from its window), and upwards for a tall opening.
+
+    An opening that runs past a wall with a connector window is left to the opening check, which says how far to
+    move it.
+    """
+    blocked = {c.side for c in windowed}
+    g = EXTRA_CORNER_MARGIN
+    for e in spec.extras:
+        if e.face in ("top", "bottom"):
+            continue
+        half_a, half_z = _side_extra_halves(e)
+        a0, a1 = e.along - half_a, e.along + half_a
+        if e.face in ("front", "back"):  # along X
+            if a0 < x0 + g and "left" not in blocked:
+                x0 = a0 - g
+            if a1 > x1 - g and "right" not in blocked:
+                x1 = a1 + g
+        else:  # along Y
+            if a0 < y0 + g and "front" not in blocked:
+                y0 = a0 - g
+            if a1 > y1 - g and "back" not in blocked:
+                y1 = a1 + g
+        z_top = max(z_top, pcb_top + e.z + half_z + LIP_HEIGHT + 0.01)  # under the lid's lip
+    return x0, x1, y0, y1, z_top
+
+
 def _extra_side_openings(layout: Layout) -> list[Opening]:
     """Bounding rectangles of side extras (circles included) so checks can treat them like windows."""
     out = []
@@ -541,13 +583,7 @@ def _extra_side_openings(layout: Layout) -> list[Opening]:
         if e.face in ("top", "bottom"):
             continue
         zc = layout.pcb_top + e.z
-        if e.shape == "circle":
-            half_a = half_z = e.diameter / 2
-        elif e.shape == "rect":
-            half_a, half_z = e.width / 2, e.height / 2
-        else:
-            half_a = (e.slot_count - 1) * e.slot_pitch / 2 + e.width / 2
-            half_z = e.height / 2
+        half_a, half_z = _side_extra_halves(e)
         out.append(Opening(e.name or f"{e.shape}@{e.face}", e.face, e.along - half_a, e.along + half_a, zc - half_z, zc + half_z))
     return out
 

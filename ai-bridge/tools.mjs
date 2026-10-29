@@ -212,7 +212,11 @@ export const TOOLS = [
       wall: z.number().optional().describe('Side wall thickness, default 2.'),
       floor: z.number().optional().describe('Floor thickness, default 2.'),
       lid_thickness: z.number().optional().describe('Default 2.'),
-      clearance: z.number().optional().describe('Gap between the PCB edge and the inner wall, default 1.'),
+      clearance: z.number().optional().describe('Gap between the PCB edge and the inner wall, default 1. Never raise it to make a wall longer: that moves the board off every wall and its connectors away from their windows.'),
+      side_clearance: z
+        .object({ left: z.number().optional(), right: z.number().optional(), front: z.number().optional(), back: z.number().optional() })
+        .optional()
+        .describe('The gap on one side only, e.g. {"right": 40} for room beside the board; clearance on the others. A side with a connector still keeps the connector at its window.'),
       bottom_clearance: z.number().optional().describe('Space under the PCB; default from the board data.'),
       top_clearance: z.number().optional().describe('Gap between the tallest component and the lid, default 2.5. Raise it for parts plugged into headers.'),
       corner_radius: z.number().optional().describe('Default 3.'),

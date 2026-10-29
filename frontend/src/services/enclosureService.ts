@@ -14,9 +14,14 @@ export type EnclosureSpec = {
   battery_side?: 'left' | 'right';
   battery_hatch?: boolean;
   top_height?: number | null;
+  clearance?: number;
+  /** The gap between the board and one wall, where it differs from `clearance`. */
+  side_clearance?: Partial<Record<EnclosureSide, number>>;
   modules?: EnclosureModuleSpec[];
   lid_modules?: EnclosureLidModuleSpec[];
 } & Record<string, unknown>;
+
+export type EnclosureSide = 'left' | 'right' | 'front' | 'back';
 
 /** A display hung under the lid behind a window (backend LidModule). */
 export interface EnclosureLidModuleSpec {
@@ -140,6 +145,8 @@ export interface EnclosureBuild {
     battery_side: 'left' | 'right';
     battery_hatch: boolean;
     top_height: number | null;
+    clearance: number;
+    side_clearance: Partial<Record<EnclosureSide, number>>;
     modules: EnclosureModuleSpec[];
     lid_modules: EnclosureLidModuleSpec[];
   };
