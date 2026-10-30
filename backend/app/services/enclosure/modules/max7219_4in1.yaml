@@ -1,0 +1,16 @@
+id: max7219_4in1
+name: "MAX7219 4-in-1 LED matrix module (FC-16, 32x8 dots)"
+name_ru: "Светодиодная матрица 4 в 1 MAX7219 (FC-16, 32×8 точек)"
+part_types: []
+source: "Vendor listings (Robu, Probots, Makerlab): PCB 128 x 32 mm (one lists 132), 14 mm thick in all; not measured."
+verified: false
+notes: "Four 8x8 matrices flush with the PCB; its holes are under them, so it does not hang under the lid. Stands against a side wall (wall_modules); 5-pin headers at both ends, plugs pointing back."
+size: [128.0, 32.0]
+pcb_thickness: 1.6
+top_height: 7.0
+bottom_clearance: 12.0
+mount: end_supports
+support_depth: 1.5
+window:
+  center: [64.0, 16.0]
+  size: [126.0, 30.0]

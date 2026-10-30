@@ -294,6 +294,12 @@
   gap: 6px;
   align-items: center;
 }
+.enc-wall-module select {
+  max-width: 100%;
+  min-width: 0;
+  text-overflow: ellipsis;
+}
+.enc-wall-module select,
 .enc-add-opening select {
   padding: 4px 6px;
   background: var(--wb-4);

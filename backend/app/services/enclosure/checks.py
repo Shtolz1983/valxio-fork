@@ -81,10 +81,11 @@ def check_collisions(enc: Enclosure) -> list[Violation]:
 def check_openings(enc: Enclosure) -> list[Violation]:
     lay, spec = enc.layout, enc.layout.spec
     lip_bottom = lay.z_top - LIP_HEIGHT
+    displays = {m.name for m in lay.wall_modules}  # check_wall_modules places them, cradle included
     out = []
     for o in enc.openings:
         lo, hi = lay.side_range(o.side)
-        if o.along0 < lo or o.along1 > hi:
+        if o.name not in displays and (o.along0 < lo or o.along1 > hi):
             # the case grows by itself where it can (enclosure._grow_for_extras): what is left is a wall with a
             # connector window in the way, so say how far along the wall the opening has to move
             length = o.along1 - o.along0
@@ -311,9 +312,41 @@ def check_lid_modules(enc: Enclosure) -> list[Violation]:
     return out
 
 
+def check_wall_modules(enc: Enclosure) -> list[Violation]:
+    """Displays on the side walls: inside the wall with their cradles, above the floor, off each other, and not
+    standing in front of another opening."""
+    lay = enc.layout
+    out = []
+    for i, m in enumerate(lay.wall_modules):
+        lo, hi = lay.side_range(m.side)
+        s0, s1 = m.span()
+        if s0 < lo - 1e-6 or s1 > hi + 1e-6:
+            shift = lo - s0 if s0 < lo else hi - s1
+            out.append(_v(
+                "error", "wall module", "wall_display_corner",
+                f"display {m.name} on the {m.side} wall runs past the inner corner with its cradle; move it {shift:+.1f} mm along the wall",
+                name=m.name, side=m.side, shift=shift,
+            ))
+        if m.z0 < lay.floor_top + 0.5:
+            out.append(_v("error", "wall module", "wall_display_low",
+                          f"display {m.name} on the {m.side} wall reaches the floor (bottom {m.z0:.1f} < {lay.floor_top + 0.5:.1f}); raise its z",
+                          name=m.name, side=m.side))
+        for other in lay.wall_modules[:i]:
+            o0, o1 = other.span()
+            if other.side == m.side and s0 < o1 and o0 < s1 and m.z0 < other.z1 and other.z0 < m.z1:
+                out.append(_v("error", "wall module", "wall_display_overlap", f"display {m.name} overlaps display {other.name}",
+                              name=m.name, what_kind="display", what_name=other.name))
+        for o in enc.openings:
+            if o.side == m.side and o.name != m.name and o.along0 < m.a1 and m.a0 < o.along1 and o.z0 < m.z1 and m.z0 < o.z1:
+                out.append(_v("error", "wall module", "wall_display_covers",
+                              f"display {m.name} stands in front of {o.name} on the {m.side} wall; move one of them",
+                              name=m.name, other=o.name, side=m.side))
+    return out
+
+
 ALL_CHECKS = (
     check_thickness, check_collisions, check_openings, check_top_extras, check_supports, check_modules, check_lid_modules,
-    check_hatch, check_bed, check_overhangs,
+    check_wall_modules, check_hatch, check_bed, check_overhangs,
 )
 
 

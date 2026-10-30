@@ -204,6 +204,27 @@ describe('enclosure openings', () => {
     expect(onApply.mock.calls[0][0].lid_modules).toEqual([{ name: 'lcd1', type: 'lcd1602' }]);
   });
 
+  it('a display stands against a wall without connectors, on the wall, type and spot chosen', () => {
+    const onApply = vi.fn();
+    act(() => root.render(createElement(EnclosureEditor, { build: BUILD, catalog: CATALOG, busy: false, onApply })));
+    expect(host.textContent).toContain('No displays on the walls.');
+    act(() => choose(field('Stand against a wall'), 'lcd1'));
+    // the display is taken: it is offered neither under the lid nor on a wall again
+    expect(host.textContent).not.toContain('Hang under the lid');
+    const row = host.querySelector<HTMLElement>('.enc-wall-module')!;
+    const [face, kind] = [...row.querySelectorAll('select')];
+    expect(face.value).toBe('front');
+    expect([...face.options].filter((o) => o.disabled).map((o) => o.value)).toEqual(['left']); // the USB window is there
+    expect([...kind.options].map((o) => o.value)).toEqual(['lcd1602']);
+    act(() => choose(face, 'back'));
+    const [along, z] = [...row.querySelectorAll('input')];
+    act(() => type(along, '30'));
+    expect(z.value).toBe(''); // halfway up, the generator's choice
+    expect(row.textContent).toContain('window 66 × 17 mm · placed after a rebuild');
+    act(() => button('Rebuild')!.click());
+    expect(onApply.mock.calls[0][0].wall_modules).toEqual([{ name: 'lcd1', type: 'lcd1602', face: 'back', along: 30 }]);
+  });
+
   it('moves an opening and adds a new one in the middle of the chosen face', () => {
     const onApply = vi.fn();
     act(() => root.render(createElement(EnclosureEditor, { build: BUILD, catalog: CATALOG, busy: false, onApply })));

@@ -68,8 +68,6 @@ class Board(BaseModel):
     def _check(self) -> Board:
         if self.mount == "standoffs" and not (self.holes and self.holes.positions):
             raise ValueError("mount=standoffs requires mounting holes")
-        if self.window and not (self.holes and self.holes.positions):
-            raise ValueError("a module with a window hangs under the lid on its holes: it needs them")
         names = [c.name for c in self.connectors]
         if len(names) != len(set(names)):
             raise ValueError("connector names must be unique")
@@ -144,6 +142,19 @@ class LidModule(BaseModel):
     position: tuple[float, float] | None = Field(None, description="PCB lower-left corner in board coordinates; automatic when omitted")
 
 
+class WallModule(BaseModel):
+    """A display standing against the inside of a side wall, its visible area behind a window cut in the wall.
+
+    It slides down into a cradle (a column with a hook at each end of its PCB) from above, the lid open.
+    """
+
+    name: str = Field(description="The part id on the canvas; labels the render")
+    type: str = Field(description="Module table id of a module with a window, e.g. max7219_4in1")
+    face: Side = Field(description="The wall it stands against")
+    along: float | None = Field(None, description="Window centre along the wall (Y on left/right, X on front/back); middle of the wall when omitted")
+    z: float | None = Field(None, description="Window centre height above the PCB top; middle of the wall's height when omitted")
+
+
 class EnclosureSpec(BaseModel):
     board: str = Field(description="Board id from list_boards")
     wall: float = Field(2.0, description="Side wall thickness")
@@ -164,6 +175,7 @@ class EnclosureSpec(BaseModel):
     battery_hatch: bool = Field(False, description="Change the battery from below: an opening in the floor and a screwed-on hatch")
     modules: list[InsideModule] = Field([], description="Modules inside the case, placed beside the board")
     lid_modules: list[LidModule] = Field([], description="Displays hung under the lid behind a window")
+    wall_modules: list[WallModule] = Field([], description="Displays standing against a side wall behind a window")
     min_wall: float = Field(1.2, description="Thinnest printable wall (3 perimeters of a 0.4 nozzle)")
     bed: tuple[float, float, float] = Field((220.0, 220.0, 250.0), description="Printer build volume X, Y, Z")
 

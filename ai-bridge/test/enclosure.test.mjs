@@ -56,14 +56,17 @@ const BUILT = {
 test('boards come back with what the model needs to place openings', async () => {
   const battery = { id: '2xAA', length: 58, width: 32, height: 16, description: '2 x AA holder' };
   const module = { id: 'ds3231', name: 'ZS-042 DS3231 RTC module', part_types: ['ds3231'], size: [38, 22], top_height: 15, holes: null, window: null };
-  const display = { id: 'lcd1602', name: 'LCD1602', part_types: ['lcd1602'], size: [80, 36], top_height: 7.5, window: { center: [40, 18], size: [66, 17] } };
-  const backend = await fakeBackend(() => [200, { boards: [BOARD], batteries: [battery], modules: [module, display] }]);
+  const display = { id: 'lcd1602', name: 'LCD1602', part_types: ['lcd1602'], size: [80, 36], top_height: 7.5, mount: 'standoffs', window: { center: [40, 18], size: [66, 17] } };
+  const matrix = { id: 'max7219_4in1', name: 'MAX7219 4-in-1', part_types: [], size: [128, 32], top_height: 7, mount: 'end_supports', window: { center: [64, 16], size: [126, 30] } };
+  const backend = await fakeBackend(() => [200, { boards: [BOARD], batteries: [battery], modules: [module, display, matrix] }]);
   try {
     const { boards: [b], batteries, modules } = await listEnclosureBoards(backend.url);
     assert.deepEqual(batteries, [battery]);
     assert.deepEqual(modules, [
       { id: 'ds3231', name: 'ZS-042 DS3231 RTC module', partTypes: ['ds3231'], size: [38, 22], height: 15 },
-      { id: 'lcd1602', name: 'LCD1602', partTypes: ['lcd1602'], size: [80, 36], height: 7.5, underLid: true, visibleArea: [66, 17] },
+      { id: 'lcd1602', name: 'LCD1602', partTypes: ['lcd1602'], size: [80, 36], height: 7.5, underLid: true, onWall: true, visibleArea: [66, 17] },
+      // its holes are under the matrices: on a wall only
+      { id: 'max7219_4in1', name: 'MAX7219 4-in-1', partTypes: [], size: [128, 32], height: 7, underLid: false, onWall: true, visibleArea: [126, 30] },
     ]);
     assert.equal(backend.seen[0].url, '/api/enclosure/boards');
     assert.deepEqual(b.canvasKinds, ['arduino-uno']);
@@ -122,10 +125,12 @@ test('the build_enclosure schema takes a full spec and refuses a bad face', () =
     ],
     modules: [{ name: 'rtc1', type: 'ds3231' }, { name: 'mp3', size: [21, 21], height: 8, position: [5, 60] }],
     lid_modules: [{ name: 'lcd1', type: 'lcd1602' }],
+    wall_modules: [{ name: 'matrix1', type: 'max7219_4in1', face: 'front', along: 60 }],
     bed: [220, 220, 250],
   };
   assert.ok(tool.check(spec).success);
   assert.ok(!tool.check({ board: 'arduino_uno', extras: [{ face: 'side' }] }).success);
+  assert.ok(!tool.check({ board: 'arduino_uno', wall_modules: [{ name: 'm', type: 'max7219_4in1', face: 'top' }] }).success);
 });
 
 test('every bridge tool is implemented in server.mjs', () => {

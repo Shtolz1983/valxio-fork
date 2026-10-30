@@ -26,6 +26,7 @@ import {
   type EnclosureModuleSpec,
   type EnclosureSide,
   type EnclosureSpec,
+  type EnclosureWallModuleSpec,
 } from '../../services/enclosureService';
 import { useSimulatorStore } from '../../store/useSimulatorStore';
 
@@ -73,6 +74,7 @@ type Draft = Pick<
   | 'battery_hatch'
   | 'modules'
   | 'lid_modules'
+  | 'wall_modules'
   | 'extras'
   | 'skip_connectors'
 >;
@@ -88,6 +90,7 @@ const draftOf = (spec: EnclosureBuild['spec']): Draft => ({
   battery_hatch: spec.battery_hatch,
   modules: spec.modules,
   lid_modules: spec.lid_modules,
+  wall_modules: spec.wall_modules ?? [],
   extras: spec.extras,
   skip_connectors: [...spec.skip_connectors].sort(),
 });
@@ -110,6 +113,10 @@ export function EnclosureEditor({ build, catalog, busy, onApply }: Props) {
   const setModules = (update: (list: EnclosureModuleSpec[]) => EnclosureModuleSpec[]) => setDraft((d) => ({ ...d, modules: update(d.modules) }));
   const setLidModules = (update: (list: EnclosureLidModuleSpec[]) => EnclosureLidModuleSpec[]) =>
     setDraft((d) => ({ ...d, lid_modules: update(d.lid_modules) }));
+  const setWallModules = (update: (list: EnclosureWallModuleSpec[]) => EnclosureWallModuleSpec[]) =>
+    setDraft((d) => ({ ...d, wall_modules: update(d.wall_modules) }));
+  const patchWallModule = (name: string, patch: Partial<EnclosureWallModuleSpec>) =>
+    setWallModules((list) => list.map((x) => (x.name === name ? { ...x, ...patch } : x)));
   const setSkip = (update: (names: string[]) => string[]) => setDraft((d) => ({ ...d, skip_connectors: update(d.skip_connectors).sort() }));
   // Connector windows belong to the built board; another board brings its own after a rebuild.
   const sameBoard = draft.board === build.spec.board;
@@ -142,8 +149,8 @@ export function EnclosureEditor({ build, catalog, busy, onApply }: Props) {
   };
 
   // Parts of the project with a module table entry, not yet in the case: displays (a window) go under
-  // the lid, the rest inside.
-  const used = new Set([...draft.modules, ...draft.lid_modules].map((m) => m.name));
+  // the lid or on a wall, the rest inside.
+  const used = new Set([...draft.modules, ...draft.lid_modules, ...draft.wall_modules].map((m) => m.name));
   const candidates = (underLid: boolean): Array<{ part: string; module: EnclosureModule }> =>
     catalog
       ? components.flatMap((c) => {
@@ -153,6 +160,10 @@ export function EnclosureEditor({ build, catalog, busy, onApply }: Props) {
       : [];
   const addable = candidates(false);
   const addableUnderLid = candidates(true);
+  const displayModules = catalog?.modules.filter((m) => m.window) ?? [];
+  // A wall with connector windows cannot move out for a display; a new one goes on the first wall without.
+  const connectorWalls = new Set(sameBoard ? build.connectors.filter((c) => !skip.includes(c.name)).map((c) => c.side) : []);
+  const freeWall = (['front', 'back', 'right', 'left'] as const).find((s) => !connectorWalls.has(s)) ?? 'front';
   const placedOf = (name: string) => (draft.board === build.spec.board ? build.modules.find((m) => m.name === name) : undefined);
 
   const posLabel: Record<PosKey, string> = {
@@ -368,6 +379,99 @@ export function EnclosureEditor({ build, catalog, busy, onApply }: Props) {
             onChange={(e) => {
               const pick = addableUnderLid.find((a) => a.part === e.target.value);
               if (pick) setLidModules((list) => [...list, { name: pick.part, type: pick.module.id }]);
+            }}
+          >
+            <option value="">{t('enclosure.chooseDisplay', 'a display of the project…')}</option>
+            {addableUnderLid.map((a) => (
+              <option key={a.part} value={a.part}>
+                {partLabel(a.part)}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+
+      <div className="enc-section">{t('enclosure.onWalls', 'On the walls')}</div>
+      {draft.wall_modules.map((m) => {
+        const table = catalog?.modules.find((x) => x.id === m.type);
+        const placed = draft.board === build.spec.board ? build.wall_modules?.find((x) => x.name === m.name) : undefined;
+        const num = (v: string) => (v === '' ? null : Number(v));
+        return (
+          <div key={m.name} className="enc-opening enc-wall-module">
+            <span className="enc-opening-head">
+              <strong>{partLabel(m.name)}</strong>
+              <button
+                className="enc-icon enc-opening-remove"
+                onClick={() => setWallModules((list) => list.filter((x) => x.name !== m.name))}
+                title={t('enclosure.removeModule', 'Take it out of the case')}
+              >
+                <Trash2 size={13} />
+              </button>
+            </span>
+            <span className="enc-sizes">
+              <select value={m.face} onChange={(e) => patchWallModule(m.name, { face: e.target.value as EnclosureSide })}>
+                {SIDES.map((s) => (
+                  <option key={s} value={s} disabled={connectorWalls.has(s)}>
+                    {faceLabel(s)}
+                  </option>
+                ))}
+              </select>
+              <select value={m.type} onChange={(e) => patchWallModule(m.name, { type: e.target.value })}>
+                {displayModules.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {localName(d, i18n.language)}
+                  </option>
+                ))}
+              </select>
+            </span>
+            <span className="enc-sizes">
+              <label className="enc-size">
+                {posLabel.along}
+                <input
+                  type="number"
+                  step={1}
+                  value={m.along ?? ''}
+                  placeholder={placed ? fmt(placed.window.along) : ''}
+                  onChange={(e) => patchWallModule(m.name, { along: num(e.target.value) })}
+                />
+              </label>
+              <label className="enc-size">
+                {posLabel.z}
+                <input
+                  type="number"
+                  step={1}
+                  value={m.z ?? ''}
+                  placeholder={placed ? fmt(placed.window.z) : ''}
+                  onChange={(e) => patchWallModule(m.name, { z: num(e.target.value) })}
+                />
+              </label>
+              {t('enclosure.mm', 'mm')}
+            </span>
+            <span className="enc-opening-sub">
+              {[
+                table?.window &&
+                  t('enclosure.windowSize', 'window {{w}} × {{h}} mm', { w: fmt(table.window.size[0]), h: fmt(table.window.size[1]) }),
+                placed
+                  ? m.along == null || m.z == null
+                    ? t('enclosure.auto', 'placed by the generator')
+                    : null
+                  : t('enclosure.placedAfterRebuild', 'placed after a rebuild'),
+              ]
+                .filter(Boolean)
+                .join(' · ')}
+            </span>
+          </div>
+        );
+      })}
+      {draft.wall_modules.length === 0 && <p className="enc-muted">{t('enclosure.noWallModules', 'No displays on the walls.')}</p>}
+      {addableUnderLid.length > 0 && (
+        <label className="enc-field">
+          <span>{t('enclosure.addWallModule', 'Stand against a wall')}</span>
+          <select
+            value=""
+            onChange={(e) => {
+              const pick = addableUnderLid.find((a) => a.part === e.target.value);
+              if (pick) setWallModules((list) => [...list, { name: pick.part, type: pick.module.id, face: freeWall }]);
             }}
           >
             <option value="">{t('enclosure.chooseDisplay', 'a display of the project…')}</option>

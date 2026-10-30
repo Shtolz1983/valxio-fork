@@ -267,6 +267,18 @@ export const TOOLS = [
         )
         .optional()
         .describe('Displays hung under the lid on posts, with a window cut over their visible area; the case rises to clear the parts below.'),
+      wall_modules: z
+        .array(
+          z.object({
+            name: z.string().describe('The part id on the canvas, e.g. "matrix1".'),
+            type: z.string().describe('Module id from list_enclosure_boards marked onWall, e.g. "max7219_4in1".'),
+            face: z.enum(['left', 'right', 'front', 'back']).describe('The wall it stands against; never one with connector windows.'),
+            along: z.number().optional().describe('Window centre along the wall (Y on left/right, X on front/back); omit for the middle of the wall.'),
+            z: z.number().optional().describe('Window centre height above the PCB top; omit for halfway up the wall.'),
+          }),
+        )
+        .optional()
+        .describe('Displays standing against the inside of a side wall, with a window cut through the wall; the wall moves out and grows to hold them.'),
       bed: z.array(z.number()).length(3).optional().describe('Printer build volume X, Y, Z in mm, default [220, 220, 250].'),
     },
   },

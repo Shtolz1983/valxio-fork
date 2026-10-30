@@ -30,6 +30,11 @@ def errors(enc):
     return [v for v in run_checks(enc) if v.severity == "error"]
 
 
+def all_but_bridges(enc):
+    """A window cut through a side wall prints its top edge as a bridge: that warning is expected."""
+    return [v for v in run_checks(enc) if v.code != "overhang_bridge"]
+
+
 @pytest.mark.parametrize("board", BOARDS)
 @pytest.mark.parametrize("lid", ["screw", "snap"])
 def test_default_enclosure_passes_all_checks(board, lid):
@@ -216,10 +221,11 @@ def test_top_height_override_raises_the_lid():
 
 
 DISPLAYS = sorted(k for k, m in load_modules().items() if m.window)
+LID_DISPLAYS = sorted(k for k, m in load_modules().items() if m.window and m.holes)  # screwed to posts under the lid
 INSIDE_MODULES = sorted(k for k, m in load_modules().items() if not m.window)
 
 
-@pytest.mark.parametrize("display", DISPLAYS)
+@pytest.mark.parametrize("display", LID_DISPLAYS)
 def test_each_display_hangs_under_the_lid_behind_its_window(display):
     enc = build(EnclosureSpec(board="arduino_uno", lid_modules=[{"name": "d1", "type": display}]))
     assert run_checks(enc) == []
@@ -254,6 +260,66 @@ def test_two_displays_side_by_side_and_bad_ones():
     spec = EnclosureSpec(board="arduino_uno", lid_modules=[{"name": "oled", "type": "oled_096", "position": (20, 15)}])
     assert run_checks(build(spec)) == []
     assert any("hangs into the board" in v.message for v in errors(build(spec.model_copy(update={"top_clearance": -3}))))
+
+
+@pytest.mark.parametrize("display", DISPLAYS)
+def test_each_display_stands_against_a_side_wall_behind_its_window(display):
+    plain = make_layout(EnclosureSpec(board="arduino_uno"))
+    enc = build(EnclosureSpec(board="arduino_uno", wall_modules=[{"name": "d1", "type": display, "face": "front"}]))
+    assert all_but_bridges(enc) == []
+    lay = enc.layout
+    [m] = lay.wall_modules
+    assert lay.y0 == pytest.approx(plain.y0 - m.depth - 2.0)  # the front wall moved out by the display's depth
+    # the connectors on the left stay at their windows (no screw posts: they move the side walls out for themselves)
+    assert lay.x0 == pytest.approx(make_layout(EnclosureSpec(board="arduino_uno", lid="snap")).x0)
+    assert lay.z_top - 2.0 >= m.z1 and m.z0 > lay.floor_top
+    # the window is open: a point in the wall at its middle is not base material, a point in the wall beside it is
+    wa0, wa1, wz0, wz1 = m.window()
+    y_wall = lay.y0 - lay.spec.wall / 2
+    assert not enc.base.is_inside(Vector((wa0 + wa1) / 2, y_wall, (wz0 + wz1) / 2))
+    assert enc.base.is_inside(Vector(m.a0 - 2, y_wall, (wz0 + wz1) / 2))
+    # the cradle's columns stand beside both ends of the PCB
+    zc = (m.z0 + m.z1) / 2
+    assert enc.base.is_inside(Vector(m.a0 - 1.5, lay.y0 + 1, zc)) and enc.base.is_inside(Vector(m.a1 + 1.5, lay.y0 + 1, zc))
+    assert "module:d1" in enc.board_parts
+
+
+def test_long_matrix_on_the_front_of_a_nano_and_its_mistakes():
+    """The 4-in-1 matrix (128 mm) on a Nano: the case grows to the right, the USB keeps its window on the left."""
+    matrix = {"name": "matrix", "type": "max7219_4in1", "face": "front"}
+    enc = build(EnclosureSpec(board="arduino_nano", wall_modules=[matrix]))
+    assert all_but_bridges(enc) == []
+    lay, [m] = enc.layout, enc.layout.wall_modules
+    assert lay.x0 == make_layout(EnclosureSpec(board="arduino_nano")).x0
+    assert lay.x1 >= m.a1 + 3.3 and m.a0 - 3.3 >= lay.x0
+    # its window centre where asked, 20 mm above the PCB top
+    enc = build(EnclosureSpec(board="arduino_nano", wall_modules=[{**matrix, "along": 80, "z": 20}]))
+    wa0, wa1, wz0, wz1 = enc.layout.wall_modules[0].window()
+    assert ((wa0 + wa1) / 2, (wz0 + wz1) / 2 - enc.layout.pcb_top) == pytest.approx((80, 20))
+    assert errors(enc) == []
+    # pushed into the left corner, where the USB holds the wall; and down through the floor
+    codes = {v.code: v for v in errors(build(EnclosureSpec(board="arduino_nano", wall_modules=[{**matrix, "along": 30, "z": -10}])))}
+    assert codes["wall_display_corner"].params["shift"] > 0 and "wall_display_low" in codes
+    # a cable hole behind the display
+    hole = {"name": "cable", "face": "front", "shape": "circle", "diameter": 6, "along": 70, "z": 5}
+    codes = {v.code for v in errors(build(EnclosureSpec(board="arduino_nano", wall_modules=[matrix], extras=[hole])))}
+    assert "wall_display_covers" in codes
+    # not on the wall with the USB window, and not under the lid: its holes are under the matrices
+    with pytest.raises(ValueError, match="usb"):
+        build(EnclosureSpec(board="arduino_nano", wall_modules=[{**matrix, "face": "left"}]))
+    with pytest.raises(ValueError, match="no mounting holes"):
+        build(EnclosureSpec(board="arduino_nano", lid_modules=[{"name": "matrix", "type": "max7219_4in1"}]))
+
+
+def test_two_displays_on_one_wall_stand_side_by_side():
+    enc = build(EnclosureSpec(board="arduino_uno", wall_modules=[
+        {"name": "oled", "type": "oled_096", "face": "back"}, {"name": "seg", "type": "tm1637", "face": "back"},
+    ]))
+    assert all_but_bridges(enc) == []
+    oled, seg = enc.layout.wall_modules
+    assert oled.span()[1] < seg.span()[0] or seg.span()[1] < oled.span()[0]
+    pinned = [{"name": "a", "type": "oled_096", "face": "back", "along": 30}, {"name": "b", "type": "oled_096", "face": "back", "along": 40}]
+    assert "wall_display_overlap" in {v.code for v in errors(build(EnclosureSpec(board="arduino_uno", wall_modules=pinned)))}
 
 
 @pytest.mark.parametrize("module", INSIDE_MODULES)

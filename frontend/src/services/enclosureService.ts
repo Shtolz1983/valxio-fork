@@ -19,6 +19,7 @@ export type EnclosureSpec = {
   side_clearance?: Partial<Record<EnclosureSide, number>>;
   modules?: EnclosureModuleSpec[];
   lid_modules?: EnclosureLidModuleSpec[];
+  wall_modules?: EnclosureWallModuleSpec[];
 } & Record<string, unknown>;
 
 export type EnclosureSide = 'left' | 'right' | 'front' | 'back';
@@ -30,6 +31,18 @@ export interface EnclosureLidModuleSpec {
   /** A module table entry with a `window`. */
   type: string;
   position?: [number, number] | null;
+}
+
+/** A display against the inside of a side wall behind a window (backend WallModule). */
+export interface EnclosureWallModuleSpec {
+  /** The part id on the canvas. */
+  name: string;
+  /** A module table entry with a `window`. */
+  type: string;
+  face: EnclosureSide;
+  /** The window's centre along the wall and above the PCB top; the generator's choice when left out. */
+  along?: number | null;
+  z?: number | null;
 }
 
 /** A module inside the case (backend InsideModule): from the module table by `type`, or by its size. */
@@ -52,7 +65,7 @@ export interface EnclosureModule {
   part_types: string[];
   size: [number, number];
   top_height: number;
-  /** A display's visible area: such a module hangs under the lid, not inside. */
+  /** A display's visible area: such a module hangs under the lid or stands against a wall, not inside. */
   window?: { center: [number, number]; size: [number, number] } | null;
 }
 
@@ -133,6 +146,15 @@ export interface EnclosureBuild {
   modules: Array<{ name: string; type: string; x0: number; y0: number; x1: number; y1: number; height: number; rotated: boolean }>;
   /** Where each display hangs, and its window in the lid (x0, y0, x1, y1). */
   lid_modules: Array<{ name: string; type: string; x0: number; y0: number; x1: number; y1: number; window: [number, number, number, number] }>;
+  /** Where each wall display stands: its PCB along the wall and above the PCB top, and its window's centre and size. */
+  wall_modules: Array<{
+    name: string;
+    type: string;
+    face: EnclosureSide;
+    along: [number, number];
+    z: [number, number];
+    window: { along: number; z: number; width: number; height: number };
+  }>;
   /** Where an opening can go: side walls by `along` and `z` (above the PCB top), lid and bottom by x / y. */
   faces: Record<'left' | 'right' | 'front' | 'back', { along: [number, number]; z: [number, number] }> &
     Record<'top' | 'bottom', { x: [number, number]; y: [number, number] }>;
@@ -149,6 +171,7 @@ export interface EnclosureBuild {
     side_clearance: Partial<Record<EnclosureSide, number>>;
     modules: EnclosureModuleSpec[];
     lid_modules: EnclosureLidModuleSpec[];
+    wall_modules: EnclosureWallModuleSpec[];
   };
   /** Binary STL, base64, assembly position. */
   base_stl: string;

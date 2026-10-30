@@ -703,20 +703,20 @@
     "boardAndPower": "Board and power",
     "board": "Board",
     "partsHeight": "Parts above the board",
-      "gaps": "Gap to the walls",
-      "gapsHint": "Room between the board and each wall; empty is the usual gap. A wall with a connector keeps the connector at its window.",
-      "gapSide": {
-        "left": "left",
-        "right": "right",
-        "front": "front",
-        "back": "back"
-      },
-      "shiftDir": {
-        "right": "to the right",
-        "left": "to the left",
-        "back": "towards the back",
-        "front": "towards the front"
-      },
+    "gaps": "Gap to the walls",
+    "gapsHint": "Room between the board and each wall; empty is the usual gap. A wall with a connector keeps the connector at its window.",
+    "gapSide": {
+      "left": "left",
+      "right": "right",
+      "front": "front",
+      "back": "back"
+    },
+    "shiftDir": {
+      "right": "to the right",
+      "left": "to the left",
+      "back": "towards the back",
+      "front": "towards the front"
+    },
     "battery": "Battery",
     "noBattery": "none (USB or external supply)",
     "batterySide": "Battery at the",
@@ -735,6 +735,9 @@
     "windowSize": "window {{w}} × {{h}} mm",
     "noLidModules": "No displays.",
     "addLidModule": "Hang under the lid",
+    "onWalls": "On the walls",
+    "noWallModules": "No displays on the walls.",
+    "addWallModule": "Stand against a wall",
     "chooseDisplay": "a display of the project…",
     "batteryHatch": "Hatch in the bottom to change it",
     "hatch": "hatch in the bottom",
@@ -769,6 +772,10 @@
       "collision": "{{part}} runs into {{what}} ({{volume}} mm³): raise the clearances or check the board data",
       "opening_corner": "{{name}} ({{side}}) runs past the inner corner of the case: move it {{shift}} mm {{dir}}",
       "opening_too_long": "{{name}} ({{side}}) is longer than the wall ({{length}} mm, the wall is {{wall}} mm) and the case cannot grow past a connector window: make it shorter or give that end its own gap",
+      "wall_display_corner": "Display {{name}} ({{side}}) runs past the inner corner with its holder: move it {{shift}} mm {{dir}}",
+      "wall_display_low": "Display {{name}} ({{side}}) reaches the floor: raise it",
+      "wall_display_overlap": "Display {{name}} overlaps {{what}}",
+      "wall_display_covers": "Display {{name}} stands in front of {{other}} on the {{side}}: move one of them",
       "opening_lip": "{{name}} ({{side}}) reaches the lid's lip: raise the gap above the parts",
       "opening_thin_top": "{{name}} ({{side}}) leaves less than {{min}} mm of wall above it",
       "opening_floor": "{{name}} ({{side}}) cuts into the floor",

@@ -13,7 +13,7 @@ from build123d import Box, Cylinder, Part, Pos, Rectangle, RectangleRounded, Rot
 from .batteries import CATALOG as BATTERIES
 from .connectors import ResolvedConnector, resolved_connectors
 from .registry import get_board, get_module
-from .spec import Board, EnclosureSpec, ExtraCutout, InsideModule, LidModule
+from .spec import Board, EnclosureSpec, ExtraCutout, InsideModule, LidModule, WallModule
 
 CONNECTOR_GAP = 0.5  # air between a connector face and the inner wall
 POST_D = 6.5  # lid screw post
@@ -43,6 +43,11 @@ MODULE_GAP = 2.0  # air around a module inside the case: to the board, other mod
 GENERIC_MODULE_HEIGHT = 10.0  # a module given only by its size
 LID_MODULE_INSET = LID_FIT + LIP_WIDTH + 0.5  # a display under the lid stays inside the lid's lip
 LID_POST_WALL = 1.5  # plastic around a display's screw in its lid post: M2 holes get thinner posts than STANDOFF_D
+WALL_FIT = 0.3  # play between a wall display's PCB and its cradle
+WALL_RIB_W = 3.0  # the cradle's columns beside both ends of a wall display's PCB
+WALL_HOOK = 1.2  # how far the cradle's hooks reach behind each end of the PCB
+WALL_HOOK_T = 1.6
+WALL_TOP_GAP = 0.5  # air between a wall display's top edge and the lid's lip
 PLA_DENSITY = 1.24  # g/cm3
 
 
@@ -96,6 +101,47 @@ class PlacedModule:
 
 
 @dataclass
+class PlacedWallModule:
+    """A display against the inside of a side wall: its PCB's extent along the wall (a0, a1) and in height (z0, z1).
+
+    Seen from outside, the module's own X runs left to right along the wall and its Y upwards.
+    """
+
+    name: str
+    module: Board
+    side: str
+    a0: float
+    a1: float
+    z0: float  # PCB bottom edge
+
+    @property
+    def z1(self) -> float:
+        return self.z0 + self.module.width
+
+    @property
+    def sign(self) -> int:
+        """+1 where "left to right seen from outside" runs along +X / +Y (front, right), -1 on back and left."""
+        return 1 if self.side in ("front", "right") else -1
+
+    @property
+    def depth(self) -> float:
+        """How far it reaches into the case from the wall: display, PCB, the parts behind it or the cradle's hooks."""
+        mod = self.module
+        return mod.top_height + mod.pcb_thickness + max(mod.bottom_clearance, WALL_FIT + WALL_HOOK_T)
+
+    def window(self) -> tuple[float, float, float, float]:
+        """The visible area: along the wall (a0, a1) and in height (z0, z1)."""
+        (cx, cy), (w, h) = self.module.window.center, self.module.window.size
+        ac = (self.a0 if self.sign > 0 else self.a1) + self.sign * cx
+        return ac - w / 2, ac + w / 2, self.z0 + cy - h / 2, self.z0 + cy + h / 2
+
+    def span(self) -> tuple[float, float]:
+        """Along the wall with the cradle's columns."""
+        g = WALL_FIT + WALL_RIB_W
+        return self.a0 - g, self.a1 + g
+
+
+@dataclass
 class Layout:
     board: Board
     spec: EnclosureSpec
@@ -116,6 +162,7 @@ class Layout:
     modules: list[PlacedModule] = field(default_factory=list)
     # Displays hung under the lid: `top` is the lid's underside, `bottom` their PCB underside.
     lid_modules: list[PlacedModule] = field(default_factory=list)
+    wall_modules: list[PlacedWallModule] = field(default_factory=list)
     posts: list[tuple[float, float]] = field(default_factory=list)
 
     def outer(self) -> tuple[float, float, float, float]:
@@ -270,6 +317,9 @@ def make_layout(spec: EnclosureSpec, board: Board | None = None) -> Layout:
         battery, modules, lid_modules, x0, x1, y1, z_top = min(arranged, key=lambda a: (a[4] - a[3]) * (a[5] - y0))
     else:
         battery, modules, lid_modules, x0, x1, y1, z_top = arrange(None)
+    wall_modules: list[PlacedWallModule] = []
+    if spec.wall_modules:
+        wall_modules, x0, x1, y0, y1, z_top = _place_wall_modules(spec, windowed, x0, x1, y0, y1, z_top, floor_top, pcb_top)
     x0, x1, y0, y1, z_top = _grow_for_extras(spec, windowed, x0, x1, y0, y1, z_top, pcb_top)
     for m in lid_modules:  # the displays hang from the lid's final height
         m.top = z_top
@@ -294,6 +344,7 @@ def make_layout(spec: EnclosureSpec, board: Board | None = None) -> Layout:
         battery=battery,
         modules=modules,
         lid_modules=lid_modules,
+        wall_modules=wall_modules,
     )
     if spec.lid == "screw":
         _place_posts(layout)
@@ -395,6 +446,8 @@ def _place_lid_modules(
             raise ValueError(str(e.args[0])) from None
         if not module.window:
             raise ValueError(f"module {m.type} has no display window: it cannot hang under the lid")
+        if not module.holes:
+            raise ValueError(f"module {m.type} has no mounting holes: it cannot hang under the lid; put it on a side wall (wall_modules)")
         resolved.append((m, module))
     auto = [(m, mod) for m, mod in resolved if not m.position]
     row = sum(mod.length for _, mod in auto) + MODULE_GAP * max(len(auto) - 1, 0)
@@ -423,6 +476,90 @@ def _place_lid_modules(
             cursor += module.length + MODULE_GAP
         placed.append(PlacedModule(m.name, module, px, py, px + module.length, py + module.width, False, 0.0, 0.0, 0.0))
     return placed, x0, x1, y1
+
+
+def _place_wall_modules(
+    spec: EnclosureSpec, windowed: list[ResolvedConnector], x0: float, x1: float, y0: float, y1: float, z_top: float,
+    floor_top: float, pcb_top: float,
+) -> tuple[list[PlacedWallModule], float, float, float, float, float]:
+    """Displays against the side walls. Each wall with displays moves out by their depth, so they stand beside
+    whatever is in the case, not over it; the wall grows along for them towards the ends without connector windows,
+    and the case grows taller for them. Without `along`, the displays on a wall stand in a row at its middle;
+    without `z`, at the middle of its height.
+    """
+    blocked = {c.side for c in windowed}
+    placed: list[tuple[WallModule, PlacedWallModule]] = []
+    by_side: dict[str, list[tuple[WallModule, PlacedWallModule]]] = {}
+    for m in spec.wall_modules:
+        try:
+            module = get_module(m.type)
+        except KeyError as e:
+            raise ValueError(str(e.args[0])) from None
+        if not module.window:
+            raise ValueError(f"module {m.type} has no display window: it cannot stand behind a wall window")
+        if m.face in blocked:
+            names = ", ".join(c.name for c in windowed if c.side == m.face)
+            raise ValueError(
+                f"display {m.name} on the {m.face} wall would move that wall away from the {names} window; put it on another wall"
+            )
+        placed.append((m, PlacedWallModule(m.name, module, m.face, 0.0, module.length, 0.0)))
+        by_side.setdefault(m.face, []).append(placed[-1])
+
+    for side, items in by_side.items():  # the wall moves out by the deepest display on it
+        d = max(p.depth for _, p in items) + MODULE_GAP
+        if side == "front":
+            y0 -= d
+        elif side == "back":
+            y1 += d
+        elif side == "left":
+            x0 -= d
+        else:
+            x1 += d
+
+    # along each wall; the corner screw posts keep their room
+    margin = MODULE_GAP + (POST_D if spec.lid == "screw" else 0.0)
+    g = WALL_FIT + WALL_RIB_W
+    for side in sorted(by_side, key=lambda s: s in ("left", "right")):  # front/back first: they set the X range
+        items = by_side[side]
+        lo, hi = (x0, x1) if side in ("front", "back") else (y0, y1)
+        lo_end, hi_end = ("left", "right") if side in ("front", "back") else ("front", "back")
+        auto = [p for m, p in items if m.along is None]
+        row = sum(p.module.length + 2 * g for p in auto) + MODULE_GAP * max(len(auto) - 1, 0)
+        start = (lo + hi) / 2 - row / 2
+        if lo_end in blocked:
+            start = max(start, lo + margin)
+        elif hi_end in blocked:
+            start = min(start, hi - margin - row)
+        for m, p in items:
+            if m.along is None:
+                p.a0 = start + g
+                start += p.module.length + 2 * g + MODULE_GAP
+            else:  # the window's centre at `along`
+                cx = p.module.window.center[0]
+                p.a0 = m.along - cx if p.sign > 0 else m.along + cx - p.module.length
+            p.a1 = p.a0 + p.module.length
+        need_lo = min(p.span()[0] for _, p in items) - margin
+        need_hi = max(p.span()[1] for _, p in items) + margin
+        if need_lo < lo and lo_end not in blocked:
+            lo = need_lo
+        if need_hi > hi and hi_end not in blocked:
+            hi = need_hi
+        if side in ("front", "back"):
+            x0, x1 = lo, hi
+        else:
+            y0, y1 = lo, hi
+
+    # in height: the lid's lip comes down over the top of the wall
+    for m, p in placed:
+        if m.z is not None:
+            p.z0 = pcb_top + m.z - p.module.window.center[1]
+            z_top = max(z_top, p.z1 + WALL_TOP_GAP + LIP_HEIGHT)
+        else:
+            z_top = max(z_top, floor_top + MODULE_GAP + p.module.width + WALL_TOP_GAP + LIP_HEIGHT)
+    for m, p in placed:
+        if m.z is None:
+            p.z0 = max(floor_top + MODULE_GAP, (floor_top + z_top - LIP_HEIGHT - WALL_TOP_GAP - p.module.width) / 2)
+    return [p for _, p in placed], x0, x1, y0, y1, z_top
 
 
 def _place_battery(
@@ -576,6 +713,15 @@ def _grow_for_extras(
     return x0, x1, y0, y1, z_top
 
 
+def _wall_windows(layout: Layout) -> list[Opening]:
+    """The windows of the wall displays, for the checks on openings."""
+    out = []
+    for m in layout.wall_modules:
+        wa0, wa1, wz0, wz1 = m.window()
+        out.append(Opening(name=m.name, side=m.side, along0=wa0, along1=wa1, z0=wz0, z1=wz1))
+    return out
+
+
 def _extra_side_openings(layout: Layout) -> list[Opening]:
     """Bounding rectangles of side extras (circles included) so checks can treat them like windows."""
     out = []
@@ -651,6 +797,8 @@ def build_base(layout: Layout) -> Part:
             base -= _hatch_cuts(layout)
     for m in layout.modules:
         base += _module_supports(layout, m)
+    for m in layout.wall_modules:
+        base += _wall_cradle(layout, m)
 
     # lid screw posts
     for px, py in layout.posts:
@@ -667,7 +815,50 @@ def build_base(layout: Layout) -> Part:
             base -= _flat_cutter(layout, e, -1, layout.floor_top + 0.01)
         elif e.face != "top":
             base -= _side_extra_cutter(layout, e)
+    for m in layout.wall_modules:
+        wa0, wa1, wz0, wz1 = m.window()
+        base -= _side_cutter(layout, m.side, wa0, wa1, wz0, wz1)
     return base
+
+
+def _wall_box(layout: Layout, side: str, a0: float, a1: float, z0: float, z1: float, d0: float, d1: float) -> Part:
+    """A box against a side wall: along it (a0, a1), in height (z0, z1), and from d0 to d1 in from its inner face."""
+    if side == "front":
+        return box(a0, layout.y0 + d0, z0, a1, layout.y0 + d1, z1)
+    if side == "back":
+        return box(a0, layout.y1 - d1, z0, a1, layout.y1 - d0, z1)
+    if side == "left":
+        return box(layout.x0 + d0, a0, z0, layout.x0 + d1, a1, z1)
+    return box(layout.x1 - d1, a0, z0, layout.x1 - d0, a1, z1)
+
+
+def _wall_cradle(layout: Layout, m: PlacedWallModule) -> Part:
+    """What holds a wall display, at both ends of its PCB: a column from the floor beside the end, a hook behind
+    the PCB that keeps it against the wall, and a seat under the PCB's bottom edge. It slides in from above."""
+    t, pcb = m.module.top_height, m.module.pcb_thickness
+    hook0, hook1 = t + pcb + WALL_FIT, t + pcb + WALL_FIT + WALL_HOOK_T
+    z0 = layout.floor_top - 0.5
+    cradle = None
+    for end, out in ((m.a0, -1), (m.a1, 1)):
+        col = sorted((end + out * WALL_FIT, end + out * (WALL_FIT + WALL_RIB_W)))
+        grip = sorted((end - out * WALL_HOOK, end + out * WALL_FIT))
+        part = _wall_box(layout, m.side, *col, z0, m.z1, -0.5, hook1) + _wall_box(layout, m.side, *grip, z0, m.z1, hook0, hook1)
+        if m.z0 > z0 + 0.1:  # a display put down through the floor gets no seat (check_wall_modules reports it)
+            part += _wall_box(layout, m.side, *grip, z0, m.z0, -0.5, hook0)
+        cradle = part if cradle is None else cradle + part
+    return cradle
+
+
+def wall_module_body(layout: Layout, m: PlacedWallModule) -> Part:
+    """A wall display's envelope: the display over its visible area, the PCB, and the parts behind it short of
+    the hooks at its ends."""
+    t, pcb = m.module.top_height, m.module.pcb_thickness
+    wa0, wa1, wz0, wz1 = m.window()
+    inset = WALL_HOOK + WALL_FIT
+    body = _wall_box(layout, m.side, wa0, wa1, wz0, wz1, 0.0, t) + _wall_box(layout, m.side, m.a0, m.a1, m.z0, m.z1, t, t + pcb)
+    if m.module.bottom_clearance > 0:
+        body += _wall_box(layout, m.side, m.a0 + inset, m.a1 - inset, m.z0, m.z1, t + pcb, t + pcb + m.module.bottom_clearance)
+    return body
 
 
 def _module_supports(layout: Layout, m: PlacedModule) -> Part:
@@ -836,6 +1027,8 @@ def build_board_parts(layout: Layout) -> dict[str, Part]:
         parts["battery"] = battery_body(layout)
     for m in layout.modules:
         parts[f"module:{m.name}"] = module_body(m)
+    for m in layout.wall_modules:
+        parts[f"module:{m.name}"] = wall_module_body(layout, m)
     return parts
 
 
@@ -856,7 +1049,7 @@ def build(spec: EnclosureSpec, board: Board | None = None) -> Enclosure:
         layout=layout,
         base=build_base(layout),
         lid=build_lid(layout),
-        openings=_connector_openings(layout) + _extra_side_openings(layout),
+        openings=_connector_openings(layout) + _extra_side_openings(layout) + _wall_windows(layout),
         keepouts={**build_keepouts(layout, board_parts), **lid_parts},
         board_parts=board_parts,
         lid_parts=lid_parts,

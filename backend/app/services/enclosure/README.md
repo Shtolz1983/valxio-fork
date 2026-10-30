@@ -74,6 +74,22 @@ under the lid on posts that grow from it, display side up against the lid, with 
 They sit in a row across the middle of the lid unless pinned by `position`; the case grows when they do not fit inside
 the lid's lip, and rises so that their back (header, I2C backpack, Dupont plugs) clears whatever lies right under them.
 `check_lid_modules` reports a display under the lip, on another one, or hanging into the parts below.
+A display needs mounting holes clear of its display to hang under the lid.
+
+## Displays on a side wall
+
+`wall_modules` stands displays against the inside of a side wall (`face`), display side out, with the window cut
+through the wall over the visible area: a long LED matrix (`max7219_4in1`, 128 x 32) on the front of a clock, for
+example. The display slides down from above into a cradle printed with the base: at each end of its PCB a column from
+the floor, a hook behind the PCB that keeps it against the wall, and a seat under its bottom edge. No screws, so it
+also takes modules whose holes are under the display.
+
+The wall moves out by the display's depth (display, PCB, the parts behind it), so the display stands beside whatever
+is in the case; a wall with connector windows cannot take one. The wall grows along for it towards ends without
+connector windows, and the case grows taller. `along` and `z` place the window's centre like a side extra's;
+without them the displays on a wall stand in a row at its middle, halfway up. `check_wall_modules` reports a display
+whose cradle runs past a corner, one on the floor, two on top of each other, and one standing in front of another
+opening.
 
 ## Rules
 

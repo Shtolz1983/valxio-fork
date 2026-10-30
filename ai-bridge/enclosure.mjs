@@ -44,8 +44,9 @@ export async function listEnclosureBoards(velxioUrl) {
     partTypes: m.part_types,
     size: m.size,
     height: m.top_height,
-    // a display: it hangs under the lid behind a window (lid_modules), not inside
-    ...(m.window ? { underLid: true, visibleArea: m.window.size } : {}),
+    // a display: it hangs under the lid (lid_modules, only with holes) or stands against a side wall
+    // (wall_modules) behind a window, not inside
+    ...(m.window ? { underLid: m.mount === 'standoffs', onWall: true, visibleArea: m.window.size } : {}),
   }));
   return { boards: boardList, batteries, modules: moduleList };
 }
@@ -67,6 +68,7 @@ export async function buildEnclosure(velxioUrl, spec) {
     faces: r.faces,
     modules: r.modules,
     lidModules: r.lid_modules,
+    wallModules: r.wall_modules,
     [TOOL_IMAGES]: r.render_png ? [{ mediaType: 'image/png', data: r.render_png }] : [],
   };
 }

@@ -59,7 +59,7 @@ def _build(spec: EnclosureSpec) -> Enclosure:
     """Blocking; call under _lock. Bad input becomes an HTTP error the model can act on."""
     if len(spec.extras) > MAX_EXTRAS:
         raise HTTPException(status_code=422, detail=f"at most {MAX_EXTRAS} extras")
-    if len(spec.modules) + len(spec.lid_modules) > MAX_MODULES:
+    if len(spec.modules) + len(spec.lid_modules) + len(spec.wall_modules) > MAX_MODULES:
         raise HTTPException(status_code=422, detail=f"at most {MAX_MODULES} modules")
     try:
         board = get_board(spec.board)
@@ -128,6 +128,14 @@ def _build_job(req: BuildRequest) -> dict:
                 {"name": m.name, "type": m.module.id, "x0": round(m.x0, 2), "y0": round(m.y0, 2), "x1": round(m.x1, 2),
                  "y1": round(m.y1, 2), "window": [round(v, 2) for v in m.window_rect()]}
                 for m in lay.lid_modules
+            ],
+            # a wall display: its PCB along the wall and in height (above the PCB top, like an extra's z), its window
+            "wall_modules": [
+                {"name": m.name, "type": m.module.id, "face": m.side, "along": [round(m.a0, 2), round(m.a1, 2)],
+                 "z": [round(m.z0 - lay.pcb_top, 2), round(m.z1 - lay.pcb_top, 2)],
+                 "window": {"along": round((m.window()[0] + m.window()[1]) / 2, 2), "z": round((m.window()[2] + m.window()[3]) / 2 - lay.pcb_top, 2),
+                            "width": m.module.window.size[0], "height": m.module.window.size[1]}}
+                for m in lay.wall_modules
             ],
             "spec": req.spec.model_dump(),
             "render_png": None,
